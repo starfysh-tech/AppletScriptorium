@@ -1,105 +1,89 @@
 ### Project: AppletScriptorium — PRO Alert Summarizer (Phase 1)
 
 #### Overview & Goals
+* Automate handling of Google Alert emails for the “Patient Reported Outcome” topic, anchored on the alert received by randall@mqol.com on **Mon, 06 Oct 2025 at 09:12 ET** (subject `Google Alert - “Patient reported outcome”`).
+* Transform each alert into a polished digest: extract links, pull article content, generate concise bullet summaries, and output HTML suitable for Mail.app delivery.
+* Deliver the solution incrementally so each layer is reliable before integrating the next.
 
-* Automate the summarization of Google Alert emails (specifically for “Patient Reported Outcomes / PRO” topic) in Mail.app.
-* For each alert email, extract article links, fetch article content, call an LLM to generate a structured summary, then send a digest email with clickable links and summaries.
-* The user should receive a polished summary email without manual clicking, reading, or copying.
-* The system should be robust: skip failures, avoid duplicates, support retries, and be maintainable.
+#### Target Email Reference
+* Sample `.eml`: `Summarizer/Google Alert - “Patient reported outcome”.eml`
+* Expected HTML export: `Summarizer/alert.html`
+* Stored artifacts (link lists, HTML snapshots) are the regression fixtures for ongoing development.
 
-#### Key Features & Workflow
-
-| Step                         | Description                                                                                                                                                                          |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Email Trigger                | Mail.app rule triggers a script when a matching alert arrives (by subject).                                                                                                          |
-| Fetch Email Source           | AppleScript fetches the full raw `source` (headers + HTML) of the triggered email.                                                                                                   |
-| Parse Links                  | A helper script (e.g. Python or shell) extracts `<a href>` links + titles, unwraps Google redirect wrappers, filters only relevant article links.                                    |
-| Fetch Articles               | For each link, perform HTTP fetch following redirects to retrieve full HTML.                                                                                                         |
-| Summarize                    | Call LLM API with the fetched article content (or trimmed version) using a controlled prompt, get back summary output.                                                               |
-| Postprocess Summary          | Parse and sanitize the LLM output (e.g. strip HTML wrapper, extract bullet points).                                                                                                  |
-| Compose Digest               | Build an HTML digest email body that lists each article as a clickable title + bullet summary. Optionally prepend a short top-level summary.                                         |
-| Send Email                   | Use AppleScript (`osascript`) to compose and send the digest email with HTML content via Mail.app.                                                                                   |
-| Logging & Idempotency        | Record which alert emails (via message IDs) have been processed to avoid duplication. Log errors and successes.                                                                      |
-| Error Handling & Concurrency | Each article fetch / summarize should be isolated so failures don’t abort entire flow. Use file locking or similar to prevent race conditions when multiple scripts run in parallel. |
-
-#### Non-Goals (for Phase 1)
-
-* Persistence to Google Sheets or database
-* Parallel or batched bulk processing (beyond basic concurrency protection)
-* Advanced fallback for JS-only article rendering (unless required)
-* UI / GUI — this is fully script / background automation
-
-#### Dependencies & Environment
-
-* macOS (user’s laptop)
-* Apple Mail app (with scripting enabled)
-* `osascript` / AppleScript
-* Shell scripting (bash / zsh)
-* Python 3 (for HTML parsing, LLM calls)
-* Access to an LLM API (e.g. OpenAI)
-* Optional: HTML parsing library (BeautifulSoup)
-* Optional: Readability / article text extraction library
-
-#### Directory Structure
-
+#### Current Repository Layout
 ```
 AppletScriptorium/
-  scripts/
-    fetch_alert.scpt
-    send_digest.scpt
-    master.sh
-    parse_alert.py
-    summarize_article.py
-  logs/
-  processed_ids.txt
+  AGENTS.md
   README.md
-  config.json
+  Summarizer/
+    clean-alert.py
+    fetch-alert-source.applescript
+    requirements.txt
+    Samples/
+      alert-cleaned.txt
+      alert.html
+      email-source.txt
+      prediction.html
+      summary.html
+    PRO Alert Summarizer PRD.md
+    ...additional fixtures...
 ```
+* Each agent lives in its own top-level directory (Phase 1 only has `Summarizer/`).
+* Future shared helpers will move into `shared/` once multiple agents depend on them.
 
-* `scripts/`: AppleScript and shell/Python scripts
-* `logs/`: logs of runs, errors
-* `processed_ids.txt`: flat file storing processed email message IDs
-* `config.json`: configuration (e.g. LLM keys, recipient address, subject filters)
-* `README.md`: instructions, setup, usage
+#### Core Workflow Vision
+1. Apple Mail rule forwards matching alerts into the Summarizer pipeline.
+2. Parser extracts canonical article metadata from the alert payload.
+3. Fetcher retrieves article HTML (with caching & retry guards).
+4. Cleaner distills readable text from each article.
+5. Summarizer (LLM or rule-based fallback) produces bullet highlights.
+6. Digest assembler creates an HTML email fragment ready for Mail.app delivery.
+7. Orchestrator logs results, skips already-processed alerts, and emits errors without halting the run.
+
+#### Incremental Delivery Plan
+Maintain the following checklist; update status and supporting docs after you confirm a task is complete.
+
+- [x] **0. Scaffolding & Bootstrap** – Confirmed agent structure, added `Summarizer/requirements.txt`, and shipped `fetch-alert-source.applescript` plus README notes so the latest Mail alert source can be captured locally.
+- [ ] **1. Ground Truth Fixtures** – Normalize the 09:12 alert: ensure `.eml`, `.html`, and expected link/title pairs are captured; document assumptions and store expected outputs for testing. Update README/AGENTS to reflect any new fixtures.
+- [ ] **2. Robust Link Extraction** – Refactor `clean-alert.py` into a callable module that reads `.eml` or `.html`, decodes quoted-printable sections, and unwraps Google redirect URLs. Add unit tests verifying the exact link list for the sample alert. Document invocation examples.
+- [ ] **3. Metadata & Deduping Layer** – Extend extraction to capture publisher/snippet data and deduplicate repeating stories. Emit structured JSON artifacts and validate against fixtures. Note schema in docs.
+- [ ] **4. Article Fetching Adapter** – Introduce a fetch module with retries, caching, and a stubbed mode for tests so CI can run offline. Provide smoke tests with mocked responses. Mention any new dependencies.
+- [ ] **5. Content Extraction & Cleanup** – Apply readability/boilerplate stripping to produce stable plain text for summarization; snapshot-test against stored article HTML. Document assumptions in README/PRD.
+- [ ] **6. Summary Generation Pipeline** – Add a pluggable summarizer layer (LLM-backed with mockable interface). Record expected JSON summaries for the sample alert and test with mocked LLM replies. Document configuration (API keys, prompts).
+- [ ] **7. Digest Assembly** – Render HTML digest matching newsletter requirements, including clickable titles and bullet copy. Snapshot-test to guard layout. Attach digest example references.
+- [ ] **8. Automation & CLI Wrapper** – Ship a CLI (`summarizer run path/to/email.eml`) with configuration via `.env`, structured logging, and end-to-end regression using the 09:12 alert fixture. Update README with usage steps.
+- [ ] **9. Deployment & Scheduling Prep** – Package dependencies, define AppleScript hooks, and specify how orchestrator/cron will invoke the CLI. Document monitoring hooks and operational notes.
+
+#### Dependencies & Environment
+* macOS with Apple Mail (scriptable), Python 3.11+, BeautifulSoup, readability library, HTTP client (requests/httpx).
+* LLM access (e.g., OpenAI API) via environment-configured keys.
+* Optional: local cache directory for fetched HTML, `.env` for secrets. Prefer lightweight local files over external services unless absolutely required.
 
 #### Configurable Parameters
+* Subject filter (`Google Alert - “Patient reported outcome”`).
+* Output recipients, sender identity, and digest subject.
+* Fetch timeouts/retries, cache TTL, dedupe window.
+* LLM model, temperature, token budget, prompt templates.
+* Logging level and lock file path.
 
-* Email subject filter (e.g. “Google Alert – PRO”)
-* Recipient email address
-* LLM model name / API key
-* Prompt template or formatting rules
-* Timeouts, retry counts
-* Lock file path
-* Logging level
-
-#### Error Handling / Edge Cases
-
-* If link extraction fails (no links), skip and log
-* If HTTP fetch fails or returns no content, skip that article
-* If LLM API errors (timeout, rate limit), retry (up to N times), then skip
-* If AppleScript sending fails, log and maybe retry once
-* Use a lock (e.g. `flock` or PID lock file) to prevent concurrent runs racing
-* On script start, check for existence of lock; if locked, abort or wait
+#### Error Handling & Idempotency
+* Guard every pipeline stage with retries and per-article isolation.
+* Use message-ID tracking (flat file or SQLite) to skip already-processed alerts.
+* Gracefully degrade: if article fetch or summarization fails, skip with clear logging while continuing others.
+* Employ file locks to prevent parallel runs from colliding.
 
 #### Logging & Monitoring
+* Structured log lines per alert: message ID, link count, summary success/fail counts.
+* Per-article diagnostics (URL, fetch status, summary status).
+* Optional notification channel (email/slack) for failures.
 
-* Log every run: timestamp, alert message ID, number of links, successfully summarized count
-* Log per-article results: URL, summary text or error
-* Log errors with stack traces or diagnostic data
-* Optionally email you a failure report
+#### Success Metrics
+* The 09:12 alert processes end-to-end with accurate link extraction, cleaned content, and digest HTML ready to send.
+* Additional alerts run without manual tweaks, respecting dedupe and error-handling rules.
+* Automated regression (using stored fixtures + mocks) passes before deploy.
 
-#### Success Criteria & Test Cases
-
-* On arrival of a sample alert email, the system sends you one summary email with clickable links and correct bullet summaries.
-* Duplicate alert emails are not reprocessed.
-* If one article fails, others still get processed.
-* HTML formatting survives in the outgoing email.
-* The system recovers gracefully from errors (timeouts, missing content).
-
-#### Roadmap / Next Phases
-
-* Support fallback rendering for JS-only pages (via headless browser)
-* Store summaries persistently (database, spreadsheet)
-* Add web dashboard / UI for reviewing summaries
-* Support alerts on other topics (configurable)
-* Add scheduling / batching / rate limits
+#### Future Extensions
+* Headless browser fallback for JS-heavy sites.
+* Persistent storage (database, Sheets) for summaries.
+* Multi-topic support via configuration.
+* Integration with scheduler/orchestrator and broader AppletScriptorium agent suite.

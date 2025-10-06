@@ -1,22 +1,34 @@
 # Repository Guidelines
 
+## Agent Role & Scope
+AppletScriptorium agents are expected to operate as macOS automation specialists fluent in AppleScript/osascript, shell (bash/zsh), and Python helpers. Build the simplest thing that works on the maintainer’s local Mac—avoid speculative abstractions or premature generalization. Still add pragmatic logging, error handling, idempotency, and locks where they materially improve reliability. Ask clarifying questions only when requirements are ambiguous.
+
+## Collaboration Workflow
+The maintainer will issue focused tasks sequentially (e.g., “write AppleScript to fetch message source,” “add locking wrapper”). For each task deliver:
+- Production-ready scripts or modules placed under the appropriate agent directory.
+- Inline comments explaining non-obvious logic and integration points.
+- Tests or usage examples (CLI invocation, mocked runs) demonstrating expected behavior.
+Document assumptions in the PRD or README so future tasks start with full context, and call out when a deliberately simple approach was chosen.
+
 ## Project Structure & Module Organization
-AppletScriptorium hosts standalone automation agents as top-level directories. The active module is `Summarizer/`, containing the Python entry point (`clean-alert.py`) plus sample inputs (`alert.html`, `.eml`, `email-source.txt`) and expected outputs (`alert-cleaned.txt`, `summary.html`). Keep module assets self-contained: place new agents alongside the existing folder, and add any shared utilities to a future `shared/` package rather than cross-linking directories.
+Each automation agent lives at the repository root (current module: `Summarizer/`). Keep fixtures, scripts, and docs self-contained within the agent directory. Shared utilities will eventually reside in `shared/`, but avoid cross-linking until that package exists. Preserve sample artifacts under `Summarizer/Samples/` (alert HTML, `.eml`, summaries) because they anchor regression tests.
 
 ## Build, Test, and Development Commands
-Use Python 3. Run the summarizer from the repo root so relative paths resolve:
-- `python3 'PRO Alert Summarizer/clean-alert.py' < 'PRO Alert Summarizer/alert.html' > /tmp/alert-cleaned.txt` parses links from a Google Alert export.
-- `python3 -m pip install beautifulsoup4` installs the only external dependency; pin versions in a module-specific `requirements.txt` if more packages are added.
-- `python3 -m venv .venv && source .venv/bin/activate` is the recommended virtualenv workflow for contributors.
+Use Python 3.11+.
+- `osascript Summarizer/fetch-alert-source.applescript /tmp/alert-source.eml` captures the newest matching Mail alert; omit the path to stream to stdout.
+- `python3 'Summarizer/clean-alert.py' < 'Summarizer/Samples/alert.html' > /tmp/alert-cleaned.txt` parses link/title pairs from the target 09:12 alert.
+- `python3 -m venv .venv && source .venv/bin/activate` creates an isolated environment.
+- `python3 -m pip install -r Summarizer/requirements.txt` installs declared Python dependencies.
+Keep shell wrappers executable (`chmod +x`) and provide example invocations in README updates.
 
 ## Coding Style & Naming Conventions
-Follow PEP 8 with 4-space indentation and snake_case identifiers inside Python modules. Keep scripts kebab-cased (`clean-alert.py`) to mirror their command-line usage. Prefer explicit imports and pure functions so scripts can be promoted into reusable packages later. Document any non-obvious parsing logic inline with concise comments.
+Follow PEP 8 (4-space indents) and snake_case for Python; kebab-case script filenames (e.g., `fetch-alert.scpt`). AppleScript files should include header comments describing trigger conditions. Prefer pure functions and dependency injection to ease unit testing and future reuse.
 
-## Testing Guidelines
-There is no automated test harness yet. Validate changes by regenerating `alert-cleaned.txt` from representative alerts and diffing against previous runs (`diff -u old.txt new.txt`). When adding summarization steps, commit sanitized fixtures into the module directory and extend manual checklists within `README.md`. Introduce pytest-based smoke tests once logic moves out of one-off scripts.
+## Testing & Validation Guidelines
+Until automated tests are wired, rely on fixture-driven diffs: regenerate `alert-cleaned.txt` and compare with prior outputs (`diff -u`). When adding new modules, include pytest smoke tests, AppleScript usage notes, or shell dry-run flags. Capture expected JSON/HTML digests as golden files to guard regressions.
 
-## Commit & Pull Request Guidelines
-Write imperative, present-tense summaries under 60 characters (e.g., `summarizer: refine link parser`). Group related cleanups into one commit. Pull requests should describe the scenario, outline validation steps, and attach before/after artifacts (link diffs or HTML snippets). Reference issue IDs or roadmap bullets when available, and call out any new dependencies or secrets required for reviewers.
+## Commit & Pull Request Expectations
+Write imperative commit subjects under ~60 chars (e.g., `summarizer: add link parser`). Each PR should summarize the scenario, list validation steps, and attach relevant artifacts (diffs, HTML snippets, logs). Reference issues/roadmap bullets and note new dependencies or secret requirements for reviewers.
 
 ## Security & Configuration Tips
-Do not commit production Google Alert content or API keys—use redacted fixtures only. Store per-agent credentials in local `.env` files ignored by git, and document any required environment variables in the module’s README before merging.
+Never commit live Google Alert content, API keys, or Mail credentials. Use redacted fixtures and `.env` files ignored by git. Document required env vars and configuration updates in the README before merging.

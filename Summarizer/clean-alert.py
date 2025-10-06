@@ -1,6 +1,9 @@
+from pathlib import Path
 from bs4 import BeautifulSoup
 
-with open("alert.html", encoding="utf8") as f:
+SAMPLES_DIR = Path(__file__).parent / "Samples"
+
+with open(SAMPLES_DIR / "alert.html", encoding="utf8") as f:
     html = f.read()
 
 soup = BeautifulSoup(html, "html.parser")
