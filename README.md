@@ -15,6 +15,7 @@ AppletScriptorium is a collection of macOS automation agents orchestrated throug
 ├── Summarizer/                   # PRO Alert Summarizer agent (fixtures + scripts)
 │   ├── article_fetcher.py        # Minimal HTTP fetcher with retries + stubs
 │   ├── clean-alert.py            # Link extraction CLI wrapper
+│   ├── content_cleaner.py        # Extracts structured article content
 │   ├── fetch-alert-source.applescript  # Mail helper to pull raw alert source
 │   ├── refresh-fixtures.py       # Helper to rebuild committed samples
 │   ├── requirements.txt          # Python dependencies for the agent
@@ -23,6 +24,7 @@ AppletScriptorium is a collection of macOS automation agents orchestrated throug
 │   │   ├── google-alert-patient-reported-outcome-2025-10-06.html
 │   │   ├── google-alert-patient-reported-outcome-2025-10-06-links.tsv
 │   │   └── google-alert-patient-reported-outcome-2025-10-06-links.json
+│   ├── Samples/articles/         # Sample fetched article HTML for cleaning
 │   └── PRO Alert Summarizer PRD.md
 ├── LICENSE
 └── README.md
@@ -72,6 +74,20 @@ The AppleScript searches the Inbox for the newest message whose subject begins w
   PY
   ```
 - The fetcher caches responses in-memory for the life of the process; call `article_fetcher.clear_cache()` in tests to reset state.
+
+## Content Extraction
+- `Summarizer/content_cleaner.py` exposes `extract_content(html)` which returns JSON-friendly blocks (headings, paragraphs, lists).
+- Example usage with the sample article fixture:
+  ```bash
+  python3 - <<'PY'
+  from pathlib import Path
+  from content_cleaner import extract_content
+
+  html = Path('Summarizer/Samples/articles/pro-diction-models.html').read_text(encoding='utf-8')
+  blocks = extract_content(html)
+  print(blocks[0])
+  PY
+  ```
 
 ## Testing
 - `python3 -m pytest Summarizer/tests` validates link extraction, metadata, and fetcher behaviour via stubs against the committed fixtures.
