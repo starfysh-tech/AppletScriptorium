@@ -13,7 +13,8 @@ AppletScriptorium is a collection of macOS automation agents orchestrated throug
 .
 ├── AGENTS.md                     # Contributor guidelines & workflow expectations
 ├── Summarizer/                   # PRO Alert Summarizer agent (fixtures + scripts)
-│   ├── clean-alert.py            # Link extraction prototype
+│   ├── article_fetcher.py        # Minimal HTTP fetcher with retries + stubs
+│   ├── clean-alert.py            # Link extraction CLI wrapper
 │   ├── fetch-alert-source.applescript  # Mail helper to pull raw alert source
 │   ├── refresh-fixtures.py       # Helper to rebuild committed samples
 │   ├── requirements.txt          # Python dependencies for the agent
@@ -57,8 +58,23 @@ Future agents (Mailer, Orchestrator, etc.) will live alongside `Summarizer/`. Sh
 
 The AppleScript searches the Inbox for the newest message whose subject begins with `Google Alert -` and contains `Patient reported outcome`. Update the `subject_prefix` and `topic_keyword` variables in `Summarizer/fetch-alert-source.applescript` if your alerts land in a different format or mailbox.
 
+## Article Fetching
+- Use `Summarizer/article_fetcher.py` in scripts or REPL sessions to retrieve article HTML.
+- Provide a stub manifest when you want deterministic content (map URLs to fixture files):
+  ```bash
+  python3 - <<'PY'
+  from pathlib import Path
+  from article_fetcher import FetchConfig, fetch_article
+
+  manifest = Path('Summarizer/Samples/stubs-example.json')
+  html = fetch_article('https://example.com', FetchConfig(stub_manifest=manifest))
+  print(html[:200])
+  PY
+  ```
+- The fetcher caches responses in-memory for the life of the process; call `article_fetcher.clear_cache()` in tests to reset state.
+
 ## Testing
-- `python3 -m pytest Summarizer/tests` validates link extraction and metadata against the committed fixtures.
+- `python3 -m pytest Summarizer/tests` validates link extraction, metadata, and fetcher behaviour via stubs against the committed fixtures.
 
 ## Development Expectations
 - Keep fixtures sanitized; never commit production emails or secrets.
