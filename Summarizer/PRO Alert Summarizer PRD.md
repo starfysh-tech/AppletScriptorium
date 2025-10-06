@@ -18,13 +18,12 @@ AppletScriptorium/
   Summarizer/
     clean-alert.py
     fetch-alert-source.applescript
+    refresh-fixtures.py
     requirements.txt
     Samples/
-      alert-cleaned.txt
-      alert.html
-      email-source.txt
-      prediction.html
-      summary.html
+      google-alert-patient-reported-outcome-2025-10-06.eml
+      google-alert-patient-reported-outcome-2025-10-06.html
+      google-alert-patient-reported-outcome-2025-10-06-links.tsv
     PRO Alert Summarizer PRD.md
     ...additional fixtures...
 ```
@@ -44,7 +43,7 @@ AppletScriptorium/
 Maintain the following checklist; update status and supporting docs after you confirm a task is complete.
 
 - [x] **0. Scaffolding & Bootstrap** – Confirmed agent structure, added `Summarizer/requirements.txt`, and shipped `fetch-alert-source.applescript` plus README notes so the latest Mail alert source can be captured locally.
-- [ ] **1. Ground Truth Fixtures** – Normalize the 09:12 alert: ensure `.eml`, `.html`, and expected link/title pairs are captured; document assumptions and store expected outputs for testing. Update README/AGENTS to reflect any new fixtures.
+- [x] **1. Ground Truth Fixtures** – Regenerated the 09:12 alert fixtures (`google-alert-patient-reported-outcome-2025-10-06.*`), captured the decoded HTML plus link TSV via `refresh-fixtures.py`, and updated docs so contributors can rebuild and diff the baseline.
 - [ ] **2. Robust Link Extraction** – Refactor `clean-alert.py` into a callable module that reads `.eml` or `.html`, decodes quoted-printable sections, and unwraps Google redirect URLs. Add unit tests verifying the exact link list for the sample alert. Document invocation examples.
 - [ ] **3. Metadata & Deduping Layer** – Extend extraction to capture publisher/snippet data and deduplicate repeating stories. Emit structured JSON artifacts and validate against fixtures. Note schema in docs.
 - [ ] **4. Article Fetching Adapter** – Introduce a fetch module with retries, caching, and a stubbed mode for tests so CI can run offline. Provide smoke tests with mocked responses. Mention any new dependencies.
