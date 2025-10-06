@@ -20,7 +20,8 @@ AppletScriptorium is a collection of macOS automation agents orchestrated throug
 │   ├── Samples/
 │   │   ├── google-alert-patient-reported-outcome-2025-10-06.eml
 │   │   ├── google-alert-patient-reported-outcome-2025-10-06.html
-│   │   └── google-alert-patient-reported-outcome-2025-10-06-links.tsv
+│   │   ├── google-alert-patient-reported-outcome-2025-10-06-links.tsv
+│   │   └── google-alert-patient-reported-outcome-2025-10-06-links.json
 │   └── PRO Alert Summarizer PRD.md
 ├── LICENSE
 └── README.md
@@ -38,21 +39,26 @@ Future agents (Mailer, Orchestrator, etc.) will live alongside `Summarizer/`. Sh
    ```bash
    Summarizer/refresh-fixtures.py
    ```
-5. Inspect the parsed output on the command line:
+5. Inspect the parsed output on the command line (TSV by default):
    ```bash
    python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06.eml | head
    ```
-6. When the parser changes, rebuild a scratch link list and diff against the fixture:
+6. Emit JSON instead when you need structured metadata:
    ```bash
-   Summarizer/refresh-fixtures.py --links /tmp/alert-links.tsv --html /tmp/alert.html
-   diff -u Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06-links.tsv /tmp/alert-links.tsv
+   python3 Summarizer/clean-alert.py --format json | jq '.' | head
    ```
-7. Refer to `Summarizer/PRO Alert Summarizer PRD.md` for the staged roadmap (fixtures → link extraction → fetcher → summarizer → digest).
+7. When the parser changes, rebuild scratch artifacts and diff against the fixtures:
+   ```bash
+   Summarizer/refresh-fixtures.py --links /tmp/alert-links.tsv --links-json /tmp/alert-links.json --html /tmp/alert.html
+   diff -u Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06-links.tsv /tmp/alert-links.tsv
+   diff -u Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06-links.json /tmp/alert-links.json
+   ```
+8. Refer to `Summarizer/PRO Alert Summarizer PRD.md` for the staged roadmap (fixtures → link extraction → fetcher → summarizer → digest).
 
 The AppleScript searches the Inbox for the newest message whose subject begins with `Google Alert -` and contains `Patient reported outcome`. Update the `subject_prefix` and `topic_keyword` variables in `Summarizer/fetch-alert-source.applescript` if your alerts land in a different format or mailbox.
 
 ## Testing
-- `python3 -m pytest Summarizer/tests` validates link extraction against the committed fixtures.
+- `python3 -m pytest Summarizer/tests` validates link extraction and metadata against the committed fixtures.
 
 ## Development Expectations
 - Keep fixtures sanitized; never commit production emails or secrets.
