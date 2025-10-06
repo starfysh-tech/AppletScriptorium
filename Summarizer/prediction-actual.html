@@ -1,0 +1,1925 @@
+
+
+
+
+
+
+<!DOCTYPE html>
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+<html lang="en"
+      
+        
+      
+      
+        
+
+        
+
+        
+        
+            
+        
+        
+        
+        
+        
+
+      class="pb-page"
+         data-request-id="98a6e186792ddafc-EWR"  
+
+>
+
+    
+        <head data-pb-dropzone="head">
+            
+
+<meta charset="UTF-8">
+
+
+
+
+
+
+    
+        
+            
+        
+    
+        
+            
+        
+    
+        
+    
+        
+    
+        
+            
+                
+                
+<title>From Prediction to PRO-Diction Models: Incorporating Patient-Reported Outcomes Into Predictive Oncology</title>
+
+
+
+
+
+                
+            
+        
+    
+
+
+
+
+
+
+
+    
+        
+            
+                
+                
+
+
+
+    
+        
+    
+
+                
+            
+        
+    
+        
+            
+        
+    
+        
+    
+        
+    
+        
+            
+        
+    
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+    
+
+    
+    
+
+    
+    
+    
+    
+        
+            
+            
+            
+                
+            
+        
+    
+
+    
+    
+        
+            <link rel="icon" href="/products/asco/releasedAssets/images/favicon/favicon-6de6915de478e6b3f5816cbf9ee5cd59.ico" type="image/x-icon"/>
+        
+        
+        
+        
+        
+        
+    
+
+    
+    
+            <link rel="stylesheet" href="/products/asco/releasedAssets/css/build-08eeeab2cbfdc3ff5588.css" media="all">
+        <link rel="stylesheet" href="/products/asco/releasedAssets/css/print-08eeeab2cbfdc3ff5588.css"media="print">
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+        
+            
+                
+                
+                
+                
+                
+            
+        
+    
+        
+            
+                
+                
+                
+                    
+                    
+
+
+
+
+
+<meta name="robots" content="noarchive"/>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+
+
+
+    
+    
+
+
+
+    
+    
+
+
+    
+    
+
+
+
+    
+    
+
+
+
+    
+    
+
+
+
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="citation_fulltext_world_readable" content=""/>
+    <!--Render the heads templates for digital objects, Head templates are used to include additional meta tags specially used for digital objects-->
+    
+    <meta property="description" content="Integrating patient-reported outcomes (PROs) into machine learning models can substantially enhance predictive oncology by improving personalized risk prediction, symptom management, and quality-of-li"/>
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@ASCO_pubs" />
+    <meta name="twitter:title" content="From Prediction to PRO-Diction Models: Incorporating Patient-Reported Outcomes Into Predictive Oncology" />
+    <meta name="twitter:description" content="Integrating patient-reported outcomes (PROs) into machine learning models can substantially enhance predictive oncology by improving personalized risk prediction, symptom management, and quality-of-life assessment. Successful implementation requires standardized PRO collection, seamless electronic health record integration, and transparent, robust studies." /><meta name="twitter:image" content="https://dailynews.ascopubs.org/cms/asset/a6b37efc-f151-44dd-b236-0d3e2e044f0f/media/goldstein_jordan_570px.jpg"/>
+            <meta property="og:image"  content="https://dailynews.ascopubs.org/cms/asset/a6b37efc-f151-44dd-b236-0d3e2e044f0f/media/goldstein_jordan_570px.jpg"/>
+        <meta property="og:url" content="https://dailynews.ascopubs.org/do/10.1200/adn.25.300356/full/" />
+    <meta property="og:title" content="From Prediction to PRO-Diction Models: Incorporating Patient-Reported Outcomes Into Predictive Oncology" />
+    <meta property="og:description" content="Integrating patient-reported outcomes (PROs) into machine learning models can substantially enhance predictive oncology by improving personalized risk prediction, symptom management, and quality-of-life assessment. Successful implementation requires standardized PRO collection, seamless electronic health record integration, and transparent, robust studies." />
+
+<meta name="publication_doi" content="10.1200/adn.25.300356"/>
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script nonce="98a6e186792ddafc-EWR">
+var debugInfo = {};
+
+      console.log("debugInfoMap is null or empty");
+
+      var keysToRemove = ['okta-token-storage',
+          'cognito-token-storage',
+          'x-amzn-RequestId',
+          'ASCO-entitlements',
+          'ASCO-username'];
+
+      keysToRemove.forEach(function (key) {
+          if (localStorage.getItem(key) !== null) {
+              localStorage.removeItem(key);
+          }
+      });
+    </script>
+
+<meta name="bchash" content=""/>
+                    
+                
+            
+        
+    
+        
+    
+        
+    
+        
+            
+                
+                
+                
+                
+                
+            
+        
+    
+
+
+
+
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- OneTrust Cookies Consent Notice start for ascopubs.org -->
+<script src="https://cdn.cookielaw.org/scripttemplates/otSDKStub.js"  type="text/javascript" charset="UTF-8" data-domain-script="e39fa339-b637-41bd-8c1a-0b10695a5c62"  nonce="98a6e186792ddafc-EWR"></script>
+<script type="text/javascript" nonce="98a6e186792ddafc-EWR">
+function OptanonWrapper() { }
+</script>
+<!-- OneTrust Cookies Consent Notice end for ascopubs.org -->
+
+<!-- ASCO-1897 -->
+<script type="text/javascript" nonce="98a6e186792ddafc-EWR">
+	if (window.location.hostname=="dailynews.ascopubs.org") {
+		adobesrc = "https://assets.adobedtm.com/bd3ece2de486/7640702317d7/launch-1f1bbbc00411.min.js";
+		// Set the Adobe script
+		var insertAdb = document.createElement('script');
+		insertAdb.src = adobesrc;
+		insertAdb.async = true;
+		document.head.appendChild(insertAdb);
+	};
+</script>
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-6730686-14" nonce="98a6e186792ddafc-EWR"></script>
+<script nonce="98a6e186792ddafc-EWR">
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  
+  gtag('config', 'UA-6730686-14');
+</script><link rel="canonical" href="https://dailynews.ascopubs.org/do/prediction-pro-diction-models-incorporating-patient-reported-outcomes-into-predictive">
+        
+
+
+
+
+<!-- loading Javascript for using the persistence Service -->
+    <script src="/wro/b1742a8f189b0636b916af25cdf7d8143edd6daf~thiss-ds.js" async nonce="98a6e186792ddafc-EWR"></script>
+
+    <script type="text/javascript" nonce="98a6e186792ddafc-EWR">
+
+        var SeamlessAccessService = {
+            spUrl: "/action/ssostart",
+            returnURL: window.location.href,
+            my_context: 'seamlessaccess.org',
+            timeout: 5000,
+            _persistenceService: null,
+            _getPersistenceService: function () {
+                if (!this._persistenceService) {
+                    this._persistenceService = new thiss.PersistenceService('https://service.seamlessaccess.org/ps/');
+                }
+                return this._persistenceService;
+            },
+
+            getWAYFLessUrl: function (entityId) {
+                return this.spUrl + "?idp=" + encodeURIComponent(entityId)
+                    + "&redirectUri=" + encodeURIComponent(this.returnURL);
+            },
+            retrieveEntity: function (ms) {
+                var self = this;
+                var persistService = this._getPersistenceService();
+
+                if (ms == undefined || ms === '') {
+                    ms = this.timeout;
+                }
+
+                return new Promise(function (resolve, reject) {
+                    persistService.entities(self.my_context)
+                        .then(function (res) {
+                            return resolve(res.data);
+                        }, function (err) {
+                            // failed
+                            reject('failed to retrieve entity from local storage: ' + err);
+                        });
+                    // Set up the timeout
+                    setTimeout(function () {
+                        reject('Promise timed out ' + ms + ' ms');
+                    }, ms);
+                });
+            },
+            updateEntity: function (entitydata) {
+                var self = this;
+                var persistService = this._getPersistenceService();
+
+                var jsonObj = {};
+                try {
+                    //try to parse it, if it is a json string
+                    jsonObj = JSON.parse(entitydata.val());
+                } catch (e) {
+                    jsonObj = entitydata;
+                }
+                return new Promise(function (resolve, reject) {
+                    persistService.update(self.my_context, jsonObj)
+                        .then(function (res) {
+                            // Process the results
+                            var ssoInstitutions = res.data;
+                            return resolve(ssoInstitutions);
+                        }, function (err) {
+                            // failed
+                            console.log('failed to update the local storage due to: ' + err);
+                            reject(err);
+                        });
+                })
+            },
+            removeEntity: function (entityId) {
+                var self = this;
+                var persistService = this._getPersistenceService();
+
+                return new Promise(function (resolve) {
+                    persistService.remove(self.my_context, entityId)
+                        .then(function (res) {
+                            return resolve(res);
+                        }, function (err) {
+                            // failed
+                            console.log('failed to remove from local storage duo to: ' + err);
+                        });
+                })
+            },
+            getAccessibleEntityStatus: function (doi, entityId, entityTitle) {
+                return new Promise(function (resolve, reject) {
+                    $.ajax({
+                        type: 'POST',
+                        url: '/action/seamlessAccess',
+                        accept: {
+                            text: "application/json"
+                        },
+                        data: {
+                            doi: doi,
+                            entityid: entityId,
+                            entityTitle: entityTitle,
+                            eventGroupKey: '2295b3ac-440a-4b52-86ff-a9733ba2342b'
+                        }
+
+                    }).done(function (status) {
+                        return resolve(status);
+                    }).fail(function (status) {
+                        return reject(status);
+                    });
+                });
+            },
+            getEntitiesWithAllInfo: function (doi) {
+                let self = this,
+                    arrayOfPromises = [];
+                return new Promise(function (resolve, reject) {
+                    self.retrieveEntity().then(function (res) {
+                        let allSsoInstitutions = res;
+                        for (i = 0; i < allSsoInstitutions.length; i++) {
+                            let ssoInstitution = allSsoInstitutions[i];
+                            arrayOfPromises.push(new Promise(function (resolve) {
+                                self.getAccessibleEntityStatus(doi, ssoInstitution.entity.entityID, ssoInstitution.entity.title)
+                                    .then(function (entityStatus) {
+                                        resolve({
+                                            entityID: ssoInstitution.entity.entityID,
+                                            entityTitle: ssoInstitution.entity.title,
+                                            entityStatusObj: entityStatus,
+                                            entitySsoUrl: self.getWAYFLessUrl(ssoInstitution.entity.entityID)
+                                        });
+                                    }, function (err) {
+                                        console.log('failed to get the entity status: ' + ssoInstitution.entity.entityID,err);
+                                    });
+                            }));
+                        }
+                        if(allSsoInstitutions.length === 0 && false){
+                            self.getAccessibleEntityStatus(doi, null, null)
+                                .then(function () {
+                                    console.log('No Entity found');
+                                }, function (err) {
+                                    console.log('failed to get the none entity status' ,err);
+                                });
+                        }
+                        Promise.all(arrayOfPromises)
+                            .then(function (finalResponse) {
+                                resolve(finalResponse);
+                            }).catch(function (err) {
+                                reject(err);
+                            });
+
+                    }).catch(function (err) {
+                        reject(err);
+                    })
+                });
+            }
+        };
+
+        window.addEventListener('load', function () {
+            document.querySelectorAll(".sso-institution").forEach(function (institution) {
+                var entityId = institution.getAttribute('data-entityid');
+                var entityName = institution.getAttribute('data-name');
+                var entitydata = {
+                    entityID: entityId,
+                    title: entityName
+                };
+                institution.addEventListener("click", function (e) {
+                    e.preventDefault();
+
+                    if ($('.institution-preference-userconsent-checkbox').length > 0) {
+                        let institutionPreferenceUserConsentCheckbox = $('.institution-preference-userconsent-checkbox').get(0);
+                        if (!$(institutionPreferenceUserConsentCheckbox).is(":checked")) {
+                            return;
+                        }
+                    }
+
+                    var self = this;
+                    SeamlessAccessService.updateEntity(entitydata).then(function (res) {
+                        console.log(res);
+                        window.location.href = self.href;
+                    }).catch(function (err) {
+                        window.location.href = self.href;
+                    });
+                });
+            });
+        });
+
+    </script>
+
+    
+<meta name="pbContext" content=";csubtype:string:Dailynews;pageGroup:string:Digital Objects;article:article:doi\:10.1200/adn.25.300356;page:string:Show Digital Object;journal:journal:digital-objects;ctype:string:Digital Object Content;wgroup:string:Publication Websites;issue:issue:doi\:10.5555/default-do-group;website:website:dailynews.ascopubs.org">
+        </head>
+    
+
+    
+
+
+
+    
+        
+        
+        
+            <body
+                    class="pb-ui website-dailynews.ascopubs.org">
+            
+
+
+
+
+
+
+    
+    
+        
+
+
+
+    
+    
+        
+        
+    
+    
+    
+
+
+
+
+
+
+        <div id="pb-page-content" data-ng-non-bindable>
+                
+            <div data-pb-dropzone="main" data-pb-dropzone-name="Main">
+                
+                    
+                        
+
+
+
+        
+        <!-- AMC Ad Code -->
+    <script async class='optanon-category-4' type='text/plain' src="https://securepubads.g.doubleclick.net/tag/js/gpt.js" nonce="98a6e186792ddafc-EWR"></script>
+
+    <script nonce="98a6e186792ddafc-EWR">
+        var googletag = googletag || {};
+        googletag.cmd = googletag.cmd || [];
+
+        googletag.cmd.push(function () {
+	    // responsive ad size mapping
+            var towerMapping = googletag
+                .sizeMapping()
+                .addSize([1300, 0], [160, 600]) 
+                .addSize([0, 0], [])
+                .build();
+
+            var leaderMapping = googletag
+                .sizeMapping()
+                .addSize([1300, 0], []) 
+                .addSize([730, 0], [728,90]) // add the 728x90 size for any screen larger than 1300 px
+                .addSize([0, 0], [320,50])
+                .build();
+
+	    
+			googletag.defineSlot('/30017927/asco/asco.leaderboard', [[728, 90],[320, 50]], 'top-leaderboard').addService(googletag.pubads());
+
+            googletag.defineSlot('/30017927/asco/asco.skyscraper', [160, 600], 'sidebar-tower').defineSizeMapping(towerMapping).addService(googletag.pubads());
+
+
+            // Enable for 300x250 Ad unit.
+            googletag.defineSlot('/30017927/asco/asco.box', [300, 250], 'sidebar-box').addService(googletag.pubads()); //top 300x250
+            googletag.defineSlot('/30017927/asco/asco.box.mid', [300, 250], 'sidebar-box-mid').addService(googletag.pubads()); //mid 300x250
+            googletag.defineSlot('/30017927/asco/asco.box.bottom', [300, 250], 'sidebar-box-bottom').addService(googletag.pubads()); //bottom 300x250 (160x150 replacement)
+
+
+            // lazy loading ads
+            // ads will only render when they are in view
+            googletag.pubads().enableLazyLoad({
+                fetchMarginPercent: 0,
+                renderMarginPercent: 0,
+                mobileScaling: 0.0
+            });
+
+            // for debugging lazy load
+            googletag.pubads().addEventListener('slotRequested', function (event) {
+                updateSlotStatus(event.slot.getSlotElementId(), 'fetched');
+            });
+            googletag.pubads().addEventListener('slotOnload', function (event) {
+                updateSlotStatus(event.slot.getSlotElementId(), 'rendered');
+            });
+            // end debugging
+
+            /**
+             * Custom Targeting
+             * Key(s) will be set in DFP.
+             * Values can be dynamic or predefined in DFP
+             *
+             * Predefined key values. These values needs to be passed dynamically to setTargeting option depending on the zone/section.
+             * gi_microsite
+             * gu_microsite
+             * am_microsite
+             * boa_microsite
+             * qc_microsite
+             *
+             * Example: googletag.pubads().setTargeting('asco_zone',['gi_microsite']);
+             * Example for multiple values: googletag.pubads().setTargeting('asco_zone',['gi_microsite', 'breast_cancer']);
+             */
+
+	        // set targeting
+            googletag.pubads().setTargeting('asco_zone', ['daily_news']); 
+
+            // for future use
+            //googletag.pubads().setTargeting(['keywords'], ['keyword_value']); // keyword
+            //googletag.pubads().setTargeting(['search_term'], ['search_term_value']); // search term
+
+            // collapse divs if there are no ads
+            googletag.pubads().collapseEmptyDivs();
+
+            // enable ad service
+            googletag.enableServices();
+        });
+
+        // can be removed after confirming lazy load function
+        console.log("Lazy load render check.");
+	    // Fetched: Ad is fetched but not displaying. No impressions until rendered.
+        // Rendered: Ad is displaying and impression is registered.
+
+        function updateSlotStatus(slotId, state) {
+            console.log(slotId + " - " + state);
+        }
+
+    </script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v84a3a4012de94ce1a686ba8c167c359c1696973893317" integrity="sha512-euoFGowhlaLqXsPWQ48qSkBSCFs3DPRyiwVu3FjR96cMPx+Fr+gpWRhIafcHwqwCqWS42RZhIudOvEI+Ckf6MA==" data-cf-beacon='{"rayId":"8471c083c91cfae3","version":"2023.10.0","token":"3c3925b8c0464e759e46f4c81973faa3"}' crossorigin="anonymous" nonce="98a6e186792ddafc-EWR"></script>
+<style type="text/css">
+.ad-wrapper--banner:before {
+	font-size: 0.5rem;
+}
+@media (min-width: 768px) {
+	.ad-wrapper--banner:before {
+	font-size: 0.75rem;
+	}
+}
+</style>
+
+                    
+                        
+
+
+
+
+
+
+
+
+
+    
+    
+        <div data-widget-def="UX3HTMLWidget" data-widget-id="d8374fd4-3d22-41af-a873-0edad6a0718b" class="ad-wrapper--banner header-ads py-16">
+        
+
+
+
+        
+        <!-- /30017927/asco/asco.leaderboard-->
+<div id='top-leaderboard'>
+    <script nonce="98a6e186792ddafc-EWR">
+        googletag.cmd.push(function() { googletag.display('top-leaderboard'); });
+    </script>
+</div>
+
+        </div>
+    
+
+
+                    
+                        
+
+
+
+        
+        <header class="main-header daily-news-header">
+  <div class="header-first-row d-flex justify-content-center">
+    <div class="header-right-content d-none d-lg-flex align-items-center">
+      
+
+
+
+        
+        <style>
+.login-bar::before {
+  content: url('/pb-assets/images/adn/account-icon-1544132921257.png');
+  padding: 5px 5px 0 0;
+}
+
+.login-bar .dropdown,
+.login-bar .login-btn {
+  color: #088764;
+  font-size: 18px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.login-bar .become-member-btn {
+  display: none;
+}
+</style>
+
+
+
+
+
+
+
+
+
+
+    
+    
+        <div data-widget-def="literatumNavigationLoginBar" data-widget-id="fd03af4b-2a7e-4c3e-b588-90f4ed429033" class="pl-16">
+        
+
+
+
+        
+        
+
+
+
+
+    
+
+
+
+
+
+
+
+
+    
+    
+        
+
+
+
+
+    
+
+
+
+
+
+
+
+<div class="login-bar">
+    <a href="https://signin.asco.org/oauth2/aus1goap5nQ33vo7A297/v1/authorize/?client_id=0oa1lqh0mhJversiO297&amp;response_type=code&amp;scope=openid profile email&amp;state=%2Fdo%2Fprediction-pro-diction-models-incorporating-patient-reported-outcomes-into-predictive&amp;redirect_uri=https%3A%2F%2Fdailynews.ascopubs.org%2Faction%2FssoReturn" class="font-weight-bold login-btn nav-link py-6 text-small-bold" uri="/do/prediction-pro-diction-models-incorporating-patient-reported-outcomes-into-predictive" aria-label="Sign in">
+        Sign in
+    </a>
+    <a href="https://www.asco.org/membership" class="become-member-btn login-btn ml-8 text-small-bold text-white" target="_blank">become a member</a>
+</div>
+
+
+
+
+    
+
+
+
+        </div>
+    
+
+
+      <a href="https://apps.asco.org/EmailPreferences"
+        class="alerts d-flex align-items-center right-content-link ml-16">
+        <span class="icon-component ">
+          <svg aria-hidden="true">
+            <use xlink:href="/specs/products/asco/releasedAssets/icons/icons.spritemap.svg#social-email"></use>
+          </svg>
+        </span>
+        Alerts
+      </a>
+    </div>
+    <a href="/" class="navbar-brand mx-16">
+      <img src="/specs/products/asco/releasedAssets/images/logo-daily-news-4f646bb8c113bf0e16dfae5a64dbce23.svg" alt="Go to homepage" />
+    </a>
+    <a href="#main"
+      class="sr-only sr-only-focusable skip-to-main-content serif font-weight-bold bg-white text-black-gray text-decoration-none">Skip
+      to main content</a>
+  </div>
+  <nav id="mainNavbar" class="main-navbar navbar text-uppercase"
+    data-preserved-class-name="main-navbar navbar text-uppercase">
+    <div class="navbar-in d-flex">
+      <button type="button" data-toggle="collapse" data-target="#main-menu" aria-controls="#main-menu"
+        aria-expanded="false" aria-label="Toggle navigation" class="navbar-toggler sidebar-toggler">
+        <span class="navbar-toggler__box">
+          <span class="navbar-toggler__inner"></span>
+        </span>
+        <span>Menu</span>
+      </button>
+      <button type="button" data-toggle="collapse" data-target="#quick-search" aria-controls="#quick-search"
+        aria-expanded="false" aria-label="Toggle quick search" class="navbar-toggler">
+        <span class="icon-component ">
+          <svg aria-hidden="true">
+            <use xlink:href="/specs/products/asco/releasedAssets/icons/icons.spritemap.svg#search"></use>
+          </svg>
+        </span>
+      </button>
+      <div id="main-menu" class="main-menu collapse navbar-collapse collapse-lock-screen side-nav-overlay">
+        <button type="button" data-toggle="collapse" data-target="#main-menu" aria-controls="#main-menu"
+          aria-expanded="false" aria-label="Toggle navigation" class="navbar-toggler sidebar-toggler">
+          <span class="toggler">
+            <span class="navbar-toggler__box">
+              <span class="navbar-toggler__inner"></span>
+            </span>
+            <span>Menu</span>
+          </span>
+        </button>
+        <div class="main-menu__nav">
+          <ul class="navbar-nav">
+            <li class="nav-item pl-16">
+              <div class="dropdown">
+                <a id="menu-item-0" href="#" role="button" data-toggle="dropdown" aria-haspopup="true"
+                  aria-expanded="false" class="nav-link dropdown-toggle text-mini-bold-uppercase">News</a>
+                <div aria-labelledby="menu-item-3" class="dropdown-menu">
+                  <a href="/news/guidelines" class="dropdown-item">Guidelines</a>
+                  <a href="/news/in-the-journals" class="dropdown-item">In the Journals</a>
+                  <a href="/news/features" class="dropdown-item">Features</a>
+                  <a href="/news/from-asco" class="dropdown-item">From ASCO</a>
+                </div>
+              </div>
+            </li>
+            <li class="nav-item pl-16">
+              <a id="menu-item-1" href="/commentary" tabindex=""
+                class="nav-link text-mini-bold-uppercase">Commentaries</a>
+            </li>
+            <li class="nav-item pl-16">
+              <div class="dropdown">
+                <a id="menu-item-2" href="#" role="button" data-toggle="dropdown" aria-haspopup="true"
+                  aria-expanded="false" class="nav-link dropdown-toggle text-mini-bold-uppercase">Meetings</a>
+                <div aria-labelledby="menu-item-2" class="dropdown-menu">
+                  <a class="dropdown-item" href="/meetings/asco-annual-meeting">ASCO Annual Meeting</a>
+                  <a class="dropdown-item" href="/meetings/gastrointestinal-cancers-symposium">ASCO Gastrointestinal
+                    Cancers Symposium</a>
+                  <a class="dropdown-item" href="/meetings/genitourinary-cancers-symposium">ASCO Genitourinary Cancers
+                    Symposium</a>
+                  <a class="dropdown-item" href="/meetings/quality-care-symposium">ASCO Quality Care Symposium</a>
+                  <a class="dropdown-item" href="/meetings/asco-breakthrough">ASCO Breakthrough</a>
+                  <a class="dropdown-item" href="/meetings/archive">Archive</a>
+                </div>
+              </div>
+            </li>
+            <li class="nav-item pl-16">
+              <div class="dropdown">
+                <a id="menu-item-3" href="#" role="button" data-toggle="dropdown" aria-haspopup="true"
+                  aria-expanded="false" class="nav-link dropdown-toggle text-mini-bold-uppercase">Topics</a>
+                <div aria-labelledby="menu-item-3" class="dropdown-menu">
+                  <a class="dropdown-item" href="/topics/breast-cancer">Breast Cancer</a>
+                  <a class="dropdown-item" href="/topics/lung-cancer">Lung Cancer</a>
+                  <a class="dropdown-item" href="/topics/gastrointestinal-cancer">Gastrointestinal Cancers</a>
+                  <a class="dropdown-item" href="/topics/genitourinary-cancer">Genitourinary Cancers</a>
+                  <a class="dropdown-item" href="/topics/immunotherapy">Immunotherapy</a>
+                  <a class="dropdown-item" href="/topics/hematologic-malignancies">Hematologic Malignancies</a>
+                  <a class="dropdown-item" href="/topics">View More</a>
+                </div>
+              </div>
+            </li>
+            <li class="nav-item pl-16">
+              <a id="menu-item-4" href="/podcasts" tabindex="" class="nav-link text-mini-bold-uppercase">Podcasts</a>
+            </li>
+            <!--<li class="nav-item pl-16">
+              <a id="menu-item-4-5" href="/video" tabindex="" class="nav-link text-mini-bold-uppercase">Videos</a>
+            </li>-->
+            <li class="nav-item pl-16">
+              <div class="dropdown">
+                <a id="menu-item-5" href="#" role="button" data-toggle="dropdown" aria-haspopup="true"
+                  aria-expanded="false" class="nav-link dropdown-toggle text-mini-bold-uppercase">About</a>
+                <div aria-labelledby="menu-item-5" class="dropdown-menu">
+                  <a class="dropdown-item" href="/about/asco-daily-news">About ASCO Daily News</a>
+                  <a class="dropdown-item" href="/about/advertise">Advertising</a>
+                  <a class="dropdown-item" href="/author-guidelines">Author Guidelines</a>
+                  <a class="dropdown-item" href="/about/editorial-roster">Editorial Roster</a>
+                  <a class="dropdown-item" href="/submit">Submit to ASCO Daily News</a>
+                  <a class="dropdown-item" href="/contact">Contact Us</a>
+                </div>
+              </div>
+            </li>
+          </ul>
+          <div class="header-right-content d-lg-none d-flex align-items-center align-items-center">
+            
+
+
+
+        
+        <style>
+.login-bar::before {
+  content: url('/pb-assets/images/adn/account-icon-1544132921257.png');
+  padding: 5px 5px 0 0;
+}
+
+.login-bar .dropdown,
+.login-bar .login-btn {
+  color: #088764;
+  font-size: 18px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.login-bar .become-member-btn {
+  display: none;
+}
+</style>
+
+
+
+
+
+
+
+
+
+
+    
+    
+        <div data-widget-def="literatumNavigationLoginBar" data-widget-id="fd03af4b-2a7e-4c3e-b588-90f4ed429033" class="pl-16">
+        
+
+
+
+        
+        
+
+
+
+
+    
+
+
+
+
+
+
+
+
+    
+    
+        
+
+
+
+
+    
+
+
+
+
+
+
+
+<div class="login-bar">
+    <a href="https://signin.asco.org/oauth2/aus1goap5nQ33vo7A297/v1/authorize/?client_id=0oa1lqh0mhJversiO297&amp;response_type=code&amp;scope=openid profile email&amp;state=%2Fdo%2Fprediction-pro-diction-models-incorporating-patient-reported-outcomes-into-predictive&amp;redirect_uri=https%3A%2F%2Fdailynews.ascopubs.org%2Faction%2FssoReturn" class="font-weight-bold login-btn nav-link py-6 text-small-bold" uri="/do/prediction-pro-diction-models-incorporating-patient-reported-outcomes-into-predictive" aria-label="Sign in">
+        Sign in
+    </a>
+    <a href="https://www.asco.org/membership" class="become-member-btn login-btn ml-8 text-small-bold text-white" target="_blank">become a member</a>
+</div>
+
+
+
+
+    
+
+
+
+        </div>
+    
+
+
+            <a href="https://apps.asco.org/EmailPreferences" class="alerts d-flex align-items-center right-content-link ml-16">
+              <span class="icon-component ">
+                <svg aria-hidden="true">
+                  <use xlink:href="/specs/products/asco/releasedAssets/icons/icons.spritemap.svg#social-email"></use>
+                </svg>
+              </span>
+              Alerts
+            </a>
+          </div>
+        </div>
+      </div>
+      <a href="#main-menu" data-toggle="collapse" aria-hidden="true" class="sidebar-toggler"></a>
+      <div id="quick-search"
+        class="quick-search-wrapper quickSearch-collapse collapse ml-0 ml-xl-48 mt-md-16 mt-xl-0 pt-32 pt-lg-0">
+        
+
+
+
+        
+        <div class="quick-search row no-gutters"><div class="quick-search__items col"><div aria-labelledby="#trigger-quick-search-form-d03a5f79-164f-4da6-aec6-da18ed7efbd2-0" id="quick-search-form-d03a5f79-164f-4da6-aec6-da18ed7efbd2-0" data-parent=".quick-search__items" role="tabpanel"><form action="/action/doSearch" name="defaultQuickSearch" method="get" id="quick-search-from-d03a5f79-164f-4da6-aec6-da18ed7efbd20" role="search"><fieldset><legend class="sr-only">Quick Search anywhere</legend><div class="input-group option-0  pb-8 pb-lg-0"><label for="AllFieldd03a5f79-164f-4da6-aec6-da18ed7efbd20" class="sr-only">Enter words / phrases / DOI / ISBN / keywords / authors / etc</label><input type="search" id="AllFieldd03a5f79-164f-4da6-aec6-da18ed7efbd20" name="AllField" autocomplete="off" placeholder="Enter words / phrases / DOI / ISBN / keywords / authors / etc" data-auto-complete-max-words="7" data-auto-complete-max-chars="32" data-contributors-conf="3" data-topics-conf="3" data-publication-titles-conf="3" data-history-items-conf="3" value="" data-id="" data-value="" class="quick-search__input form-control autocomplete"/><div class="input-group-append"><button type="submit" title="Search" class="quick-search__btn font-weight-bold btn p-0"><span class="icon-component "><svg aria-hidden="true" style=""><use xlink:href="/specs/products/asco/releasedAssets/icons/icons-ca21b3d91491a5938c8d8abb5c27e783.spritemap.svg#search"></use></svg></span><span class="sr-only">Search</span><span>Search</span></button></div></div></fieldset></form></div></div><div class="quick-search__links"><div class="pb-dropzone" data-pb-dropzone="advancedSearch" title="advancedSearch"></div></div></div>
+
+      </div>
+    </div>
+  </nav>
+</header>
+
+                    
+                        
+
+
+
+        
+        <div class="digital-objects">
+
+
+
+        
+        <div></div>
+
+
+
+
+
+
+
+
+
+
+    
+    
+        <div data-widget-def="ux3-layout-widget" data-widget-id="center" class="daily-news my-32" id="main">
+        
+
+
+
+        
+        <div class="container-fluid"><div class="row"><main class="content col-lg-9">
+
+
+
+
+
+
+
+
+
+    
+    
+        <div data-widget-def="literatumDigitalObjectContent" data-widget-id="76fef85c-fd29-4c9a-a90d-dc1e15eecfb4" class="full-text podcast-page">
+        
+
+
+
+        
+        
+
+
+
+
+
+
+    
+    
+    
+        
+    <article class="container">
+        
+
+        
+    
+        <h1 class="article-title">From Prediction to PRO-Diction Models: Incorporating Patient-Reported Outcomes Into Predictive Oncology
+        </h1>
+    
+
+
+        <div class="deck"></div>
+        <div class="epub_section mb-12">
+	
+		<span class="epub_section__date">
+			September 24, 2025
+		</span>
+	
+
+        </div>
+        <div class="article-details">
+            
+	
+		<div class="author-section">
+			
+				<span>
+                <p>Jordan S. Goldstein, MD, MS, and Ash A. Alizadeh, MD, PhD</p>
+              </span>
+			
+		</div>
+	
+
+        </div>
+
+
+
+        
+        <style>
+.meta-panel__share {
+    clear: both;
+    margin-top:.5em;
+}
+    .meta-panel__share .a2a a {
+    color: inherit;
+    display: flex;
+    font-size: 24px;
+    font-size: 1.5rem;
+    line-height: 1;
+    margin: 0 0.75rem 0 0;
+    text-decoration: none!important;
+    color:rgb(117, 117, 117);
+    transition: .1s;
+}
+
+.meta-panel__share .a2a a:hover {
+    color: black
+}
+
+.meta-panel__share .a2a a::after {
+    display:none;
+}
+
+.section-bottom-border {
+    border-bottom: 4px solid #088965;
+    margin: 40px auto;
+}
+</style>
+
+
+
+
+
+
+
+
+
+
+    
+    
+        <div data-widget-def="UX3share" data-widget-id="b356ebe2-e338-4105-b4af-cff2db97f8ad" class="meta-panel__share">
+        
+
+
+
+        
+        <!-- Go to https://www.addtoany.com/buttons/customize/ to customize your tools --><script type="text/javascript" defer="defer" src="https://static.addtoany.com/menu/page.js" nonce="98a6e186792ddafc-EWR"></script><div class="share share--short"><span class="sr-only">Share on</span><ul class="d-flex list-unstyled a2a a2a_kit a2a_default_style mb-0 a2a_kit_size_16 flex-wrap"><li class="a2a_listitem_custom"><a role="link" title="x" class="share__link a2a_button_x"><span class="icon-component " style="height: 28px; width: 28px"><svg aria-hidden="true" style="height: 28px; width: 28px"><use xlink:href="/specs/products/asco/releasedAssets/icons/icons-ca21b3d91491a5938c8d8abb5c27e783.spritemap.svg#social-x"></use></svg></span></a></li><li class="a2a_listitem_custom"><a role="link" title="linkedin" class="share__link a2a_button_linkedin"><span class="icon-component " style="height: 28px; width: 28px"><svg aria-hidden="true" style="height: 28px; width: 28px"><use xlink:href="/specs/products/asco/releasedAssets/icons/icons-ca21b3d91491a5938c8d8abb5c27e783.spritemap.svg#social-linkedin"></use></svg></span></a></li><li class="a2a_listitem_custom"><a role="link" title="facebook" class="share__link a2a_button_facebook"><span class="icon-component " style="height: 28px; width: 28px"><svg aria-hidden="true" style="height: 28px; width: 28px"><use xlink:href="/specs/products/asco/releasedAssets/icons/icons-ca21b3d91491a5938c8d8abb5c27e783.spritemap.svg#social-facebook"></use></svg></span></a></li><li class="a2a_listitem_custom"><a role="link" title="wechat" class="share__link a2a_button_wechat"><span class="icon-component " style="height: 28px; width: 28px"><svg aria-hidden="true" style="height: 28px; width: 28px"><use xlink:href="/specs/products/asco/releasedAssets/icons/icons-ca21b3d91491a5938c8d8abb5c27e783.spritemap.svg#wechat"></use></svg></span></a></li><li class="a2a_listitem_custom"><a role="link" title="email" class="share__link a2a_button_email"><span class="icon-component " style="height: 28px; width: 28px"><svg aria-hidden="true" style="height: 28px; width: 28px"><use xlink:href="/specs/products/asco/releasedAssets/icons/icons-ca21b3d91491a5938c8d8abb5c27e783.spritemap.svg#social-email"></use></svg></span></a></li><li class="a2a_listitem_custom"><a role="link" title="bluesky" class="share__link a2a_button_bluesky"><span class="icon-component " style="height: 28px; width: 28px"><svg aria-hidden="true" style="height: 28px; width: 28px"><use xlink:href="/specs/products/asco/releasedAssets/icons/icons-ca21b3d91491a5938c8d8abb5c27e783.spritemap.svg#social-bluesky"></use></svg></span></a></li></ul></div>
+
+        </div>
+    
+
+<div class="article__body">
+    
+        
+     
+<div class="node-content"> 
+ <figure class="daily-news-image">
+  <img class="adn-img" src="/cms/asset/a6b37efc-f151-44dd-b236-0d3e2e044f0f/media/goldstein_jordan_570px.jpg" alt="Professional headshot of Dr. Jordan Goldstein "> 
+  <figcaption>
+   Dr. Jordan Goldstein
+  </figcaption> 
+ </figure> 
+ <p><b>Key Points:</b></p> 
+ <ul class="bullet"> 
+  <li>Integrating patient-reported outcomes (PROs) into machine learning (ML) risk models can enhance and humanize personalized oncology predictions by capturing patient symptoms, quality of life (QOL), and physical function.</li> 
+  <li>Standardizing PRO collection, integrating electronic health records (EHRs), and adhering to established guidelines for PROs and artificial intelligence (AI) are methods to overcome current clinical and administrative challenges and ensure robust, generalizable risk prediction models.</li> 
+  <li>Thoughtful incorporation of PROs into dynamic risk models can bridge data-driven insights and patient-centered care to improve clinical and regulatory decision-making.</li> 
+ </ul> 
+ <p><b>Question:</b> Where do you see the role of or potential for integrating PROs into ML models—for example, for predicting mortality risk or risk of relapse? Are there any standardized guidelines for their integration?</p> 
+ <p><b>Answer:</b> Prediction drives cancer treatment decisions. The emergence of digital medicine and AI is transforming predictive oncology, a burgeoning field that uses sophisticated models to personalize care.<sup>1</sup> Historically, prognostic models in oncology relied on limited clinical or molecular parameters. ML methods enhance risk prediction models by incorporating large-scale multiomic, radiologic, pathologic, or EHR data.<sup>2</sup> Although these advances can accelerate precision oncology, current models often exclude the patient experience, limiting truly personalized treatment and prognostication.</p> 
+ <figure class="daily-news-image">
+  <img class="adn-img" src="/cms/asset/c04eb50f-a0cf-48ef-aff1-f924f7df47ae/media/alizadeh_ash_300px.jpg" alt="Professional headshot of Dr. Ash Alizadeh"> 
+  <figcaption>
+   Dr. Ash Alizadeh
+  </figcaption> 
+ </figure> 
+ <p>Herein lie the pros of PROs, which directly capture symptoms or QOL metrics from the patient without clinician interpretation and are increasingly incorporated in clinical trials and regulatory decision-making.<sup>3</sup> When collected with validated instruments, PROs provide clinically valuable information—disease-related symptoms, adverse drug events, or physical and cognitive function—that may not otherwise be captured by clinicians or conventional efficacy and safety measures.<sup>4</sup> Integrating PROs into routine cancer care improves QOL and survival outcomes by enhancing symptom management and disease recognition.<sup>5,6</sup> Furthermore, PRO measures themselves predict disease recurrence and survival.</p> 
+ <p>ML risk prediction models and PROs are new tools in oncology with limited overlap thus far in spite of their potential (Table).<sup>7-15</sup> By incorporating data on cancer-related symptoms, QOL, and mental and physical function, PROs improve short-term mortality prediction, which oncologists often overestimate.<sup>7,9,16</sup> Improved mortality prediction can increase palliative care use and promote goal-concordant end-of-life care. However, end-of-life risk models currently use various PRO measurement tools, complicating their implementation (Table).<sup>7-15</sup> Beyond short-term mortality, PROs in ML models also predict disease recurrence, treatment toxicities, postoperative complications, and care utilization (Table).<sup>7-15</sup> ML models can also forecast PROs themselves, such as symptoms or QOL trajectories.<sup>15</sup></p> 
+ <figure class="daily-news-figure">
+  <b>Table.</b> Comparison of Studies Incorporating PROs Into ML Models 
+  <img class="adn-img" src="/cms/asset/a28c114c-ccf4-4a17-b1ab-7eeb2f602a76/media/dn25_cc_alizadeh_table_thumbnail.png" alt="Table. Comparison of Studies Incorporating PROs Into ML Models"> 
+  <figcaption>
+   <b>Abbreviations:</b> DT, decision tree; ESAS, Edmonton Symptom Assessment Scale; FACT-O, Functional Assessment of Cancer Therapy–Ovarian; GBM, gradient boosting machine; kNN, k-means nearest neighbor; LR, logistic regression; MCS, Mental Component Score; MDASI, MD Anderson Symptom Inventory; ML, machine learning; NN, neural network; PCS, Physical Component Score; PGHD, patient-generated health data; PRO, patient-reported outcome; PRO-CTCAE, Patient-Reported Outcomes version of the Common Terminology Criteria for Adverse Events; PROMIS, Patient-Reported Outcome Measurement Information System; RF, random forest; SVM, support vector machine; XGBM, extreme gradient boosting machine.
+  </figcaption> 
+  <figcaption>
+   <a href="/cms/asset/4353f1fa-5af0-4ac7-9276-d24a5c264210/dn25_cc_alizadeh_table.png" target="_blank" rel="noopener">View larger</a>.
+  </figcaption> 
+ </figure> 
+ <p>Electronic PROs (ePROs) enable efficient, real-time capture of patient experiences, facilitating timely communication with physicians and incorporation into ML models. Emerging AI technologies, particularly large language models, may allow PRO extraction from unstructured clinical texts. Dynamic risk models that combine pretreatment clinical features with pathologic, radiologic, or molecular response to forecast treatment response, prognosis, and mortality promise a new era of predictive oncology (Figure).<sup>17</sup> Integrating ePROs allows more precise dynamic outcome predictions and the forecasting of toxicity and QOL over time, enabling patient-centered decision-making.<sup>18</sup></p> 
+ <figure class="daily-news-figure">
+  <b>Figure.</b> Potential Incorporation of ePROs Into a Dynamic ML Risk Prediction Model and Keys to Standardization 
+  <img class="adn-img" src="/cms/asset/33f8b637-1add-4fd2-9cc1-e71ea4559c10/media/dn25_cc_alizadeh_fig_thumbnail.png" alt="Figure. Potential Incorporation of ePROs Into a Dynamic ML Risk Prediction Model and Keys to Standardization"> 
+  <figcaption>
+   <b>Abbreviations:</b> ctDNA, circulating tumor DNA; ePRO, electronic patient-reported outcomes; ML, machine learning; MRD, minimal residual disease; QOL, quality of life.
+  </figcaption> 
+  <figcaption>
+   <a href="/cms/asset/21c0867c-f4c4-44dc-bea9-a80d3713535a/dn25_cc_alizadeh_fig.png" target="_blank" rel="noopener">View larger</a>.
+  </figcaption> 
+ </figure> 
+ <p>Cancer-specific ML models that incorporate PROs may offer the most useful predictions and interventions. For certain hematologic cancers, such as myeloproliferative neoplasms or indolent lymphomas, in which oncologists prioritize treatments that improve QOL, ML models that forecast PROs may be well-suited. Many solid tumors present disease-specific symptoms based on initial or metastatic cancer sites, which accurately predict disease recurrence.</p> 
+ <p>To implement PROs in ML models, several challenges must be addressed. Despite years of evidence showing PROs benefit cancer symptom control, treatment success, and survival, EHRs often do not routinely collect these data. This limits their practical use in risk models and hinders the development of data-intensive ML methods. Fragmented data collection and inconsistent PRO instruments prevent data harmonization and generalizability of ML models.</p> 
+ <p>Standardization is key to unlocking the potential of PROs in dynamic ML models. Clinicians should routinely collect ePROs in oncologic care and integrate them seamlessly into the EHR to garner large data sets. PRO data collection must be standardized for each clinical context. Researchers should study and use validated PRO measures to ensure consistency and comparability. Standardized approaches are needed for data harmonization and handling of missing data, which can occur because of systematic reasons or patient illness. ML methods must handle longitudinal PRO data and be explainable to drive clinician uptake and implement relative values for shared decision-making. Finally, researchers should design high-quality PRO and ML studies by following guidelines, such as SPIRIT-PRO and SPIRIT-AI, to clearly define research questions and interventions.<sup>19,20</sup> External validation on independent, prospective data sets will determine generalizability.</p> 
+ <p>PROs and risk prediction models are synergistic tools poised to transform personalized oncology care. Leveraging PROs in dynamic prediction frameworks can improve decision-making by humanizing AI and supporting multiple stakeholders. Standardizing PRO collection, integrating EHRs, and designing robust, transparent studies are essential for successful implementation. Prioritizing model interpretability and clearly communicating rationale will foster clinician trust, patient engagement, and regulatory acceptance. Thoughtfully integrating PROs into predictive oncology bridges the gap between data-driven insights and patient-centered care.</p> 
+ <div class="adn-references"> 
+  <h2>References:</h2> 
+  <ol class="adn-reference-list"> 
+   <li>Singhal A, Zhao X, Wall P, et al. The hallmarks of predictive oncology. <a href="https://doi.org/10.1158/2159-8290.CD-24-0760" target="_blank" rel="noopener"><i>Cancer Discov</i></a>. 2025;15(2):271-285.</li> 
+   <li>Jee J, Fong C, Pichotta K, et al; MSK Cancer Data Science Initiative Group. Automated real-world data integration improves cancer outcome prediction. <a href="C:%5C%5CUsers%5C%5Cecoba%5C%5CDownloads%5C%5CDN25_CC_Alizadeh%5C%5CDN25_CC_Alizadeh%5C%5C. https:%5C%5Cdoi.org%5C%5C10.1038%5C%5Cs41586-024-08167-5" target="_blank" rel="noopener"><i>Nature</i></a>. 2024;636(8043):728-736.</li> 
+   <li>U.S. Department of Health and Human Services. <i>Core Patient-Reported Outcomes in Cancer Clinical Trials</i>. U.S. Department of Health and Human Services; 2024.</li> 
+   <li>Fromme EK, Eilers KM, Mori M, Hsieh YC, Beer TM. How accurate is clinician reporting of chemotherapy adverse effects? A comparison with patient-reported symptoms from the Quality-of-Life Questionnaire C30. <a href="https://doi.org/10.1200/JCO.2004.03.025" target="_blank" rel="noopener"><i>J Clin Oncol</i></a>. 2004;22(17):3485-3490.</li> 
+   <li>Basch E, Deal AM, Kris MG, et al. Symptom monitoring with patient-reported outcomes during routine cancer treatment: a randomized controlled trial. <a href="https://doi.org/10.1200/JCO.2015.63.0830" target="_blank" rel="noopener"><i>J Clin Oncol</i></a>. 2016;34(6):557-565.</li> 
+   <li>Basch E, Deal AM, Dueck AC, et al. Overall survival results of a trial assessing patient-reported outcomes for symptom monitoring during routine cancer treatment. <a href="https://doi.org/10.1001/jama.2017.7156" target="_blank" rel="noopener"><i>JAMA</i></a>. 2017;318(2):197-198.</li> 
+   <li>Parikh RB, Hasler JS, Zhang Y, et al. Development of machine learning algorithms incorporating electronic health record data, patient-reported outcomes, or both to predict mortality for outpatients with cancer. <a href="https://doi.org/10.1200/CCI.22.00073" target="_blank" rel="noopener"><i>JCO Clin Cancer Inform</i></a>. 2022;6(6):e2200073.</li> 
+   <li>Sidey-Gibbons CJ, Sun C, Schneider A, et al. Predicting 180-day mortality for women with ovarian cancer using machine learning and patient-reported outcome data. <a href="https://doi.org/10.1038/s41598-022-22614-1" target="_blank" rel="noopener"><i>Sci Rep</i></a>. 2022;12:21269.</li> 
+   <li>Xu C, Subbiah IM, Lu SC, Pfob A, Sidey-Gibbons C. Machine learning models for 180-day mortality prediction of patients with advanced cancer using patient-reported symptom data. <a href="https://doi.org/10.1007/s11136-022-03284-y" target="_blank" rel="noopener"><i>Qual Life Res</i></a>. 2023;32(3):713-727.</li> 
+   <li>Seow H, Tanuseputro P, Barbera L, et al. Development and validation of a prognostic survival model with patient-reported outcomes for patients with cancer. <a href="https://doi.org/10.1001/jamanetworkopen.2020.1768" target="_blank" rel="noopener"><i>JAMA Netw Open</i></a>. 2020;3(4):e201768.</li> 
+   <li>Rossi LA, Melstrom LG, Fong Y, Sun V. Predicting post-discharge cancer surgery complications via telemonitoring of patient-reported outcomes and patient-generated health data. <a href="https://doi.org/10.1002/jso.26413" target="_blank" rel="noopener"><i>J Surg Oncol</i></a>. 2021;123(5):1345-1352.</li> 
+   <li>Yao CMKL, Hueniken K, Huang SH, et al. Development of a patient reported outcomes based machine learning model to predict recurrences in head and neck cancer. <a href="https://doi.org/10.1016/j.oraloncology.2025.107304" target="_blank" rel="noopener"><i>Oral Oncol</i></a>. 2025;165:107304.</li> 
+   <li>Iivanainen S, Ekstrom J, Virtanen H, Kataja VV, Koivunen JP. Electronic patient-reported outcomes and machine learning in predicting immune-related adverse events of immune checkpoint inhibitor therapies. <a href="https://doi.org/10.1186/s12911-021-01564-0" target="_blank" rel="noopener"><i>BMC Med Inform Decis Mak</i></a>. 2021;21:205.</li> 
+   <li>Peterson DJ, Ostberg NP, Blayney DW, et al. Machine learning applied to electronic health records: identification of chemotherapy patients at high risk for preventable emergency department visits and hospital admissions. <a href="https://doi.org/10.1200/cci.21.00116" target="_blank" rel="noopener"><i>JCO Clin Cancer Inform</i></a>. 2021;5:1106-1126.</li> 
+   <li>Lian R, Hsiao V, Hwang J, et al. Predicting health-related quality of life change using natural language processing in thyroid cancer. <a href="https://doi.org/10.1016/j.ibmed.2023.100097" target="_blank" rel="noopener">Intell Based Med</a>. 2023;7:100097.</li> 
+   <li>Glare P, Virik K, Jones M, et al. A systematic review of physicians’ survival predictions in terminally ill cancer patients. <a href="https://doi.org/10.1136/bmj.327.7408.195" target="_blank" rel="noopener"><i>BMJ</i></a>. 2003;327(7408):195-198.</li> 
+   <li>Kurtz DM, Esfahani MS, Scherer F, et al. Dynamic risk profiling using serial tumor biomarkers for personalized outcome prediction. <a href="https://doi.org/10.1016/j.cell.2019.06.011" target="_blank" rel="noopener"><i>Cell</i></a>. 2019;178(3):699-713.e19.</li> 
+   <li>Thanarajasingam G, Leonard JP, Witzig TE, et al. Longitudinal toxicity over time (ToxT) analysis to evaluate tolerability: a case study of lenalidomide in the CALGB 50401 (Alliance) trial. <a href="https://doi.org/10.1016/S2352-3026(20)30067-3" target="_blank" rel="noopener"><i>Lancet Haematol</i></a>. 2020;7(6):e490-e497.</li> 
+   <li>Calvert M, King M, Mercieca-Bebber R, et al. SPIRIT-PRO Extension explanation and elaboration: guidelines for inclusion of patient-reported outcomes in protocols of clinical trials. <a href="https://doi.org/10.1136/bmjopen-2020-045105" target="_blank" rel="noopener"><i>BMJ Open</i></a>. 2021;11(6):e045105.</li> 
+   <li>Cruz Rivera S, Liu X, Chan AW, et al; SPIRIT-AI and CONSORT-AI Working Group; SPIRIT-AI and CONSORT-AI Steering Group; SPIRIT-AI and CONSORT-AI Consensus Group. Guidelines for clinical trial protocols for interventions involving artificial intelligence: the SPIRIT-AI extension. <a href="https://doi.org/10.1038/s41591-020-1037-7" target="_blank" rel="noopener"><i>Nat Med</i></a>. 2020;26(9):1351-1363.</li> 
+  </ol> 
+ </div> 
+</div>
+
+            
+                <div id="disclosure-section">
+                    <h2>Disclosures of Potential Conflicts of Interest</h2>
+                    
+                        <span>
+                <p><b>Dr. Jordan S. Goldstein</b></p> 
+<p>Consulting or Advisory Role: AstraZeneca</p> 
+<p><b>Dr. Ash A. Alizadeh</b></p> 
+<p>Leadership: Lymphoma Research Foundation</p> 
+<p>Stock or Other Ownership Interests: CiberMed, CAPP Medical, Foresight Diagnostics, CARGO Therapeutics</p> 
+<p>Honoraria: Roche, Janssen Oncology</p> 
+<p>Consulting or Advisory Role: Celgene, Roche/Genentech, Gilead Sciences, Cibermed, Foresight Diagnostics</p> 
+<p>Patents, Royalties, Other Intellectual Property: Patent filings on ctDNA detection, assigned to Stanford University</p> 
+<p>Travel, Accommodations, Expenses: Roche, Gilead Sciences</p>
+              </span>
+                    
+                </div>
+            
+            
+                <div id="bio-section">
+                    <h2>Author Bios</h2>
+                    
+                        <span>
+                <p><b>Dr. Jordan S. Goldstein</b> is a medical oncologist at Stanford University.</p>
+                <p><b>Dr. Ash A. Alizadeh</b> is the Moghadam Family Professor of Medicine, Oncology, and Hematology (by courtesy) at Stanford University and leader of the cancer genomics program at Stanford Cancer Institute.</p>
+              </span>
+                    
+                </div>
+            
+        </div>
+    </article>
+
+
+    
+
+
+<div class="digitalObjectDropzone" data-pb-dropzone="digitalObjectDropzone">
+    <pb2:renderDropzone widget="Widget type: literatumDigitalObjectContent, #76fef85c-fd29-4c9a-a90d-dc1e15eecfb4" dropzone="digitalObjectDropzone"/>
+</div>
+
+
+        </div>
+    
+
+</main><div class="d-flex flex-column align-items-center col-lg-3">
+
+
+
+
+
+
+
+
+
+    
+    
+        <div data-widget-def="UX3HTMLWidget" data-widget-id="65bb6d97-1b83-4fe5-b5f5-8be5ab816011" class="ad-wrapper mb-32">
+        
+
+
+
+        
+        <div id='sidebar-box' style='height:250px; width:300px;'>
+    <script nonce="98a6e186792ddafc-EWR">
+        googletag.cmd.push(function() { googletag.display('sidebar-box'); });
+    </script>
+</div>
+
+        </div>
+    
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+        <div data-widget-def="UX3HTMLWidget" data-widget-id="0692f3ad-4321-43d0-8f82-8d2219006621" class="ad-wrapper mb-32">
+        
+
+
+
+        
+        <!-- /30017927/asco/asco.box.mid -->
+<!-- enable for 300x250 Mid-->
+<div id='sidebar-box-mid' style='height:250px;width:300px'>
+    <script nonce="98a6e186792ddafc-EWR">
+        googletag.cmd.push(function() { googletag.display('sidebar-box-mid'); });
+    </script>
+</div>
+
+<style>
+p#careerWidgetHead {
+    border-bottom: 3px solid #00457c;
+    margin: 0;
+    padding: 5px 0px;
+    text-align: center;
+    margin-top:15px;
+}
+
+p#careerWidgetHead img {
+    width: 100%;
+    height: auto;
+    max-width: 275px;
+    padding-top: 5px;
+}
+</style>
+<!--<p id="careerWidgetHead"><img src="https://ascopubs.org/pb-assets/images/ASC_CareerCenter_RGB.png" alt="ASCO Career Center" /></p>
+<iframe src="https://careercenter.asco.org/widget/bootstrap/job/#i=1" id="mdgxWidgetiFrame" style="width: 100%;max-width:300px; border: 0; height: 400px; background: 0;border-bottom: 3px solid #00457c;" title="Job Listings"></iframe>-->
+
+        </div>
+    
+
+
+
+
+
+        
+        <style>
+    p#careerWidgetHead {
+        border-bottom: 3px solid #00457c;
+        margin: 0;
+        padding: 5px 0px;
+        text-align: center;
+        margin-top: 15px;
+        max-width: 300px;
+    }
+
+    p#careerWidgetHead img {
+        width: 100%;
+        height: auto;
+        max-width: 275px;
+        padding-top: 5px;
+    }
+</style>
+<div class="d-none d-md-block mb-32">
+    <p id="careerWidgetHead"><img src="https://ascopubs.org/pb-assets/images/ASC_CareerCenter_RGB.png"
+            alt="ASCO Career Center" loading="lazy" /></p>
+    <iframe src="https://careercenter.asco.org/widget/bootstrap/job/#i=2" title="ASCO Career Center | Jobs List"
+        id="mdgxWidgetiFrame" loading="lazy"
+        style="width: 100%; border: 0; height: 400px; background: 0; border-bottom: 3px solid #00457c;"></iframe>
+</div>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v84a3a4012de94ce1a686ba8c167c359c1696973893317"
+    integrity="sha512-euoFGowhlaLqXsPWQ48qSkBSCFs3DPRyiwVu3FjR96cMPx+Fr+gpWRhIafcHwqwCqWS42RZhIudOvEI+Ckf6MA=="
+    data-cf-beacon='{"rayId":"824dc6393d3c32ae","version":"2023.10.0","token":"3bb0add5452d43a2b5d4b3d6c628944c"}'
+    crossorigin="anonymous" nonce="98a6e186792ddafc-EWR"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v84a3a4012de94ce1a686ba8c167c359c1696973893317"
+    integrity="sha512-euoFGowhlaLqXsPWQ48qSkBSCFs3DPRyiwVu3FjR96cMPx+Fr+gpWRhIafcHwqwCqWS42RZhIudOvEI+Ckf6MA=="
+    data-cf-beacon='{"rayId":"83c9094f0d1e967f","version":"2023.10.0","token":"3bb0add5452d43a2b5d4b3d6c628944c"}'
+    crossorigin="anonymous" nonce="98a6e186792ddafc-EWR"></script>
+
+
+
+
+        
+        <div class="ad-wrapper justify-content-center mb-32">
+	<div id='sidebar-box-bottom' style='height:250px; width:300px;'>
+		<script nonce="98a6e186792ddafc-EWR">
+			googletag.cmd.push(function() { googletag.display('sidebar-box-bottom'); });
+		</script>
+	</div>
+</div>
+</div></div></div>
+
+        </div>
+    
+
+
+
+
+
+        
+        <footer class="footer daily-news-footer" style="background-color:#f4f4f4;">
+  <section class="footer__top py-8" style="position: relative;">
+    <div data-show-after="400" class="back-to-top back-to-top--align-right ">
+      <button data-snap="footer__top" class="back-to-top__action position-relative p-0 m-0 border-0 d-flex flex-column align-items-center justify-content-center">
+        <svg viewBox="0 0 36 36" class="position-relative">
+          <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" class="back-to-top__action__ring-bg"></path>
+          <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="0, 100" class="back-to-top__action__ring"></path>
+        </svg>
+        <span class="back-to-top__action-icon position-absolute d-flex">
+          <span class="icon-component ">
+            <svg aria-hidden="true">
+              <use xlink:href="/specs/products/asco/releasedAssets/icons/icons.spritemap.svg#arrows-up"></use>
+            </svg>
+          </span>
+        </span>
+        <span class="sr-only">Back to top</span>
+      </button>
+    </div>
+  </section>
+  <section class="footer__middle py-20">
+    <div class="container-fluid pb-8">
+      <div class="row justify-content-center">
+        <div class="col-12 col-sm-6 col-lg-3 my-6 my-xs-0">
+          <a data-toggle="collapse" href="#footer-menu-1" role="button" aria-expanded="false" aria-controls="footer-menu-1" class="dropdown-toggle font-weight-bold">Journals</a>
+          <ul id="footer-menu-1" class="list-unstyled collapse">
+            <li>
+              <a href="https://ascopubs.org/journal/jco" class="dropdown-item p-0">Journal of Clinical Oncology</a>
+            </li>
+            <li>
+              <a href="https://ascopubs.org/journal/op" class="dropdown-item p-0">JCO Oncology Practice</a>
+            </li>
+            <li>
+              <a href="https://ascopubs.org/journal/jgo" class="dropdown-item p-0">JCO Global Oncology</a>
+            </li>
+            <li>
+              <a href="https://ascopubs.org/journal/cci" class="dropdown-item p-0">JCO Clinical Cancer Informatics</a>
+            </li>
+            <li>
+              <a href="https://ascopubs.org/journal/po" class="dropdown-item p-0">JCO Precision Oncology</a>
+            </li>
+            <li>
+              <a href="https://ascopubs.org/journal/oa" class="dropdown-item p-0">JCO Oncology Advances</a>
+            </li>
+          </ul>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3 my-6 my-xs-0">
+          <a data-toggle="collapse" href="#footer-menu-2" role="button" aria-expanded="false" aria-controls="footer-menu-2" class="dropdown-toggle font-weight-bold">Publications</a>
+          <ul id="footer-menu-2" class="list-unstyled collapse">
+            <li>
+              <a href="https://ascopubs.org/journal/edbk" class="dropdown-item p-0">ASCO Educational Book</a>
+            </li>
+            <li>
+              <a href="/" class="dropdown-item p-0">ASCO Daily News</a>
+            </li>
+            <li>
+              <a href="https://connection.asco.org/" class="dropdown-item p-0">ASCO Connection</a>
+            </li>
+            <li>
+              <a href="https://ascopost.com/" class="dropdown-item p-0">The ASCO Post</a>
+            </li>
+          </ul>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3 my-6 my-xs-0">
+          <a data-toggle="collapse" href="#footer-menu-3" role="button" aria-expanded="false" aria-controls="footer-menu-3" class="dropdown-toggle font-weight-bold">Education</a>
+          <ul id="footer-menu-3" class="list-unstyled collapse">
+            <li>
+              <a href="https://education.asco.org/homepage" class="dropdown-item p-0" target="_blank">ASCO Meetings</a>
+            </li>
+            <!--<li>
+                <a href="https://cancer.net" class="dropdown-item p-0" target="_blank">Cancer.Net</a>
+            </li>-->
+          </ul>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3 my-6 my-xs-0">
+          <a data-toggle="collapse" href="#footer-menu-4" role="button" aria-expanded="false" aria-controls="footer-menu-4" class="dropdown-toggle font-weight-bold"> Other Sites</a>
+          <ul id="footer-menu-4" class="list-unstyled collapse">
+            <li>
+              <a href="https://www.asco.org/" class="dropdown-item p-0">ASCO.org</a>
+            </li>
+            <li>
+              <a href="https://asco.editage.com/" class="dropdown-item p-0">ASCO Author Services</a>
+            </li>
+            <li>
+              <a href="https://careercenter.asco.org/" class="dropdown-item p-0">ASCO Career Center</a>
+            </li>
+            <li>
+              <a href="http://www.conquer.org/" class="dropdown-item p-0">Conquer Cancer Foundation</a>
+            </li>
+            <li>
+              <a href="https://www.tapur.org/" class="dropdown-item p-0">TAPUR Study</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="footer__bottom py-20">
+    <div class="container-fluid">
+      <div class="row align-items-start">
+        <div class="col-sm-6 col-12">
+          <div class="d-flex flex-column align-items-start"> 
+            <img src="/specs/products/asco/releasedAssets/images/footer_logo-63ba91872004120fc8d7ea385170937c.svg" class="footer__logo" alt="American Society of Clinical Oncology: Knowledge Conquers Cancer"/>
+            <div class="footer__copyright text-left mt-12" style="color: #707070;">
+              <a href="http://www.asco.org/">American Society of Clinical Oncology</a>
+              <p class="m-0">2318 Mill Road, Suite 800, Alexandria, VA 22314</p>
+              <p class="m-0">© 2024 American Society of Clinical Oncology</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-12">
+          <div class="footer__social-media__wrapper d-flex justify-content-sm-end mt-16 mt-sm-0">
+            <div class="footer__social-media mb-20">
+              <ul role="list" class="list-inline footer__social-media__list">
+                <li role="listitem" class="list-inline-item footer__social-media__list-item mr-20">
+                  <a href="https://www.facebook.com/ASCOCancer" title="Facebook" class="d-block">
+                    <span class="icon-component ">
+                      <svg aria-hidden="true">
+                        <use xlink:href="/specs/products/asco/releasedAssets/icons/icons.spritemap.svg#social-facebook"></use>
+                      </svg>
+                    </span>
+                  </a>
+                </li>
+                <li role="listitem" class="list-inline-item footer__social-media__list-item mr-20">
+                  <a href="https://twitter.com/ASCO" title="Twitter" class="d-block">
+                    <span class="icon-component ">
+                      <svg aria-hidden="true">
+                        <use xlink:href="/specs/products/asco/releasedAssets/icons/icons.spritemap.svg#social-x"></use>
+                      </svg>
+                    </span>
+                  </a>
+                </li>
+                <li role="listitem" class="list-inline-item footer__social-media__list-item mr-20">
+                  <a href="http://www.linkedin.com/groups?home=&amp;gid=93067&amp;trk=anet_ug_hm" title="Linkedin" class="d-block">
+                    <span class="icon-component ">
+                      <svg aria-hidden="true">
+                        <use xlink:href="/specs/products/asco/releasedAssets/icons/icons.spritemap.svg#social-linkedin"></use>
+                      </svg>
+                    </span>
+                  </a>
+                </li>
+                <li role="listitem" class="list-inline-item footer__social-media__list-item m-0 mr-20">
+                  <a href="https://www.youtube.com/user/ASCOcancer" title="Youtube" class="d-block">
+                    <span class="icon-component ">
+                      <svg aria-hidden="true">
+                        <use xlink:href="/specs/products/asco/releasedAssets/icons/icons.spritemap.svg#social-youtube"></use>
+                      </svg>
+                    </span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <ul role="list" class="list-inline footer__copyright__links d-flex justify-content-sm-end">
+            <li role="listitem" class="list-inline-item">
+              <a href="https://www.asco.org/about-asco/legal/terms-use" title="Terms of Use">Terms of Use</a>
+            </li>
+            <li role="listitem" class="list-inline-item">
+              <a href="https://www.asco.org/about-asco/legal/privacy-policy" title="Privacy Policy">Privacy Policy</a>
+            </li>
+            <li role="listitem" class="list-inline-item">
+                <!-- OneTrust Cookies Settings button start -->
+                <a id="optanon-cookie-link" href="javascript:Optanon.ToggleInfoDisplay();">Cookies</a>
+                <!-- OneTrust Cookies Settings button end -->
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</footer>
+
+
+
+
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js" integrity="sha512-0bEtK0USNd96MnO4XhH8jhv3nyRF0eK87pJke6pkYf3cM0uDIhNJy9ltuzqgypoIFXw3JSuiy04tVk4AjpZdZw==" crossorigin="anonymous" nonce="98a6e186792ddafc-EWR"></script>
+
+<script nonce="98a6e186792ddafc-EWR">
+    //pls don't judge this mess of code i'm coming back to clean it up
+$(document).ready(function(){
+  if ($('#bio-section:not(:has(span))').length > 0) {
+   $("#bio-btn").remove();
+ }
+  if ($('#disclosure-section:not(:has(span))').length > 0) {
+   $("#coi-btn").remove();
+ }
+});
+
+$(document).ready(function(){
+  $('#bio-section').hide();
+  $('#disclosure-section').hide();
+});
+$('#bio-btn').click(function(){
+  $('#bio-section').toggle('slow');
+  $('#coi-btn').removeClass('active');
+  $(this).toggleClass("active");
+  $('#disclosure-section').hide('slow');
+});
+
+$('#coi-btn').click(function(){
+  $('#disclosure-section').toggle('slow');
+  $('#bio-btn').removeClass('active');
+  $(this).toggleClass("active");
+  $('#bio-section').hide('slow');
+ });
+</script>
+</div>
+
+                    
+                        
+
+
+
+        
+        <!-- meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1, user-scalable=no" -->
+<!-- link rel="stylesheet" type="text/css" href="/pb-assets/css/asco-styles-1678384193463.css" -->
+<link rel="stylesheet" href="/pb-assets/css/dailynews-global-1744825539267.css" type="text/css" />
+<!-- link rel="stylesheet" type="text/css" href="/pb-assets/css/asco_responsive-1584458699533.css" -->
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+                    
+                        
+
+
+
+        
+        <script type="text/javascript" nonce="98a6e186792ddafc-EWR">_satellite.pageBottom();</script>
+
+                    
+                        
+
+
+
+        
+        <script async class="optanon-category-4" type="text/plain" src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-5bf466e82cdf511d" nonce="98a6e186792ddafc-EWR"></script>
+<script type="text/javascript" nonce="98a6e186792ddafc-EWR"> var addthis_config = { services_exclude: 'researchgate' } </script>
+
+                    
+                        
+
+
+
+        
+        <style>
+/*display leaderboard position on mobile*/
+    .ad-wrapper {display: block}
+</style>
+
+<!-- AMC Ad Code -->
+    <script async class='optanon-category-4' type='text/plain' src="https://securepubads.g.doubleclick.net/tag/js/gpt.js" nonce="98a6e186792ddafc-EWR"></script>
+
+    <script nonce="98a6e186792ddafc-EWR">
+        var googletag = googletag || {};
+        googletag.cmd = googletag.cmd || [];
+
+        googletag.cmd.push(function () {
+	    // responsive ad size mapping
+            var towerMapping = googletag
+                .sizeMapping()
+                .addSize([1300, 0], [160, 600]) 
+                .addSize([0, 0], [])
+                .build();
+
+            var leaderMapping = googletag
+                .sizeMapping()
+                .addSize([1300, 0], []) 
+                .addSize([730, 0], [728,90]) // add the 728x90 size for any screen larger than 1300 px
+                .addSize([0, 0], [320,50])
+                .build();
+
+	    var url = window.location.href;
+            // if its ED Book or Daily News site, remove leaderboard restriction. 
+	    if ( url.indexOf("dailynews.ascopubs.org") > -1 || url.indexOf("ascopubs.org/journal/edbk") > -1 ) {
+            	googletag.defineSlot('/30017927/asco/asco.leaderboard', [[728, 90],[320, 50]], 'top-leaderboard').addService(googletag.pubads()); // remove viewport restriction for leaderboard
+
+            } else {
+	        googletag.defineSlot('/30017927/asco/asco.leaderboard', [[728, 90],[320, 50]], 'top-leaderboard').defineSizeMapping(leaderMapping).addService(googletag.pubads());
+	    }
+
+            googletag.defineSlot('/30017927/asco/asco.skyscraper', [160, 600], 'sidebar-tower').defineSizeMapping(towerMapping).addService(googletag.pubads());
+
+
+            // Enable for 300x250 Ad unit.
+            googletag.defineSlot('/30017927/asco/asco.box', [300, 250], 'sidebar-box').addService(googletag.pubads()); //top 300x250
+            googletag.defineSlot('/30017927/asco/asco.box.mid', [300, 250], 'sidebar-box-mid').addService(googletag.pubads()); //mid 300x250
+            googletag.defineSlot('/30017927/asco/asco.box.bottom', [300, 250], 'sidebar-box-bottom').addService(googletag.pubads()); //bottom 300x250 (160x150 replacement)
+
+
+            // lazy loading ads
+            // ads will only render when they are in view
+            googletag.pubads().enableLazyLoad({
+                fetchMarginPercent: 0,
+                renderMarginPercent: 0,
+                mobileScaling: 0.0
+            });
+
+            // for debugging lazy load
+            googletag.pubads().addEventListener('slotRequested', function (event) {
+                updateSlotStatus(event.slot.getSlotElementId(), 'fetched');
+            });
+            googletag.pubads().addEventListener('slotOnload', function (event) {
+                updateSlotStatus(event.slot.getSlotElementId(), 'rendered');
+            });
+            // end debugging
+
+            /**
+             * Custom Targeting
+             * Key(s) will be set in DFP.
+             * Values can be dynamic or predefined in DFP
+             *
+             * Predefined key values. These values needs to be passed dynamically to setTargeting option depending on the zone/section.
+             * gi_microsite
+             * gu_microsite
+             * am_microsite
+             * boa_microsite
+             * qc_microsite
+             *
+             * Example: googletag.pubads().setTargeting('asco_zone',['gi_microsite']);
+             * Example for multiple values: googletag.pubads().setTargeting('asco_zone',['gi_microsite', 'breast_cancer']);
+             */
+
+	        // set targeting
+            googletag.pubads().setTargeting('asco_zone', ['daily_news']); 
+
+            // for future use
+            //googletag.pubads().setTargeting(['keywords'], ['keyword_value']); // keyword
+            //googletag.pubads().setTargeting(['search_term'], ['search_term_value']); // search term
+
+            // collapse divs if there are no ads
+            googletag.pubads().collapseEmptyDivs();
+
+            // enable ad service
+            googletag.enableServices();
+        });
+
+        // can be removed after confirming lazy load function
+        console.log("Lazy load render check.");
+	    // Fetched: Ad is fetched but not displaying. No impressions until rendered.
+        // Rendered: Ad is displaying and impression is registered.
+
+        function updateSlotStatus(slotId, state) {
+            console.log(slotId + " - " + state);
+        }
+
+    </script>
+
+                    
+                        
+
+
+
+        
+        <script nonce="98a6e186792ddafc-EWR">
+    //pls don't judge this mess of code i'm coming back to clean it up
+$(document).ready(function(){
+  if ($('#bio-section:not(:has(span))').length > 0) {
+   $("#bio-btn").remove();
+ }
+  if ($('#disclosure-section:not(:has(span))').length > 0) {
+   $("#coi-btn").remove();
+ }
+});
+
+$(document).ready(function(){
+  $('#bio-section').hide();
+  $('#disclosure-section').hide();
+});
+$('#bio-btn').click(function(){
+  $('#bio-section').toggle('slow');
+  $('#coi-btn').removeClass('active');
+  $(this).toggleClass("active");
+  $('#disclosure-section').hide('slow');
+});
+
+$('#coi-btn').click(function(){
+  $('#disclosure-section').toggle('slow');
+  $('#bio-btn').removeClass('active');
+  $(this).toggleClass("active");
+  $('#bio-section').hide('slow');
+ });
+</script>
+
+                    
+                
+            </div>
+        </div>
+                
+        
+
+            <script src="/products/asco/releasedAssets/js/build.lazyload.bundle-a40ac6211861c5dd4d08.js" nonce="98a6e186792ddafc-EWR"></script>
+
+        <script src="/products/asco/releasedAssets/js/main.bundle-fa3fdc579a60fa323d19.js"  nonce="98a6e186792ddafc-EWR"></script>
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <script type="text/javascript" nonce="98a6e186792ddafc-EWR">
+        $(document).ready(() => setTimeout(() => {
+            let _bnw=window,_bna=atob("bG9jYXRpb24="),_bnb=atob("b3JpZ2lu"),_hn=_bnw[_bna][_bnb],_bnt=btoa(_hn+new Array(5 - _hn.length % 4).join(" "));
+            $.get("/resource/lodash?t="+_bnt);
+        },4000));
+    </script>
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+    
+    
+
+    
+    
+    
+    
+        
+            
+            
+            
+                
+            
+        
+    
+
+
+    
+
+
+            <script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"98a6e186792ddafc","serverTiming":{"name":{"cfExtPri":true,"cfEdge":true,"cfOrigin":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}},"version":"2025.9.1","token":"3c3925b8c0464e759e46f4c81973faa3"}' crossorigin="anonymous"></script>
+</body>
+        
+        
+    
+
+</html>
