@@ -89,6 +89,29 @@ The AppleScript searches the Inbox for the newest message whose subject begins w
   PY
   ```
 
+## Summary Generation
+- `Summarizer/summarizer.py` calls Ollama with the `granite4:tiny-h` model and returns structured bullet summaries.
+- Ensure Ollama is installed locally and the model is pulled (`ollama pull granite4:tiny-h`).
+- Example invocation using the same sample article blocks (runner stubbed here for reproducible output):
+  ```bash
+  python3 - <<'PY'
+  from pathlib import Path
+  from content_cleaner import extract_content
+  from summarizer import summarize_article
+
+  html = Path('Summarizer/Samples/articles/pro-diction-models.html').read_text(encoding='utf-8')
+  article = {
+      "title": "From Prediction to PRO-Diction Models",
+      "url": "https://example.com/article",
+      "content": extract_content(html),
+  }
+  summary = summarize_article(article, runner=lambda prompt, cfg: "- Bullet one
+- Bullet two
+- Bullet three")
+  print(summary)
+  PY
+  ```
+
 ## Testing
 - `python3 -m pytest Summarizer/tests` validates link extraction, metadata, and fetcher behaviour via stubs against the committed fixtures.
 
