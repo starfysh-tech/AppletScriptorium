@@ -44,7 +44,7 @@ Maintain the following checklist; update status and supporting docs after you co
 
 - [x] **0. Scaffolding & Bootstrap** – Confirmed agent structure, added `Summarizer/requirements.txt`, and shipped `fetch-alert-source.applescript` plus README notes so the latest Mail alert source can be captured locally.
 - [x] **1. Ground Truth Fixtures** – Regenerated the 09:12 alert fixtures (`google-alert-patient-reported-outcome-2025-10-06.*`), captured the decoded HTML plus link TSV via `refresh-fixtures.py`, and updated docs so contributors can rebuild and diff the baseline.
-- [ ] **2. Robust Link Extraction** – Refactor `clean-alert.py` into a callable module that reads `.eml` or `.html`, decodes quoted-printable sections, and unwraps Google redirect URLs. Add unit tests verifying the exact link list for the sample alert. Document invocation examples.
+- [x] **2. Robust Link Extraction** – Introduced `link_extractor.py` with `.eml`/`.html` support, unwrapped Google redirects, wired the CLI via `clean-alert.py`, and added pytest coverage against the 09:12 fixtures.
 - [ ] **3. Metadata & Deduping Layer** – Extend extraction to capture publisher/snippet data and deduplicate repeating stories. Emit structured JSON artifacts and validate against fixtures. Note schema in docs.
 - [ ] **4. Article Fetching Adapter** – Introduce a fetch module with retries, caching, and a stubbed mode for tests so CI can run offline. Provide smoke tests with mocked responses. Mention any new dependencies.
 - [ ] **5. Content Extraction & Cleanup** – Apply readability/boilerplate stripping to produce stable plain text for summarization; snapshot-test against stored article HTML. Document assumptions in README/PRD.

@@ -38,14 +38,21 @@ Future agents (Mailer, Orchestrator, etc.) will live alongside `Summarizer/`. Sh
    ```bash
    Summarizer/refresh-fixtures.py
    ```
-5. When the parser changes, rebuild a scratch link list and diff against the fixture:
+5. Inspect the parsed output on the command line:
+   ```bash
+   python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06.eml | head
+   ```
+6. When the parser changes, rebuild a scratch link list and diff against the fixture:
    ```bash
    Summarizer/refresh-fixtures.py --links /tmp/alert-links.tsv --html /tmp/alert.html
    diff -u Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06-links.tsv /tmp/alert-links.tsv
    ```
-6. Refer to `Summarizer/PRO Alert Summarizer PRD.md` for the staged roadmap (fixtures → link extraction → fetcher → summarizer → digest).
+7. Refer to `Summarizer/PRO Alert Summarizer PRD.md` for the staged roadmap (fixtures → link extraction → fetcher → summarizer → digest).
 
 The AppleScript searches the Inbox for the newest message whose subject begins with `Google Alert -` and contains `Patient reported outcome`. Update the `subject_prefix` and `topic_keyword` variables in `Summarizer/fetch-alert-source.applescript` if your alerts land in a different format or mailbox.
+
+## Testing
+- `python3 -m pytest Summarizer/tests` validates link extraction against the committed fixtures.
 
 ## Development Expectations
 - Keep fixtures sanitized; never commit production emails or secrets.
