@@ -82,6 +82,7 @@ Maintain the following checklist; update status and supporting docs after you co
 * Automated regression (using stored fixtures + mocks) passes before deploy.
 
 #### Future Extensions
+* Some publishers (ASCO Daily News, ASH, Wiley, UroToday) currently return HTTP 403; plan a fetcher enhancement (browser fallback or cached fixture) to recover those links.
 * Headless browser fallback for JS-heavy sites.
 * Persistent storage (database, Sheets) for summaries.
 * Multi-topic support via configuration.

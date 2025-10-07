@@ -92,6 +92,7 @@ The AppleScript searches the Inbox for the newest message whose subject begins w
 ## Summary Generation
 - `Summarizer/summarizer.py` calls Ollama with the `granite4:tiny-h` model and returns structured bullet summaries.
 - Ensure Ollama is installed locally and the model is pulled (`ollama pull granite4:tiny-h`).
+- Some publishers (ASCO Daily News, ASH, Wiley, UroToday) currently return HTTP 403 via Cloudflare; future enhancement: add site-specific adapters or a headless fetch fallback.
 - Example invocation using the same sample article blocks (runner stubbed here for reproducible output):
   ```bash
   python3 - <<'PY'
