@@ -5,14 +5,15 @@ from typing import Any
 
 import pytest
 
-from content_cleaner import extract_content
-from summarizer import SummarizerConfig, SummarizerError, summarize_article
+from Summarizer.content_cleaner import extract_content
+from Summarizer.summarizer import SummarizerConfig, SummarizerError, summarize_article
 
 
 @pytest.fixture(scope="module")
 def sample_article() -> dict[str, Any]:
     html = Path('Summarizer/Samples/articles/pro-diction-models.html').read_text(encoding='utf-8')
     content = extract_content(html)
+    assert isinstance(content, str)
     return {
         "title": "From Prediction to PRO-Diction Models",
         "url": "https://example.com/article",
@@ -24,6 +25,7 @@ def test_summarizer_uses_runner(sample_article):
     def fake_runner(prompt: str, cfg: SummarizerConfig) -> str:
         assert cfg.model == "granite4:tiny-h"
         assert "Title:" in prompt
+        assert "Machine-learning risk models" in prompt
         return "- Bullet one\n- Bullet two\n- Bullet three"
 
     result = summarize_article(sample_article, runner=fake_runner)

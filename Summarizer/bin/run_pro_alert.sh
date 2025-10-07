@@ -10,9 +10,16 @@ mkdir -p "$OUTPUT_DIR"
 LOG_FILE="$OUTPUT_DIR/workflow.log"
 
 ARGS=(--output-dir "$OUTPUT_DIR")
-[[ -n "${PRO_ALERT_STUB_MANIFEST:-}" ]] && ARGS+=(--stub-manifest "$PRO_ALERT_STUB_MANIFEST")
 [[ -n "${PRO_ALERT_MODEL:-}" ]] && ARGS+=(--model "$PRO_ALERT_MODEL")
 [[ -n "${PRO_ALERT_MAX_ARTICLES:-}" ]] && ARGS+=(--max-articles "$PRO_ALERT_MAX_ARTICLES")
+if [[ -n "${PRO_ALERT_DIGEST_EMAIL:-}" ]]; then
+  IFS=',' read -r -a __digest_recipients <<< "${PRO_ALERT_DIGEST_EMAIL}"
+  for recipient in "${__digest_recipients[@]}"; do
+    trimmed="$(echo "$recipient" | xargs)"
+    [[ -n "$trimmed" ]] && ARGS+=(--email-digest "$trimmed")
+  done
+  unset __digest_recipients
+fi
 
 {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting run with args: ${ARGS[*]}"

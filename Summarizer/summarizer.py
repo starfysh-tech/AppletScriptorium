@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import subprocess
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, List
+from typing import Any, Callable, List
 
 
 class SummarizerError(RuntimeError):
@@ -47,26 +47,26 @@ def summarize_article(article: ArticleDict, *, config: SummarizerConfig | None =
 
 
 def _build_prompt(article: ArticleDict) -> str:
-    blocks: Iterable[dict[str, Any]] = article.get("content", [])
-    text_fragments: List[str] = []
-    for block in blocks:
-        block_type = block.get("type")
-        if block_type == "heading":
-            text_fragments.append(f"Heading: {block.get('text', '')}")
-        elif block_type == "paragraph":
-            text_fragments.append(block.get("text", ""))
-        elif block_type == "list":
-            items = block.get("items") or []
-            for item in items:
-                text_fragments.append(f"List item: {item}")
+    content = article.get("content", "")
+    if isinstance(content, list):  # backward compatibility
+        fragments: List[str] = []
+        for block in content:
+            text = block.get("text") or ""
+            if text:
+                fragments.append(text)
+            items = block.get("items") if isinstance(block, dict) else None
+            if items:
+                fragments.extend(str(item) for item in items if item)
+        content_text = "\n".join(fragments)
+    else:
+        content_text = str(content)
 
-    context = "\n".join(fragment for fragment in text_fragments if fragment)
     title = article.get("title", "")
     instructions = (
         "Write 3 concise bullet summaries capturing the most important clinical or operational insights from the article. "
         "Each bullet should stand alone, avoid repetition, and focus on practical takeaways."
     )
-    return f"Title: {title}\n\nArticle content:\n{context}\n\n{instructions}"
+    return f"Title: {title}\n\nArticle content:\n{content_text}\n\n{instructions}"
 
 
 def _run_with_ollama(prompt: str, cfg: SummarizerConfig) -> str:

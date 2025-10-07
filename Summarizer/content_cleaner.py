@@ -1,96 +1,42 @@
-"""Extract structured article content from HTML."""
+"""Convert article HTML into Markdown-friendly plaintext."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import List
+from typing import Iterable
 
-from bs4 import BeautifulSoup, NavigableString, Tag
+from bs4 import BeautifulSoup
+from markdownify import markdownify as md
 
 try:
     from readability import Document  # type: ignore
-except ImportError:  # pragma: no cover - fallback handled in code
+except ImportError:  # pragma: no cover - readability optional
     Document = None  # type: ignore
 
 
-@dataclass(frozen=True)
-class ContentBlock:
-    type: str
-    text: str | None = None
-    level: int | None = None
-    items: List[str] | None = None
-    ordered: bool | None = None
-
-    def to_dict(self) -> dict[str, object]:
-        data: dict[str, object] = {"type": self.type}
-        if self.text is not None:
-            data["text"] = self.text
-        if self.level is not None:
-            data["level"] = self.level
-        if self.items is not None:
-            data["items"] = self.items
-        if self.ordered is not None:
-            data["ordered"] = self.ordered
-        return data
+_STRIP_TAGS: Iterable[str] = ("script", "style", "nav", "footer", "header")
 
 
-def extract_content(html: str) -> List[dict[str, object]]:
-    """Return structured content blocks extracted from *html*."""
+def extract_content(html: str) -> str:
+    """Return a cleaned Markdown string for the article body."""
     main_html = html
     if Document is not None:
         try:
             main_html = Document(html).summary(html_partial=True)
-        except Exception:  # pragma: no cover - readability edge
+        except Exception:  # pragma: no cover - readability edge cases
             main_html = html
 
     soup = BeautifulSoup(main_html, "html.parser")
-    article = soup.find("article") or soup.body or soup
-    blocks: List[ContentBlock] = []
+    for tag_name in _STRIP_TAGS:
+        for node in soup.find_all(tag_name):
+            node.decompose()
 
-    for block in _iter_blocks(article):
-        if block:
-            blocks.append(block)
-
-    return [block.to_dict() for block in blocks]
-
-
-def _iter_blocks(node: Tag) -> List[ContentBlock]:
-    blocks: List[ContentBlock] = []
-    for child in node.children:
-        if isinstance(child, NavigableString):
-            continue
-        if not isinstance(child, Tag):
-            continue
-        if child.name in {"script", "style", "noscript", "nav", "footer", "header"}:
-            continue
-
-        if child.name and child.name.startswith("h") and len(child.name) == 2 and child.name[1].isdigit():
-            text = _clean(child.get_text(" ", strip=True))
-            if text:
-                level = int(child.name[1])
-                blocks.append(ContentBlock(type="heading", text=text, level=level))
-            continue
-
-        if child.name == "p":
-            text = _clean(child.get_text(" ", strip=True))
-            if text:
-                blocks.append(ContentBlock(type="paragraph", text=text))
-            continue
-
-        if child.name in {"ul", "ol"}:
-            items = [_clean(li.get_text(" ", strip=True)) for li in child.find_all("li", recursive=False)]
-            items = [item for item in items if item]
-            if items:
-                blocks.append(ContentBlock(type="list", items=items, ordered=child.name == "ol"))
-            continue
-
-        # Recurse into other container elements (e.g., div, section)
-        blocks.extend(_iter_blocks(child))
-
-    return blocks
+    markdown = md(
+        str(soup),
+        strip=_STRIP_TAGS,
+        heading_style="ATX",
+    )
+    lines = [line.rstrip() for line in markdown.splitlines()]
+    filtered = [line for line in lines if line.strip()]
+    return "\n".join(filtered)
 
 
-def _clean(text: str) -> str:
-    return " ".join(text.split())
-
-
-__all__ = ["extract_content", "ContentBlock"]
+__all__ = ["extract_content"]

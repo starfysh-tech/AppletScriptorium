@@ -46,15 +46,15 @@ Maintain the following checklist; update status and supporting docs after you co
 - [x] **1. Ground Truth Fixtures** – Regenerated the 09:12 alert fixtures (`google-alert-patient-reported-outcome-2025-10-06.*`), captured the decoded HTML plus link TSV via `refresh-fixtures.py`, and updated docs so contributors can rebuild and diff the baseline.
 - [x] **2. Robust Link Extraction** – Introduced `link_extractor.py` with `.eml`/`.html` support, unwrapped Google redirects, wired the CLI via `clean-alert.py`, and added pytest coverage against the 09:12 fixtures.
 - [x] **3. Metadata & Deduping Layer** – Extraction now captures publisher/snippet metadata, dedupes by canonical URL, emits TSV+JSON fixtures, and documentation outlines the schema and validation flow.
-- [x] **4. Article Fetching Adapter** – Shipped `article_fetcher.py` with httpx-based retries, in-memory cache, JSON stub manifest support, and pytest coverage with mocked transports; requirements now list httpx.
-- [x] **5. Content Extraction & Cleanup** – Added `content_cleaner.py` with readability-backed parsing (falling back gracefully), produces JSON content blocks, and tests cover the sample article fixture; README documents usage.
-- [x] **6. Summary Generation Pipeline** – Introduced `summarizer.py` with an Ollama-backed runner (granite4:tiny-h), pluggable stubs for tests, JSON bullet output, and documentation covering setup/usage.
+- [x] **4. Article Fetching Adapter** – Shipped `article_fetcher.py` with httpx-based retries, in-memory cache, and pytest coverage with mocked transports; requirements now list httpx.
+- [x] **5. Content Extraction & Cleanup** – Added `content_cleaner.py` with readability-backed parsing (falling back gracefully), now producing cleaned Markdown text; README documents usage.
+- [x] **6. Summary Generation Pipeline** – Introduced `summarizer.py` with an Ollama-backed runner (granite4:tiny-h), JSON bullet output, and documentation covering setup/usage.
 - [x] **7. Digest Assembly** – `digest_renderer.py` now emits HTML + plaintext digests, with tests and sample outputs; ready to feed downstream mailers.
 - [x] **8. Automation & CLI Wrapper** – Added `Summarizer/cli.py` with `python3 -m Summarizer.cli run --output-dir …`, integrates the full pipeline with logging and README coverage.
 - [x] **9. Deployment & Scheduling Prep** – Added cron-ready `Summarizer/bin/run_pro_alert.sh`, notification hooks, and deployment guidance in README/PRD.
 
 #### Dependencies & Environment
-* macOS with Apple Mail (scriptable), Python 3.11+, BeautifulSoup, readability library, HTTP client (requests/httpx).
+* macOS with Apple Mail (scriptable) configured with a sending account, Python 3.11+, BeautifulSoup, readability library, HTTP client (requests/httpx).
 * LLM access (e.g., OpenAI API) via environment-configured keys.
 * Optional: local cache directory for fetched HTML, `.env` for secrets. Prefer lightweight local files over external services unless absolutely required.
 
@@ -82,8 +82,8 @@ Maintain the following checklist; update status and supporting docs after you co
 * Automated regression (using stored fixtures + mocks) passes before deploy.
 
 #### Future Extensions
-* Some publishers (ASCO Daily News, ASH, Wiley, UroToday) currently return HTTP 403; plan a fetcher enhancement (browser fallback or cached fixture) to recover those links.
-* Headless browser fallback for JS-heavy sites.
+* Expand headless coverage as new domains appear and capture cookies for lighter follow-up fetches when practical.
+* Harden Playwright fallback with site-specific waits/selectors for JS-heavy layouts.
 * Persistent storage (database, Sheets) for summaries.
 * Multi-topic support via configuration.
 * Integration with scheduler/orchestrator and broader AppletScriptorium agent suite.

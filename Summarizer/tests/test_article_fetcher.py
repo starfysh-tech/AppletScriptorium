@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import httpx
 import pytest
 
-from article_fetcher import FetchConfig, FetchError, clear_cache, fetch_article
+from Summarizer.article_fetcher import FetchConfig, FetchError, clear_cache, fetch_article
 
 
 @pytest.fixture(autouse=True)
@@ -14,17 +11,6 @@ def reset_cache():
     clear_cache()
     yield
     clear_cache()
-
-
-def test_fetch_uses_stub_manifest(tmp_path: Path):
-    stub_html = tmp_path / "example.html"
-    stub_html.write_text("<html>stub-content</html>", encoding="utf-8")
-
-    manifest = tmp_path / "manifest.json"
-    manifest.write_text(json.dumps({"https://example.com": "example.html"}), encoding="utf-8")
-
-    content = fetch_article("https://example.com", FetchConfig(stub_manifest=manifest))
-    assert "stub-content" in content
 
 
 def test_fetch_caches_network_response(monkeypatch: pytest.MonkeyPatch):
@@ -44,7 +30,7 @@ def test_fetch_caches_network_response(monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setattr(httpx, "get", fake_get)
 
-    cfg = FetchConfig(stub_manifest=None)
+    cfg = FetchConfig()
     first = fetch_article("https://cache.example", cfg)
     second = fetch_article("https://cache.example", cfg)
     assert first == second == "<html>ok</html>"
@@ -107,3 +93,73 @@ def test_fetch_logs_status(monkeypatch: pytest.MonkeyPatch):
         fetch_article("https://blocked", FetchConfig(max_retries=0))
 
     assert "HTTP 403" in str(exc.value)
+
+
+def test_fetch_includes_env_headers(monkeypatch: pytest.MonkeyPatch):
+    def fake_get(url: str, timeout: float, follow_redirects: bool, headers):
+        assert headers.get("Cookie") == "session=abc"
+
+        class FakeResponse:
+            status_code = 200
+            text = "<html>ok</html>"
+
+            def raise_for_status(self):
+                return None
+
+        return FakeResponse()
+
+    monkeypatch.setenv("PRO_ALERT_HTTP_HEADERS_JSON", '{"example.com": {"Cookie": "session=abc"}}')
+    monkeypatch.setattr(httpx, "get", fake_get)
+
+    fetch_article("https://example.com/path", FetchConfig(allow_cache=False))
+
+
+def test_fetch_headless_fallback(monkeypatch: pytest.MonkeyPatch):
+    url = "https://dailynews.ascopubs.org/foo"
+
+    request = httpx.Request("GET", url)
+    response = httpx.Response(403, request=request, text="challenge")
+
+    def fake_get(url: str, timeout: float, follow_redirects: bool, headers):
+        raise httpx.HTTPStatusError("blocked", request=request, response=response)
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+
+    called = {}
+
+    def fake_headless(target_url: str, *, timeout: float = 30.0) -> str:
+        called["url"] = target_url
+        called["timeout"] = timeout
+        return "<html>rendered</html>"
+
+    # Inject fake headless helper and domain mapping (to be provided by implementation)
+    monkeypatch.setattr("Summarizer.article_fetcher._fetch_with_playwright", fake_headless, raising=False)
+    monkeypatch.setattr("Summarizer.article_fetcher._HEADLESS_DOMAINS", {"dailynews.ascopubs.org"}, raising=False)
+
+    content = fetch_article(url, FetchConfig(allow_cache=False, max_retries=0))
+    assert content == "<html>rendered</html>"
+    assert called["url"] == url
+    assert called["timeout"] >= 60.0
+
+
+def test_fetch_headless_failure_raises(monkeypatch: pytest.MonkeyPatch):
+    url = "https://dailynews.ascopubs.org/foo"
+
+    request = httpx.Request("GET", url)
+    response = httpx.Response(403, request=request, text="challenge")
+
+    def fake_get(url: str, timeout: float, follow_redirects: bool, headers):
+        raise httpx.HTTPStatusError("blocked", request=request, response=response)
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+
+    def fake_headless(target_url: str, *, timeout: float = 30.0) -> str:
+        raise RuntimeError("playwright unavailable")
+
+    monkeypatch.setattr("Summarizer.article_fetcher._fetch_with_playwright", fake_headless, raising=False)
+    monkeypatch.setattr("Summarizer.article_fetcher._HEADLESS_DOMAINS", {"dailynews.ascopubs.org"}, raising=False)
+
+    with pytest.raises(FetchError) as exc:
+        fetch_article(url, FetchConfig(allow_cache=False, max_retries=0))
+
+    assert "playwright unavailable" in str(exc.value)

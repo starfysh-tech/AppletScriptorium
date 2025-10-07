@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from link_extractor import (
+from Summarizer.link_extractor import (
     DEFAULT_EML,
     DEFAULT_HTML,
     DEFAULT_LINKS_JSON,

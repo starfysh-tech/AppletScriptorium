@@ -3,14 +3,15 @@ from __future__ import annotations
 
 import html
 from datetime import datetime
-from typing import Iterable
+from typing import Iterable, Sequence
 
 SUMMARY_COUNT = 3
 
 
-def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | None = None) -> str:
+def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None) -> str:
     generated_at = generated_at or datetime.now()
     article_blocks = []
+    missing = missing or []
 
     for article in articles:
         title = html.escape(article.get("title", ""))
@@ -34,6 +35,21 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
             f"</article>"
         )
 
+    missing_block = ""
+    if missing:
+        items = "\n".join(
+            f"    <li><a href=\"{html.escape(item.get('url', ''))}\">{html.escape(item.get('url', ''))}</a> — {html.escape(item.get('reason', ''))}</li>"
+            for item in missing
+        )
+        missing_block = (
+            "<section class=\"missing\">\n"
+            "  <h2>Missing articles</h2>\n"
+            "  <ul>\n"
+            f"{items}\n"
+            "  </ul>\n"
+            "</section>"
+        )
+
     inner = "\n".join(article_blocks)
     return (
         "<!DOCTYPE html>\n"
@@ -53,13 +69,15 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
         "<body>\n"
         f"<header><h1>PRO Alert Digest</h1><p>{generated_at:%B %d, %Y}</p></header>\n"
         f"{inner}\n"
+        f"{missing_block}\n"
         "</body>\n"
         "</html>\n"
     )
 
 
-def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | None = None) -> str:
+def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None) -> str:
     generated_at = generated_at or datetime.now()
+    missing = missing or []
     lines = [f"PRO Alert Digest — {generated_at:%B %d, %Y}", ""]
     for article in articles:
         title = article.get("title", "")
@@ -76,6 +94,16 @@ def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | Non
             text = block.get("text", "")
             if text:
                 lines.append(f"    - {text}")
+        lines.append("")
+    if missing:
+        lines.append("Missing articles")
+        for item in missing:
+            url = item.get("url", "")
+            reason = item.get("reason", "")
+            line = f"- {url}"
+            if reason:
+                line += f" — {reason}"
+            lines.append(line)
         lines.append("")
     return "\n".join(lines).strip() + "\n"
 

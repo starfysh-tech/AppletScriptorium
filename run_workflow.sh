@@ -83,7 +83,7 @@ def slug(value: str) -> str:
     value = re.sub(r"[^a-zA-Z0-9]+", "-", value).strip("-").lower()
     return value or "article"
 
-fetch_cfg = FetchConfig(stub_manifest=None, allow_cache=False)
+fetch_cfg = FetchConfig(allow_cache=False)
 sum_cfg = SummarizerConfig(model="granite4:tiny-h")
 
 results = []
@@ -102,9 +102,11 @@ for idx, meta in enumerate(alert_rows, start=1):
         continue
 
     try:
-        content_blocks = extract_content(html)
-        content_path = articles_dir / f"{slug_name}.content.json"
-        content_path.write_text(json.dumps(content_blocks, indent=2, ensure_ascii=False), encoding="utf-8")
+        content_text = extract_content(html)
+        if not content_text.strip():
+            raise ValueError("no content extracted")
+        content_path = articles_dir / f"{slug_name}.content.md"
+        content_path.write_text(content_text, encoding="utf-8")
     except Exception as exc:
         print(f"[clean][ERROR] {url} -> {exc}")
         continue
@@ -114,7 +116,7 @@ for idx, meta in enumerate(alert_rows, start=1):
         "url": url,
         "publisher": meta["publisher"],
         "snippet": meta["snippet"],
-        "content": content_blocks,
+        "content": content_text,
     }
 
     try:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from content_cleaner import extract_content
+from Summarizer.content_cleaner import extract_content
 
 
 def load_sample(name: str) -> str:
@@ -10,25 +10,18 @@ def load_sample(name: str) -> str:
     return path.read_text(encoding='utf-8')
 
 
-def test_extract_content_basic_structure():
+def test_extract_content_returns_clean_markdown():
     html = load_sample('pro-diction-models.html')
-    blocks = extract_content(html)
+    text = extract_content(html)
 
-    assert blocks[0]["type"] == "heading"
-    assert blocks[0]["text"].startswith("From Prediction to PRO-Diction Models")
-
-    paragraphs = [b for b in blocks if b["type"] == "paragraph"]
-    assert any("Machine-learning risk models" in p["text"] for p in paragraphs)
-
-    lists = [b for b in blocks if b["type"] == "list"]
-    assert len(lists) == 1
-    assert "Start with a narrow cohort" in lists[0]["items"][0]
+    assert "From Prediction to PRO-Diction Models" in text
+    assert "Machine-learning risk models" in text
+    assert "Start with a narrow cohort" in text
 
 
 def test_extract_content_strips_navigation():
     html = load_sample('pro-diction-models.html')
-    blocks = extract_content(html)
-    texts = " ".join(b.get("text", "") for b in blocks if "text" in b)
+    text = extract_content(html)
 
-    assert "Topics" not in texts
-    assert "Podcasts" not in texts
+    assert "Topics" not in text
+    assert "Podcasts" not in text

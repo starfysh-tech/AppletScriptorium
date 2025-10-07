@@ -43,6 +43,8 @@ Optional environment variables (set in `~/.pro-alert-env`):
 - `PRO_ALERT_NOTIFY_ON_SUCCESS=1` — also notify when runs succeed.
 - `PRO_ALERT_OUTPUT_DIR` — override the default output directory.
 - `PRO_ALERT_MODEL`, `PRO_ALERT_STUB_MANIFEST`, `PRO_ALERT_MAX_ARTICLES` — tune behavior.
+- `PRO_ALERT_DIGEST_EMAIL` — comma-separated recipients for the generated digest.
+- `PRO_ALERT_EMAIL_SENDER` — address used to select the Mail.app account for digest delivery.
 
 ## 4. Cron Setup
 
@@ -65,13 +67,13 @@ To rerun for troubleshooting:
 ```bash
 Summarizer/bin/run_pro_alert.sh
 ```
-Or reprocess a captured `.eml`:
+Or replay into a scratch directory (limit article count if needed):
 ```bash
-python3 -m Summarizer.cli run --output-dir runs/manual-replay --stub-manifest Summarizer/Samples/stubs-example.json --max-articles 3
+python3 -m Summarizer.cli run --output-dir runs/manual-replay --max-articles 3
 ```
+- For Cloudflare-guarded links, install Playwright (`python3 -m pip install playwright` then `playwright install`) so the automation can render the challenge pages headlessly.
+- To email the digest automatically, export `PRO_ALERT_DIGEST_EMAIL` (comma-separated) and optionally `PRO_ALERT_EMAIL_SENDER` before running the CLI or wrapper; the plaintext digest is handed to Mail.app via AppleScript.
 
 ## 7. Future Enhancements
 
-- Handle Cloudflare-protected sites (ASCO Daily News, ASH, Wiley, UroToday) via site-specific adapters or headless fetcher fallback.
 - Optional Slack/email integrations for digest delivery.
-

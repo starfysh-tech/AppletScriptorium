@@ -13,9 +13,9 @@ AppletScriptorium is a collection of macOS automation agents orchestrated throug
 .
 ├── AGENTS.md                     # Contributor guidelines & workflow expectations
 ├── Summarizer/                   # PRO Alert Summarizer agent (fixtures + scripts)
-│   ├── article_fetcher.py        # Minimal HTTP fetcher with retries + stubs
+│   ├── article_fetcher.py        # Minimal HTTP fetcher with retries
 │   ├── clean-alert.py            # Link extraction CLI wrapper
-│   ├── content_cleaner.py        # Extracts structured article content
+│   ├── content_cleaner.py        # Converts article HTML into Markdown text
 │   ├── fetch-alert-source.applescript  # Mail helper to pull raw alert source
 │   ├── refresh-fixtures.py       # Helper to rebuild committed samples
 │   ├── requirements.txt          # Python dependencies for the agent
@@ -62,21 +62,16 @@ The AppleScript searches the Inbox for the newest message whose subject begins w
 
 ## Article Fetching
 - Use `Summarizer/article_fetcher.py` in scripts or REPL sessions to retrieve article HTML.
-- Provide a stub manifest when you want deterministic content (map URLs to fixture files):
-  ```bash
-  python3 - <<'PY'
-  from pathlib import Path
-  from article_fetcher import FetchConfig, fetch_article
-
-  manifest = Path('Summarizer/Samples/stubs-example.json')
-  html = fetch_article('https://example.com', FetchConfig(stub_manifest=manifest))
-  print(html[:200])
-  PY
-  ```
+- Provide extra headers (cookies, auth tokens) by exporting `PRO_ALERT_HTTP_HEADERS_JSON`, e.g. `'{"example.com": {"Cookie": "session=abc"}}'`.
 - The fetcher caches responses in-memory for the life of the process; call `article_fetcher.clear_cache()` in tests to reset state.
+- For Cloudflare-guarded publishers (`dailynews.ascopubs.org`, `ashpublications.org`, `obgyn.onlinelibrary.wiley.com`, etc.) install Playwright so the headless fallback can render the page:
+  ```bash
+  python3 -m pip install playwright
+  playwright install
+  ```
 
 ## Content Extraction
-- `Summarizer/content_cleaner.py` exposes `extract_content(html)` which returns JSON-friendly blocks (headings, paragraphs, lists).
+- `Summarizer/content_cleaner.py` exposes `extract_content(html)` which returns Markdown text extracted from the readable portion of the page.
 - Example usage with the sample article fixture:
   ```bash
   python3 - <<'PY'
@@ -84,16 +79,16 @@ The AppleScript searches the Inbox for the newest message whose subject begins w
   from content_cleaner import extract_content
 
   html = Path('Summarizer/Samples/articles/pro-diction-models.html').read_text(encoding='utf-8')
-  blocks = extract_content(html)
-  print(blocks[0])
+  markdown = extract_content(html)
+  print(markdown.splitlines()[0])
   PY
   ```
 
 ## Summary Generation
 - `Summarizer/summarizer.py` calls Ollama with the `granite4:tiny-h` model and returns structured bullet summaries.
 - Ensure Ollama is installed locally and the model is pulled (`ollama pull granite4:tiny-h`).
-- Some publishers (ASCO Daily News, ASH, Wiley, UroToday) currently return HTTP 403 via Cloudflare; future enhancement: add site-specific adapters or a headless fetch fallback.
-- Example invocation using the same sample article blocks (runner stubbed here for reproducible output):
+- The fetcher automatically retries Cloudflare-guarded publishers with a Playwright-powered headless browser when available.
+- Example invocation using the same sample article blocks (ensure Ollama is running locally):
   ```bash
   python3 - <<'PY'
   from pathlib import Path
@@ -106,9 +101,7 @@ The AppleScript searches the Inbox for the newest message whose subject begins w
       "url": "https://example.com/article",
       "content": extract_content(html),
   }
-  summary = summarize_article(article, runner=lambda prompt, cfg: "- Bullet one
-- Bullet two
-- Bullet three")
+  summary = summarize_article(article)
   print(summary)
   PY
   ```
@@ -130,7 +123,7 @@ The AppleScript searches the Inbox for the newest message whose subject begins w
   ```
 
 ## Testing
-- `python3 -m pytest Summarizer/tests` validates link extraction, metadata, and fetcher behaviour via stubs against the committed fixtures.
+- `python3 -m pytest Summarizer/tests` validates link extraction, metadata, fetcher behaviour, and rendering against the committed fixtures.
 
 ## Development Expectations
 - Keep fixtures sanitized; never commit production emails or secrets.
@@ -154,20 +147,32 @@ The project proceeds incrementally:
 See the PRD for detailed acceptance criteria and future extensions (JS rendering fallback, persistent storage, multi-topic support).
 
 ## CLI / Automation
-- `python3 -m Summarizer.cli run --output-dir /path/to/run` runs the full pipeline (fetches latest alert, fetches articles, summarizes, renders digests).
+- `python3 -m Summarizer.cli run --output-dir /path/to/run` runs the full pipeline (fetches latest alert, fetches articles, summarizes, renders digests). This now works without adjusting `PYTHONPATH`.
 - Optional flags:
-  - `--stub-manifest /path/to/manifest.json` for stubbed HTML during testing.
   - `--model MODEL` overrides the Ollama model (default: granite4:tiny-h).
   - `--max-articles N` limits how many stories to process.
+  - `--email-digest ADDRESS` sends the plaintext digest via Mail.app to the given address (repeatable). You can also set `PRO_ALERT_DIGEST_EMAIL` with a comma-separated list to mirror this flag.
+  - `--email-sender ADDRESS` explicitly selects the Mail.app account/address used when sending the digest. You can also set `PRO_ALERT_EMAIL_SENDER` to define a default.
 - Outputs mirror `run_workflow.sh`: raw alert, TSV, article artifacts, HTML/plaintext digests, and `workflow.log`.
+- Digests include a "Missing articles" section summarizing any URLs that failed to fetch or clean.
+- When email delivery is enabled, the CLI drives Mail.app via AppleScript—messages appear in Outgoing/Sent like any manual mail. Provide a sender address (or rely on Mail’s default) that matches a configured account.
+- Headless retries trigger automatically once Playwright is installed; see "Article Fetching" for setup instructions.
 
 ### Scheduling with cron
 1. Set optional environment variables in `~/.pro-alert-env` (sourced by cron):
    - `PRO_ALERT_EMAIL_RECIPIENT` — address to notify on failure (requires `mail`).
    - `PRO_ALERT_NOTIFY_ON_SUCCESS=1` to also notify when runs succeed.
-   - `PRO_ALERT_OUTPUT_DIR`, `PRO_ALERT_MODEL`, `PRO_ALERT_STUB_MANIFEST`, `PRO_ALERT_MAX_ARTICLES` tune destination/behavior.
+   - `PRO_ALERT_OUTPUT_DIR`, `PRO_ALERT_MODEL`, `PRO_ALERT_MAX_ARTICLES` tune destination/behavior.
+   - `PRO_ALERT_DIGEST_EMAIL` — comma-separated recipients for the digest (equivalent to repeating `--email-digest`).
+   - `PRO_ALERT_EMAIL_SENDER` — sender address to select the Mail.app account used for digests.
 2. Add the job (edit with `crontab -e`):
    ```cron
    0 7 * * 1-5 /bin/bash -lc 'source ~/.pro-alert-env; /Users/you/Code/AppletScriptorium/Summarizer/bin/run_pro_alert.sh'
    ```
 3. Logs/digests land under `runs/<timestamp>`, matching the CLI workflow.
+4. To email the digest automatically, add
+   ```bash
+   PRO_ALERT_DIGEST_EMAIL="randall@mqol.com"
+   PRO_ALERT_EMAIL_SENDER="randall@mqol.com"
+   ```
+   to `~/.pro-alert-env`. The wrapper expands these to the CLI flags at runtime.
