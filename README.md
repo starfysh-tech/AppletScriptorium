@@ -113,6 +113,22 @@ The AppleScript searches the Inbox for the newest message whose subject begins w
   PY
   ```
 
+## Digest Assembly
+- `Summarizer/digest_renderer.py` generates both HTML and plaintext digests from the summary payloads.
+- Sample outputs land in `Summarizer/Samples/articles/pro-diction-models.digest.*`.
+- Integration example using the same sample summary:
+  ```bash
+  python3 - <<'PY'
+  from pathlib import Path
+  from digest_renderer import render_digest_html, render_digest_text
+
+  summary = eval(Path('Summarizer/Samples/articles/pro-diction-models.summary.json').read_text())
+  print(render_digest_text([summary]))
+  html = render_digest_html([summary])
+  Path('/tmp/digest.html').write_text(html)
+  PY
+  ```
+
 ## Testing
 - `python3 -m pytest Summarizer/tests` validates link extraction, metadata, and fetcher behaviour via stubs against the committed fixtures.
 

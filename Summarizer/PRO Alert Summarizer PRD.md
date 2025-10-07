@@ -49,7 +49,7 @@ Maintain the following checklist; update status and supporting docs after you co
 - [x] **4. Article Fetching Adapter** – Shipped `article_fetcher.py` with httpx-based retries, in-memory cache, JSON stub manifest support, and pytest coverage with mocked transports; requirements now list httpx.
 - [x] **5. Content Extraction & Cleanup** – Added `content_cleaner.py` with readability-backed parsing (falling back gracefully), produces JSON content blocks, and tests cover the sample article fixture; README documents usage.
 - [x] **6. Summary Generation Pipeline** – Introduced `summarizer.py` with an Ollama-backed runner (granite4:tiny-h), pluggable stubs for tests, JSON bullet output, and documentation covering setup/usage.
-- [ ] **7. Digest Assembly** – Render HTML digest matching newsletter requirements, including clickable titles and bullet copy. Snapshot-test to guard layout. Attach digest example references.
+- [x] **7. Digest Assembly** – `digest_renderer.py` now emits HTML + plaintext digests, with tests and sample outputs; ready to feed downstream mailers.
 - [ ] **8. Automation & CLI Wrapper** – Ship a CLI (`summarizer run path/to/email.eml`) with configuration via `.env`, structured logging, and end-to-end regression using the 09:12 alert fixture. Update README with usage steps.
 - [ ] **9. Deployment & Scheduling Prep** – Package dependencies, define AppleScript hooks, and specify how orchestrator/cron will invoke the CLI. Document monitoring hooks and operational notes.
 
