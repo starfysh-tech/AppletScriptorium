@@ -51,7 +51,7 @@ Maintain the following checklist; update status and supporting docs after you co
 - [x] **6. Summary Generation Pipeline** – Introduced `summarizer.py` with an Ollama-backed runner (granite4:tiny-h), pluggable stubs for tests, JSON bullet output, and documentation covering setup/usage.
 - [x] **7. Digest Assembly** – `digest_renderer.py` now emits HTML + plaintext digests, with tests and sample outputs; ready to feed downstream mailers.
 - [x] **8. Automation & CLI Wrapper** – Added `Summarizer/cli.py` with `python3 -m Summarizer.cli run --output-dir …`, integrates the full pipeline with logging and README coverage.
-- [ ] **9. Deployment & Scheduling Prep** – Package dependencies, define AppleScript hooks, and specify how orchestrator/cron will invoke the CLI. Document monitoring hooks and operational notes.
+- [x] **9. Deployment & Scheduling Prep** – Added cron-ready `Summarizer/bin/run_pro_alert.sh`, notification hooks, and deployment guidance in README/PRD.
 
 #### Dependencies & Environment
 * macOS with Apple Mail (scriptable), Python 3.11+, BeautifulSoup, readability library, HTTP client (requests/httpx).

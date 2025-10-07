@@ -160,3 +160,14 @@ See the PRD for detailed acceptance criteria and future extensions (JS rendering
   - `--model MODEL` overrides the Ollama model (default: granite4:tiny-h).
   - `--max-articles N` limits how many stories to process.
 - Outputs mirror `run_workflow.sh`: raw alert, TSV, article artifacts, HTML/plaintext digests, and `workflow.log`.
+
+### Scheduling with cron
+1. Set optional environment variables in `~/.pro-alert-env` (sourced by cron):
+   - `PRO_ALERT_EMAIL_RECIPIENT` — address to notify on failure (requires `mail`).
+   - `PRO_ALERT_NOTIFY_ON_SUCCESS=1` to also notify when runs succeed.
+   - `PRO_ALERT_OUTPUT_DIR`, `PRO_ALERT_MODEL`, `PRO_ALERT_STUB_MANIFEST`, `PRO_ALERT_MAX_ARTICLES` tune destination/behavior.
+2. Add the job (edit with `crontab -e`):
+   ```cron
+   0 7 * * 1-5 /bin/bash -lc 'source ~/.pro-alert-env; /Users/you/Code/AppletScriptorium/Summarizer/bin/run_pro_alert.sh'
+   ```
+3. Logs/digests land under `runs/<timestamp>`, matching the CLI workflow.
