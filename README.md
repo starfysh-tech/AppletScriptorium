@@ -152,3 +152,11 @@ The project proceeds incrementally:
 9. Prepare deployment hooks for Mail.app rules and scheduling.
 
 See the PRD for detailed acceptance criteria and future extensions (JS rendering fallback, persistent storage, multi-topic support).
+
+## CLI / Automation
+- `python3 -m Summarizer.cli run --output-dir /path/to/run` runs the full pipeline (fetches latest alert, fetches articles, summarizes, renders digests).
+- Optional flags:
+  - `--stub-manifest /path/to/manifest.json` for stubbed HTML during testing.
+  - `--model MODEL` overrides the Ollama model (default: granite4:tiny-h).
+  - `--max-articles N` limits how many stories to process.
+- Outputs mirror `run_workflow.sh`: raw alert, TSV, article artifacts, HTML/plaintext digests, and `workflow.log`.

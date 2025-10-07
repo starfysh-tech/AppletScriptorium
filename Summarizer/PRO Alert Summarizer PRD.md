@@ -50,7 +50,7 @@ Maintain the following checklist; update status and supporting docs after you co
 - [x] **5. Content Extraction & Cleanup** – Added `content_cleaner.py` with readability-backed parsing (falling back gracefully), produces JSON content blocks, and tests cover the sample article fixture; README documents usage.
 - [x] **6. Summary Generation Pipeline** – Introduced `summarizer.py` with an Ollama-backed runner (granite4:tiny-h), pluggable stubs for tests, JSON bullet output, and documentation covering setup/usage.
 - [x] **7. Digest Assembly** – `digest_renderer.py` now emits HTML + plaintext digests, with tests and sample outputs; ready to feed downstream mailers.
-- [ ] **8. Automation & CLI Wrapper** – Ship a CLI (`summarizer run path/to/email.eml`) with configuration via `.env`, structured logging, and end-to-end regression using the 09:12 alert fixture. Update README with usage steps.
+- [x] **8. Automation & CLI Wrapper** – Added `Summarizer/cli.py` with `python3 -m Summarizer.cli run --output-dir …`, integrates the full pipeline with logging and README coverage.
 - [ ] **9. Deployment & Scheduling Prep** – Package dependencies, define AppleScript hooks, and specify how orchestrator/cron will invoke the CLI. Document monitoring hooks and operational notes.
 
 #### Dependencies & Environment
