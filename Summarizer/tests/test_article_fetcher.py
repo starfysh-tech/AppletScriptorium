@@ -30,7 +30,7 @@ def test_fetch_uses_stub_manifest(tmp_path: Path):
 def test_fetch_caches_network_response(monkeypatch: pytest.MonkeyPatch):
     calls = {"count": 0}
 
-    def fake_get(url: str, timeout: float, follow_redirects: bool):
+    def fake_get(url: str, timeout: float, follow_redirects: bool, headers):
         calls["count"] += 1
 
         class FakeResponse:
@@ -55,7 +55,7 @@ def test_fetch_retries_then_succeeds(monkeypatch: pytest.MonkeyPatch):
     request = httpx.Request("GET", "https://retry.example")
     attempts = {"count": 0}
 
-    def fake_get(url: str, timeout: float, follow_redirects: bool):
+    def fake_get(url: str, timeout: float, follow_redirects: bool, headers):
         attempts["count"] += 1
         if attempts["count"] < 3:
             raise httpx.RequestError("boom", request=request)
@@ -79,7 +79,7 @@ def test_fetch_retries_then_succeeds(monkeypatch: pytest.MonkeyPatch):
 def test_fetch_raises_after_exhausting_retries(monkeypatch: pytest.MonkeyPatch):
     request = httpx.Request("GET", "https://fail.example")
 
-    def fake_get(url: str, timeout: float, follow_redirects: bool):
+    def fake_get(url: str, timeout: float, follow_redirects: bool, headers):
         raise httpx.RequestError("fail", request=request)
 
     monkeypatch.setattr(httpx, "get", fake_get)
@@ -88,3 +88,22 @@ def test_fetch_raises_after_exhausting_retries(monkeypatch: pytest.MonkeyPatch):
         fetch_article("https://fail.example", FetchConfig(max_retries=1))
 
     assert "exhausted retries" in str(exc.value)
+
+
+def test_fetch_logs_status(monkeypatch: pytest.MonkeyPatch):
+    class FakeResponse:
+        status_code = 403
+        text = "Forbidden"
+
+        def raise_for_status(self):
+            raise httpx.HTTPStatusError("status", request=httpx.Request("GET", "https://blocked"), response=self)
+
+    def fake_get(url: str, timeout: float, follow_redirects: bool, headers):
+        return FakeResponse()
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+
+    with pytest.raises(FetchError) as exc:
+        fetch_article("https://blocked", FetchConfig(max_retries=0))
+
+    assert "HTTP 403" in str(exc.value)

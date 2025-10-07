@@ -8,6 +8,11 @@ from typing import Dict, Optional
 
 import httpx
 
+_DEFAULT_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+}
+
 _CACHE: Dict[str, str] = {}
 _MANIFEST_CACHE: Dict[Path, Dict[str, str]] = {}
 
@@ -47,20 +52,25 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
             _CACHE[url] = stub_content
         return stub_content
 
-    request = httpx.Request("GET", url)
+    headers = dict(_DEFAULT_HEADERS)
     last_error: Exception | None = None
 
     for attempt in range(cfg.max_retries + 1):
         try:
-            response = httpx.get(url, timeout=cfg.timeout, follow_redirects=True)
+            response = httpx.get(url, timeout=cfg.timeout, follow_redirects=True, headers=headers)
             response.raise_for_status()
             content = response.text
             if cfg.allow_cache:
                 _CACHE[url] = content
             return content
-        except httpx.HTTPError as exc:  # covers request + status errors
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            body = exc.response.text[:200].replace("\n", " ")
+            last_error = FetchError(url, f"HTTP {status}: {body}")
+        except httpx.HTTPError as exc:
             last_error = exc
-    raise FetchError(url, "exhausted retries", cause=last_error)
+
+    raise FetchError(url, f"exhausted retries (last error: {last_error})", cause=last_error)
 
 
 def _maybe_load_from_stub(url: str, manifest_path: Optional[Path]) -> Optional[str]:
