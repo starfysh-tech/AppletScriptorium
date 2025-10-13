@@ -19,8 +19,11 @@ _DEFAULT_HEADERS = {
 _CRAWLEE_MIN_TIMEOUT = 60.0
 _CRAWLEE_DOMAINS = {
     "dailynews.ascopubs.org",
+    "ascopubs.org",
     "www.urotoday.com",
     "ashpublications.org",
+    "www.jacc.org",
+    "www.medrxiv.org",
     "pmc.ncbi.nlm.nih.gov",
     "obgyn.onlinelibrary.wiley.com",
     "www.sciencedirect.com",

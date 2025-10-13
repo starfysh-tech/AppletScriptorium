@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 from dataclasses import dataclass
 from typing import Optional
 
@@ -38,7 +39,11 @@ async def _fetch_html_async(url: str, config: CrawleeFetchConfig) -> str:
         await context.page.wait_for_load_state("networkidle")
         html = await context.page.content()
 
-    await crawler.run([url])
+    try:
+        async with asyncio.timeout(config.timeout):
+            await crawler.run([url])
+    except asyncio.TimeoutError as exc:
+        raise CrawleeFetchError(f"timeout after {config.timeout}s") from exc
 
     if html is None:
         raise CrawleeFetchError("Crawler finished without returning content")
@@ -48,7 +53,8 @@ async def _fetch_html_async(url: str, config: CrawleeFetchConfig) -> str:
 def fetch_with_crawlee_sync(url: str, config: CrawleeFetchConfig) -> str:
     """Synchronously fetch *url* using Crawlee/Playwright and return HTML."""
     try:
-        return asyncio.run(_fetch_html_async(url, config))
+        with _LOOP_GUARD:
+            return _LOOP.run_until_complete(_fetch_html_async(url, config))
     except CrawleeFetchError:
         raise
     except Exception as exc:  # pragma: no cover - unexpected runtime
@@ -56,3 +62,8 @@ def fetch_with_crawlee_sync(url: str, config: CrawleeFetchConfig) -> str:
 
 
 __all__ = ["CrawleeFetchConfig", "CrawleeFetchError", "fetch_with_crawlee_sync"]
+
+
+_LOOP = asyncio.new_event_loop()
+asyncio.set_event_loop(_LOOP)
+_LOOP_GUARD = threading.Lock()
