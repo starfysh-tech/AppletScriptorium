@@ -27,6 +27,12 @@ _CRAWLEE_DOMAINS = {
     "pmc.ncbi.nlm.nih.gov",
     "obgyn.onlinelibrary.wiley.com",
     "www.sciencedirect.com",
+    "www.news10.com",
+}
+
+# Domains that require headed mode (headless=False) due to aggressive bot detection
+_HEADED_DOMAINS = {
+    "www.news10.com",
 }
 
 _CACHE: Dict[str, str] = {}
@@ -86,9 +92,11 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
                 attempted_crawlee = True
                 try:
                     crawlee_timeout = max(cfg.timeout, _CRAWLEE_MIN_TIMEOUT)
+                    # Use headed mode for domains with aggressive bot detection
+                    headless = not _requires_headed_mode(url)
                     content = fetch_with_crawlee_sync(
                         url,
-                        CrawleeFetchConfig(timeout=crawlee_timeout, headless=True, browser_type="chromium"),
+                        CrawleeFetchConfig(timeout=crawlee_timeout, headless=headless, browser_type="chromium"),
                     )
                 except CrawleeFetchError as crawlee_exc:
                     last_error = FetchError(url, f"crawlee fallback failed: {crawlee_exc}")
@@ -106,6 +114,12 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
 def _should_use_crawlee(url: str) -> bool:
     domain = urlparse(url).netloc
     return any(domain.endswith(candidate) for candidate in _CRAWLEE_DOMAINS)
+
+
+def _requires_headed_mode(url: str) -> bool:
+    """Check if URL requires headed (non-headless) browser mode."""
+    domain = urlparse(url).netloc
+    return any(domain.endswith(candidate) for candidate in _HEADED_DOMAINS)
 
 
 def _env_headers_for(url: str) -> Dict[str, str]:
