@@ -9,15 +9,15 @@ from urllib.parse import urlparse
 
 import httpx
 
-from .headless_fetch import HeadlessUnavailable, fetch_with_playwright
+from .crawlee_fetcher import CrawleeFetchConfig, CrawleeFetchError, fetch_with_crawlee_sync
 
 _DEFAULT_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
 }
 
-_HEADLESS_MIN_TIMEOUT = 60.0
-_HEADLESS_DOMAINS = {
+_CRAWLEE_MIN_TIMEOUT = 60.0
+_CRAWLEE_DOMAINS = {
     "dailynews.ascopubs.org",
     "www.urotoday.com",
     "ashpublications.org",
@@ -60,7 +60,7 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
     headers = dict(_DEFAULT_HEADERS)
     headers.update(_env_headers_for(url))
     last_error: Exception | None = None
-    attempted_headless = False
+    attempted_crawlee = False
 
     for _ in range(cfg.max_retries + 1):
         try:
@@ -76,19 +76,19 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
             last_error = FetchError(url, f"HTTP {status}: {body}")
 
             if (
-                not attempted_headless
+                not attempted_crawlee
                 and status in {403, 429, 503}
-                and _should_use_headless(url)
+                and _should_use_crawlee(url)
             ):
-                attempted_headless = True
+                attempted_crawlee = True
                 try:
-                    headless_timeout = max(cfg.timeout, _HEADLESS_MIN_TIMEOUT)
-                    content = _fetch_with_playwright(url, timeout=headless_timeout)
-                except HeadlessUnavailable as headless_exc:
-                    last_error = FetchError(url, f"headless fallback failed: {headless_exc}")
-                    break
-                except Exception as headless_exc:  # pragma: no cover - unexpected
-                    last_error = FetchError(url, f"headless fallback failed: {headless_exc}")
+                    crawlee_timeout = max(cfg.timeout, _CRAWLEE_MIN_TIMEOUT)
+                    content = fetch_with_crawlee_sync(
+                        url,
+                        CrawleeFetchConfig(timeout=crawlee_timeout, headless=True, browser_type="chromium"),
+                    )
+                except CrawleeFetchError as crawlee_exc:
+                    last_error = FetchError(url, f"crawlee fallback failed: {crawlee_exc}")
                     break
                 else:
                     if cfg.allow_cache:
@@ -100,13 +100,9 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
     raise FetchError(url, f"exhausted retries (last error: {last_error})", cause=last_error)
 
 
-def _should_use_headless(url: str) -> bool:
+def _should_use_crawlee(url: str) -> bool:
     domain = urlparse(url).netloc
-    return any(domain.endswith(candidate) for candidate in _HEADLESS_DOMAINS)
-
-
-def _fetch_with_playwright(url: str, *, timeout: float) -> str:
-    return fetch_with_playwright(url, timeout=timeout)
+    return any(domain.endswith(candidate) for candidate in _CRAWLEE_DOMAINS)
 
 
 def _env_headers_for(url: str) -> Dict[str, str]:

@@ -64,6 +64,7 @@ The AppleScript searches the Inbox for the newest message whose subject begins w
 - Use `Summarizer/article_fetcher.py` in scripts or REPL sessions to retrieve article HTML.
 - Provide extra headers (cookies, auth tokens) by exporting `PRO_ALERT_HTTP_HEADERS_JSON`, e.g. `'{"example.com": {"Cookie": "session=abc"}}'`.
 - The fetcher caches responses in-memory for the life of the process; call `article_fetcher.clear_cache()` in tests to reset state.
+- Install the browser dependencies once per machine: `python3 -m pip install -r Summarizer/requirements.txt` followed by `python3 -m playwright install` (Crawlee drives Playwright behind the scenes).
 - For Cloudflare-guarded publishers (`dailynews.ascopubs.org`, `ashpublications.org`, `obgyn.onlinelibrary.wiley.com`, etc.) install Playwright so the headless fallback can render the page:
   ```bash
   python3 -m pip install playwright
@@ -87,7 +88,7 @@ The AppleScript searches the Inbox for the newest message whose subject begins w
 ## Summary Generation
 - `Summarizer/summarizer.py` calls Ollama with the `granite4:tiny-h` model and returns structured bullet summaries.
 - Ensure Ollama is installed locally and the model is pulled (`ollama pull granite4:tiny-h`).
-- The fetcher automatically retries Cloudflare-guarded publishers with a Playwright-powered headless browser when available.
+- The fetcher automatically retries Cloudflare-guarded publishers using Crawlee + Playwright; provide cookies if a site still blocks the crawler.
 - Example invocation using the same sample article blocks (ensure Ollama is running locally):
   ```bash
   python3 - <<'PY'

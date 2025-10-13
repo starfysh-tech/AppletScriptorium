@@ -114,7 +114,7 @@ def test_fetch_includes_env_headers(monkeypatch: pytest.MonkeyPatch):
     fetch_article("https://example.com/path", FetchConfig(allow_cache=False))
 
 
-def test_fetch_headless_fallback(monkeypatch: pytest.MonkeyPatch):
+def test_fetch_crawlee_fallback(monkeypatch: pytest.MonkeyPatch):
     url = "https://dailynews.ascopubs.org/foo"
 
     request = httpx.Request("GET", url)
@@ -127,14 +127,14 @@ def test_fetch_headless_fallback(monkeypatch: pytest.MonkeyPatch):
 
     called = {}
 
-    def fake_headless(target_url: str, *, timeout: float = 30.0) -> str:
+    def fake_crawlee(target_url: str, config):
         called["url"] = target_url
-        called["timeout"] = timeout
+        called["timeout"] = config.timeout
         return "<html>rendered</html>"
 
-    # Inject fake headless helper and domain mapping (to be provided by implementation)
-    monkeypatch.setattr("Summarizer.article_fetcher._fetch_with_playwright", fake_headless, raising=False)
-    monkeypatch.setattr("Summarizer.article_fetcher._HEADLESS_DOMAINS", {"dailynews.ascopubs.org"}, raising=False)
+    # Inject fake Crawlee helper and domain mapping (to be provided by implementation)
+    monkeypatch.setattr("Summarizer.article_fetcher.fetch_with_crawlee_sync", fake_crawlee, raising=False)
+    monkeypatch.setattr("Summarizer.article_fetcher._CRAWLEE_DOMAINS", {"dailynews.ascopubs.org"}, raising=False)
 
     content = fetch_article(url, FetchConfig(allow_cache=False, max_retries=0))
     assert content == "<html>rendered</html>"
@@ -153,13 +153,15 @@ def test_fetch_headless_failure_raises(monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setattr(httpx, "get", fake_get)
 
-    def fake_headless(target_url: str, *, timeout: float = 30.0) -> str:
-        raise RuntimeError("playwright unavailable")
+    from Summarizer.crawlee_fetcher import CrawleeFetchError
 
-    monkeypatch.setattr("Summarizer.article_fetcher._fetch_with_playwright", fake_headless, raising=False)
-    monkeypatch.setattr("Summarizer.article_fetcher._HEADLESS_DOMAINS", {"dailynews.ascopubs.org"}, raising=False)
+    def fake_crawlee(target_url: str, config):
+        raise CrawleeFetchError("crawlee unavailable")
+
+    monkeypatch.setattr("Summarizer.article_fetcher.fetch_with_crawlee_sync", fake_crawlee, raising=False)
+    monkeypatch.setattr("Summarizer.article_fetcher._CRAWLEE_DOMAINS", {"dailynews.ascopubs.org"}, raising=False)
 
     with pytest.raises(FetchError) as exc:
         fetch_article(url, FetchConfig(allow_cache=False, max_retries=0))
 
-    assert "playwright unavailable" in str(exc.value)
+    assert "crawlee unavailable" in str(exc.value)
