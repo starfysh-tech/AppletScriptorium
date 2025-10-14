@@ -100,12 +100,12 @@ cd AppletScriptorium
 #### 2. Install Python Dependencies
 ```bash
 # System Python (for Mail rule automation) with UV
-uv pip install --system --python python3 -r Summarizer/requirements.txt
+UV_SYSTEM_PYTHON=true uv pip install --python python3 -r Summarizer/requirements.txt
 ```
 
 **Required packages:** beautifulsoup4, pytest, httpx, readability-lxml, markdownify, crawlee, browserforge, apify_fingerprint_datapoints
 
-**Note:** UV is ~10-100x faster than pip. The `--system` flag installs into system Python (required for Mail rule automation; virtual environments won't work with Mail rules).
+**Note:** UV is ~10-100x faster than pip. `UV_SYSTEM_PYTHON=true` tells UV to use system Python with user site-packages (like `pip install --user`), required for Mail rule automation.
 
 #### 3. Install Playwright
 ```bash
@@ -309,7 +309,7 @@ python3 -m Summarizer.cli run \
 
 ### Python Dependencies Fail to Install
 
-**Issue**: `uv pip install` fails with compilation errors
+**Issue**: `uv pip install` fails with compilation or permission errors
 
 **Solutions**:
 ```bash
@@ -319,8 +319,8 @@ brew install uv
 # Install Xcode Command Line Tools (if missing)
 xcode-select --install
 
-# Retry installation (--system flag installs into system Python)
-uv pip install --system --python python3 -r Summarizer/requirements.txt
+# Retry installation (UV_SYSTEM_PYTHON=true uses system Python with user site-packages)
+UV_SYSTEM_PYTHON=true uv pip install --python python3 -r Summarizer/requirements.txt
 ```
 
 ### Ollama Model Not Found

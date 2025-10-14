@@ -88,11 +88,12 @@ echo ""
 
 # Step 3: Install Python dependencies
 log_info "Step 3/8: Installing Python dependencies with UV..."
-if uv pip install --system --python "$PYTHON_CMD" -r "$REPO_ROOT/Summarizer/requirements.txt"; then
+# UV_SYSTEM_PYTHON=true tells UV to use system Python with user site-packages (like pip --user)
+if UV_SYSTEM_PYTHON=true uv pip install --python "$PYTHON_CMD" -r "$REPO_ROOT/Summarizer/requirements.txt"; then
     log_success "Python dependencies installed"
 else
     log_error "Failed to install Python dependencies"
-    log_info "Try manually: uv pip install --system --python python3 -r Summarizer/requirements.txt"
+    log_info "Try manually: UV_SYSTEM_PYTHON=true uv pip install --python python3 -r Summarizer/requirements.txt"
     exit 1
 fi
 
