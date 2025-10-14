@@ -2,11 +2,8 @@ using terms from application "Mail"
 	on perform mail action with messages theMessages for rule theRule
 		-- Generate timestamp for output directory
 		set timestamp to do shell script "date +%Y%m%d-%H%M%S"
-		set outputDir to (POSIX path of (path to home folder)) & "Code/AppletScriptorium/runs/alert-" & timestamp
-
-		-- Get absolute path to home directory
-		set homePath to POSIX path of (path to home folder)
-		set repoPath to homePath & "Code/AppletScriptorium"
+		set repoPath to "{{REPO_PATH}}"
+		set outputDir to repoPath & "/runs/alert-" & timestamp
 
 		-- Get recipient (customize this as needed)
 		set digestRecipient to "{{EMAIL}}"
@@ -25,7 +22,22 @@ using terms from application "Mail"
 
 		-- Run Python pipeline (using system Python - creates digest.html and digest.eml)
 		try
-			set pythonCmd to "cd " & quoted form of repoPath & " && /usr/local/bin/python3 -m Summarizer.cli run --output-dir " & quoted form of outputDir & " --email-digest " & quoted form of digestRecipient
+			-- Resolve python3 path dynamically
+			set pythonPath to do shell script "which python3 2>/dev/null || echo '/usr/local/bin/python3'"
+
+			-- Verify Python 3.11+ is available
+			try
+				set pythonVersion to do shell script pythonPath & " --version 2>&1"
+				if pythonVersion does not contain "Python 3." then
+					display notification "Python 3 not found at: " & pythonPath with title "Google Alert Intelligence"
+					return
+				end if
+			on error
+				display notification "Python 3 not found. Install via Homebrew: brew install python3" with title "Google Alert Intelligence"
+				return
+			end try
+
+			set pythonCmd to "cd " & quoted form of repoPath & " && " & pythonPath & " -m Summarizer.cli run --output-dir " & quoted form of outputDir & " --email-digest " & quoted form of digestRecipient
 			do shell script pythonCmd
 		on error errMsg
 			display notification "Pipeline failed: " & errMsg with title "Google Alert Intelligence"

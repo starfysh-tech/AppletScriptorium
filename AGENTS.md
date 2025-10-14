@@ -1,35 +1,157 @@
-# Repository Guidelines
+# Project Overview
 
-## Agent Role & Scope
-AppletScriptorium agents are expected to operate as macOS automation specialists fluent in AppleScript/osascript, shell (bash/zsh), and Python helpers. Build the simplest thing that works on the maintainer’s local Mac—avoid speculative abstractions or premature generalization. Still add pragmatic logging, error handling, idempotency, and locks where they materially improve reliability. Ask clarifying questions only when requirements are ambiguous.
+AppletScriptorium is a macOS automation framework using AppleScript, shell scripts, and Python. The first agent, **Summarizer**, processes Google Alert emails: extracts links, fetches articles, summarizes with local LLM (Ollama), and generates email digests. Build the simplest solution that works on local macOS—avoid premature abstractions.
 
-## Collaboration Workflow
-The maintainer will issue focused tasks sequentially (e.g., “write AppleScript to fetch message source,” “add locking wrapper”). For each task deliver:
-- Production-ready scripts or modules placed under the appropriate agent directory.
-- Inline comments explaining non-obvious logic and integration points.
-- Tests or usage examples (CLI invocation, mocked runs) demonstrating expected behavior.
-Document assumptions in the PRD or README so future tasks start with full context, and call out when a deliberately simple approach was chosen.
+## Build and Test Commands
 
-## Project Structure & Module Organization
-Each automation agent lives at the repository root (current module: `Summarizer/`). Keep fixtures, scripts, and docs self-contained within the agent directory. Shared utilities will eventually reside in `shared/`, but avoid cross-linking until that package exists. Preserve sample artifacts under `Summarizer/Samples/` (committed `google-alert-sample-2025-10-06.*` files) because they anchor regression tests.
+### Prerequisites
+- Python 3.11+ system Python (venv NOT supported—see Constraints below)
+- Ollama with `granite4:tiny-h` model
+- Mail.app configured
 
-## Build, Test, and Development Commands
-Use Python 3.11+ for package management.
-- `osascript Summarizer/fetch-alert-source.applescript Summarizer/Samples/google-alert-sample-2025-10-06.eml` refreshes the raw alert fixture in-place.
-- `Summarizer/refresh-fixtures.py` rebuilds the decoded HTML and expected link list.
-- `python3 'Summarizer/clean-alert.py'` still prints anchor text/URLs from the fixture for quick spot checks.
-- `python3 -m venv .venv && source .venv/bin/activate` creates an isolated environment.
-- `python3 -m pip install -r Summarizer/requirements.txt` installs declared Python dependencies.
-Keep shell wrappers executable (`chmod +x`) and provide example invocations in README updates.
+### Development Commands
+```bash
+# Run full pipeline (use -m for module invocation)
+python3 -m Summarizer.cli run --output-dir runs/test --max-articles 3
 
-## Coding Style & Naming Conventions
-Follow PEP 8 (4-space indents) and snake_case for Python; kebab-case script filenames (e.g., `fetch-alert.scpt`). AppleScript files should include header comments describing trigger conditions. Prefer pure functions and dependency injection to ease unit testing and future reuse.
+# Run all tests
+python3 -m pytest Summarizer/tests
 
-## Testing & Validation Guidelines
-Run `python3 -m pytest Summarizer/tests` to validate link extraction, metadata, fetcher behavior, and rendering against committed fixtures. When adding new modules, include pytest tests with mocked dependencies. For AppleScript changes, provide usage examples or manual test steps. Capture expected JSON/HTML digests as golden files to guard regressions.
+# Run specific test file
+python3 -m pytest Summarizer/tests/test_link_extractor.py -v
 
-## Commit & Pull Request Expectations
-Write imperative commit subjects under ~60 chars (e.g., `summarizer: add link parser`). Each PR should summarize the scenario, list validation steps, and attach relevant artifacts (diffs, HTML snippets, logs). Reference issues/roadmap bullets and note new dependencies or secret requirements for reviewers.
+# Parse alert and view extracted links
+python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head
 
-## Security & Configuration Tips
-Never commit live Google Alert content, API keys, or Mail credentials. Use redacted fixtures and `.env` files ignored by git. Document required env vars and configuration updates in the README before merging.
+# Refresh fixtures after parser changes
+Summarizer/refresh-fixtures.py
+
+# Validate AppleScript syntax before committing
+osascript -s Summarizer/templates/process-alert.scpt
+```
+
+### Testing Instructions
+- Run `python3 -m pytest Summarizer/tests` before every commit
+- Fixtures in `Summarizer/Samples/` anchor regression tests
+- After modifying parsers, run `Summarizer/refresh-fixtures.py` and diff output
+- Mock external calls: `article_fetcher.clear_cache()` resets in-memory cache between tests
+- For AppleScript changes, provide manual test steps or usage examples
+
+## Code Style Guidelines
+
+### Python
+- PEP 8: 4-space indents, snake_case for functions/variables
+- **Always** use module invocation: `python3 -m Summarizer.cli` (NOT `python3 Summarizer/cli.py`)
+- Reason: Relative imports (`from .article_fetcher import ...`) require package mode
+- Prefer pure functions and dependency injection for testability
+
+### AppleScript
+- Tab indentation (NOT spaces)
+- Kebab-case filenames (e.g., `fetch-alert-source.applescript`)
+- Include header comments describing trigger conditions and dependencies
+- Validate syntax: `osascript -s <file>`
+
+### Scripts
+- Make shell scripts executable: `chmod +x`
+- Provide usage examples in README or comments
+
+## Project Structure
+
+```
+Summarizer/                    # Each agent in own directory
+├── cli.py                     # Main orchestrator (invoke with -m)
+├── config.py                  # Configuration constants (model, timeouts, domains)
+├── link_extractor.py          # extract_links(eml_path) → list of dicts
+├── article_fetcher.py         # fetch_article(url) → HTML, clear_cache()
+├── content_cleaner.py         # extract_content(html) → Markdown
+├── summarizer.py              # summarize_article(dict) → summary
+├── digest_renderer.py         # render_digest_html/text(summaries)
+├── fetch-alert-source.applescript  # Manual inbox capture
+├── templates/process-alert.scpt    # Mail rule automation
+├── Samples/                   # Committed fixtures for regression tests
+│   ├── google-alert-sample-2025-10-06.eml
+│   ├── google-alert-sample-2025-10-06-links.tsv
+│   └── articles/              # Sample HTML for testing
+└── tests/                     # Pytest suite
+```
+
+Future agents live alongside `Summarizer/`. Shared utilities migrate to `shared/` when needed.
+
+## Critical Constraints
+
+### System Python Requirement
+- **Mail rule automation CANNOT use virtual environments**
+- Mail.app scripts run in restricted sandbox without venv access
+- **Must** install packages with `--user` flag: `python3 -m pip install --user -r requirements.txt`
+- Packages install to `~/.local/lib/python3.x/site-packages`
+
+### AppleScript Limitations
+- Cannot activate venv (Mail.app sandbox restriction)
+- Must use system Python: `which python3` (now dynamic for Intel/Apple Silicon compatibility)
+- Tab indentation required (not spaces)
+- Validate syntax before committing: `osascript -s <file>`
+
+### Module Invocation Pattern
+- **Always** use: `python3 -m Summarizer.cli run`
+- **Never** use: `python3 Summarizer/cli.py`
+- Reason: Package imports (`from .module import ...`) fail without `-m`
+
+### Parallel Processing
+- Uses `ThreadPoolExecutor` with max 5 workers for article fetch/summarize
+- Pattern: `concurrent.futures.as_completed()` for progress tracking
+- See `cli.py` lines 150-180 for reference
+
+## Commit and PR Guidelines
+
+### Commit Messages
+- Imperative subjects <60 chars: `summarizer: add link parser`
+- No emoji unless user explicitly requests
+
+### Pull Requests
+- Title format: `<scope>: <description>`
+- List validation steps and attach relevant artifacts
+- Reference issues/roadmap bullets
+- Note new dependencies or env var requirements
+
+### Before Committing
+```bash
+# Run tests
+python3 -m pytest Summarizer/tests
+
+# Validate AppleScript syntax
+osascript -s Summarizer/templates/process-alert.scpt
+
+# Check fixtures if parser changed
+Summarizer/refresh-fixtures.py
+diff -u Summarizer/Samples/google-alert-sample-2025-10-06-links.tsv /tmp/alert-links.tsv
+```
+
+## Security Considerations
+
+- Never commit production emails, API keys, or Mail credentials
+- Keep fixtures sanitized and redacted
+- Use `.env` files (git-ignored) for secrets
+- Document required env vars in README before merging
+- Custom HTTP headers: `ALERT_HTTP_HEADERS_JSON='{"example.com": {"Cookie": "session=abc"}}'`
+
+## Common Gotchas
+
+- **PYTHONPATH**: Only set in shell wrappers for inline scripts; NOT needed for `-m` invocation
+- **Crawlee subprocess**: `crawlee_fetcher.py` spawns subprocess to avoid event loop conflicts
+- **Fixture regeneration**: Must diff against committed fixtures before merging parser changes
+- **System permissions**: Different modes require different permissions:
+  - **Mail rule automation**: Accessibility (System Settings → Privacy & Security → Accessibility → enable Mail.app)
+  - **Manual CLI usage**: Automation (System Settings → Privacy & Security → Automation → enable Terminal → Mail)
+- **Breaking changes**: No backward compatibility maintained—document in release notes only
+
+## Additional Context
+
+See `CLAUDE.md` for detailed development patterns, file reference map, and technical constraints.
+
+## Working Philosophy
+
+- Ship the simplest solution that works on local macOS
+- Avoid premature abstractions until multiple agents need them
+- Add logging, error handling, idempotency, and locking when relevant
+- Ask clarifying questions only when requirements are ambiguous
+- Document assumptions inline or in PRD so future work has full context

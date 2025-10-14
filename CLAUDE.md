@@ -22,99 +22,82 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 - Fixtures live in `Summarizer/Samples/` and anchor regression tests
 - Future shared utilities will move to `shared/` when multiple agents need them
 
-## Development Commands
+## Core Files Reference
 
-### Environment Setup
-```bash
-# Create virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
+### Entry Points
+- `Summarizer/cli.py` — Main orchestrator, invoke with `python3 -m Summarizer.cli run`
+- `Summarizer/fetch-alert-source.applescript` — Captures inbox messages (manual CLI)
+- `Summarizer/templates/process-alert.scpt` — Mail rule automation script
 
-# Install Python dependencies
-python3 -m pip install -r Summarizer/requirements.txt
+### Pipeline Modules
+- `Summarizer/link_extractor.py` — `extract_links(eml_path)` → list of article dicts
+- `Summarizer/article_fetcher.py` — `fetch_article(url)` → HTML string, `clear_cache()` for tests
+- `Summarizer/crawlee_fetcher.py` — Playwright fallback (subprocess isolation)
+- `Summarizer/content_cleaner.py` — `extract_content(html)` → Markdown text
+- `Summarizer/summarizer.py` — `summarize_article(article_dict)` → structured summary
+- `Summarizer/digest_renderer.py` — `render_digest_html(summaries)`, `render_digest_text(summaries)`
 
-# Install Playwright for Cloudflare-protected sites (one-time)
-python3 -m playwright install
-```
+### Test Fixtures
+- `Summarizer/Samples/google-alert-sample-2025-10-06.eml` — Raw email source
+- `Summarizer/Samples/google-alert-sample-2025-10-06-links.tsv` — Expected link extraction
+- `Summarizer/tests/` — Pytest suite using fixture-based validation
 
-### Testing
+### Configuration
+- `Summarizer/config.py` — Central configuration (model, timeouts, domain lists, parallelism, HTTP headers)
+
+## Development Patterns
+
+### Python Execution
+- **Always** use module invocation: `python3 -m Summarizer.cli` (NOT `python3 Summarizer/cli.py`)
+- Reason: Relative imports (`from .article_fetcher import ...`) require package mode
+- System Python with `--user` flag for dependencies (venv not compatible with Mail rule automation)
+
+### Testing Approach
+- Fixture-based: Committed samples in `Summarizer/Samples/` anchor regression tests
+- Run tests: `python3 -m pytest Summarizer/tests`
+- Refresh fixtures: `Summarizer/refresh-fixtures.py`
+- Mock external calls: `article_fetcher` has in-memory cache, call `clear_cache()` between tests
+
+### Parallel Processing
+- Uses `ThreadPoolExecutor` with max 5 workers for article fetch/summarize
+- Pattern: `concurrent.futures.as_completed()` for progress tracking
+- See `cli.py` lines 150-180 for reference implementation
+
+### AppleScript Constraints
+- **Cannot activate venv** — Mail.app scripts run in restricted sandbox, must use system Python
+- **Tab indentation** — AppleScript uses tabs, not spaces
+- **Validation** — Run `osascript -s` to check syntax before committing
+- **Python path** — Now uses `which python3` for Intel/Apple Silicon portability (process-alert.scpt:29)
+
+### Common Bash Commands
 ```bash
 # Run all tests
 python3 -m pytest Summarizer/tests
 
-# Run specific test file
-python3 -m pytest Summarizer/tests/test_link_extractor.py
+# Test specific module
+python3 -m pytest Summarizer/tests/test_link_extractor.py -v
 
-# Run with verbose output
-python3 -m pytest -v
-```
-
-### Fixture Management
-```bash
-# Refresh raw alert fixture (captures most recent message matching subject)
-# Works with any Google Alert topic
-osascript Summarizer/fetch-alert-source.applescript \
-  Summarizer/Samples/google-alert-sample-2025-10-06.eml \
-  "Medication reminder"
-
-# Rebuild decoded HTML and expected link list
+# Refresh fixtures after parser changes
 Summarizer/refresh-fixtures.py
 
-# Validate changes against committed fixtures
-Summarizer/refresh-fixtures.py --links /tmp/alert-links.tsv --links-json /tmp/alert-links.json --html /tmp/alert.html
-diff -u Summarizer/Samples/google-alert-sample-2025-10-06-links.tsv /tmp/alert-links.tsv
-```
-
-### Running the Pipeline
-
-#### CLI (preferred)
-```bash
-# Full pipeline with subject filter (captures most recent matching inbox message)
-# Works with any Google Alert topic
-python3 -m Summarizer.cli run \
-  --output-dir runs/$(date +%Y%m%d-%H%M%S) \
-  --subject-filter "Medication reminder"
-
-# Without filter (captures most recent inbox message)
-python3 -m Summarizer.cli run --output-dir runs/$(date +%Y%m%d-%H%M%S)
-
-# With article limit and custom model (AI research example)
-python3 -m Summarizer.cli run \
-  --output-dir runs/test \
-  --max-articles 5 \
-  --model granite4:tiny-h \
-  --subject-filter "Artificial intelligence"
-
-# Email digest to recipients (matches all Google Alert topics with broad pattern)
-python3 -m Summarizer.cli run \
-  --output-dir runs/latest \
-  --email-digest user@example.com \
-  --email-sender user@example.com \
-  --subject-filter "Google Alert -"
-```
-
-#### Shell Wrapper (alternative)
-```bash
-# Run via bash script (creates timestamped directory in runs/)
-./run_workflow.sh
-```
-
-### Quick Validation
-```bash
-# Parse alert and view links (TSV format)
+# Parse alert and view links
 python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head
 
-# Parse alert and view links (JSON format)
-python3 Summarizer/clean-alert.py --format json Summarizer/Samples/google-alert-sample-2025-10-06.eml | jq '.' | head
+# Check AppleScript syntax
+osascript -s Summarizer/templates/process-alert.scpt
+
+# Validate system Python packages
+python3 -m pip list | grep -E "beautifulsoup4|httpx|readability|crawlee"
 ```
 
 ## Key Technical Details
 
-### AppleScript Integration
-- **Manual CLI:** `fetch-alert-source.applescript` accepts optional subject filter as second argument; captures most recent matching inbox message
-- **Mail rule automation:** `process-alert.scpt` runs when Mail rule triggers; saves the triggering message directly (bypasses fetch-alert-source.applescript)
-- Mail rule conditions (From/Subject) do all filtering; no hardcoded subject patterns in scripts
-- AppleScript files must be executable or run via `osascript`
+### Mail Rule Automation
+- Event-driven: processes alerts immediately when they arrive (any Google Alert topic)
+- Mail rule conditions filter by From/Subject (e.g., `From: googlealerts-noreply@google.com`, `Subject: Google Alert -`)
+- AppleScript (`process-alert.scpt`) saves triggering message, runs Python pipeline, creates and sends HTML digest email
+- Code is topic-agnostic—Mail rule conditions do ALL filtering
+- See `Summarizer/MAIL_RULE_SETUP.md` for configuration details
 
 ### Article Fetching Strategy
 - Primary: httpx with user-agent headers
@@ -130,29 +113,10 @@ python3 Summarizer/clean-alert.py --format json Summarizer/Samples/google-alert-
 - Digest includes executive summary and cross-article insights
 - Works with any Google Alert topic—summaries adapt to content
 
-### Mail Rule Automation (Recommended)
-- Event-driven: processes alerts immediately when they arrive (any Google Alert topic)
-- Mail rule conditions filter by From/Subject (e.g., `From: googlealerts-noreply@google.com`, `Subject: Google Alert -`)
-- AppleScript (`process-alert.scpt`) saves triggering message, runs Python pipeline, creates and sends HTML digest email
-- Fully automated: alert arrival → digest generation → email delivery with no manual intervention
-- Code is topic-agnostic—Mail rule conditions do ALL filtering
-- See `Summarizer/MAIL_RULE_SETUP.md` for configuration details
-
-### Cron Scheduling (Alternative)
-- Wrapper script: `Summarizer/bin/run_alert.sh`
-- Configuration via `~/.alert-env` (sourced by cron)
-- Example crontab entry: `0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /Users/you/Code/AppletScriptorium/Summarizer/bin/run_alert.sh'`
-- Environment variables (work with any Google Alert topic):
-  - `ALERT_EMAIL_RECIPIENT` — failure notification address
-  - `ALERT_NOTIFY_ON_SUCCESS=1` — enable success notifications
-  - `ALERT_DIGEST_EMAIL` — comma-separated digest recipients
-  - `ALERT_EMAIL_SENDER` — Mail.app account for sending
-  - `ALERT_OUTPUT_DIR`, `ALERT_MODEL`, `ALERT_MAX_ARTICLES` — behavior tuning
-
 ## Coding Conventions
 
 - **Python**: PEP 8, 4-space indents, snake_case for functions/variables
-- **Scripts**: kebab-case filenames (e.g., `fetch-alert.scpt`)
+- **Scripts**: kebab-case filenames (e.g., `fetch-alert-source.applescript`)
 - **AppleScript**: Include header comments describing trigger conditions and dependencies
 - **Commits**: Imperative subjects <60 chars (e.g., `summarizer: add link parser`)
 - Prefer pure functions and dependency injection for testability
@@ -167,3 +131,23 @@ python3 Summarizer/clean-alert.py --format json Summarizer/Samples/google-alert-
 - Provide script usage examples or tests with each change
 - Document simplifying assumptions inline or in PRD
 - **Breaking changes policy**: No backward compatibility maintained—breaking changes documented in release notes only
+
+## Common Gotchas
+
+- **AppleScript Mail rules**: Cannot use venv, must use system Python with `--user` packages
+- **Python imports**: Must use `-m Summarizer.cli` for relative imports to work
+- **Crawlee subprocess**: `crawlee_fetcher.py` spawns subprocess to avoid event loop conflicts
+- **Fixture regeneration**: Run `refresh-fixtures.py` after modifying parsers, diff before committing
+- **PYTHONPATH**: Only set in shell wrappers for inline scripts; NOT needed for `-m` invocation
+- **System permissions**: Different modes require different permissions:
+  - **Mail rule automation**: Accessibility (System Settings → Privacy & Security → Accessibility → enable Mail.app)
+  - **Manual CLI usage**: Automation (System Settings → Privacy & Security → Automation → enable Terminal → Mail)
+  - **Both modes**: Need both permissions
+
+## Documentation Location Guide
+
+- **Setup/Installation**: See `SETUP.md`
+- **Usage/CLI examples**: See `README.md`
+- **Mail rule configuration**: See `Summarizer/MAIL_RULE_SETUP.md`
+- **Architecture/PRD**: See `Summarizer/PRO Alert Summarizer PRD.md`
+- **This file**: Claude Code behavior guidance only

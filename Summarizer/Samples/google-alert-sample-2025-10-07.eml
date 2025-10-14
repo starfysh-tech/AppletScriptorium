@@ -1,0 +1,27 @@
+From: googlealerts-noreply@google.com
+To: ops@example.com
+Subject: Google Alert - PRO adoption trends
+MIME-Version: 1.0
+Content-Type: text/html; charset="UTF-8"
+
+<!DOCTYPE html>
+<html>
+<body>
+  <table>
+    <tr>
+      <td>
+        <a href="https://www.google.com/url?url=https%3A%2F%2Fexample.org%2Falpha&source=alert">Alpha Study Highlights Remote Monitoring</a>
+        <div itemprop="publisher">
+          <span itemprop="name">Clinical Daily</span>
+        </div>
+        <div itemprop="description">Remote tools double survey completion in oncology clinics.</div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <a href="https://www.google.com/url?url=https%3A%2F%2Fexample.org%2Fbeta&source=alert">Beta Report on PRO Barriers</a>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

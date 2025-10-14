@@ -12,6 +12,8 @@ from typing import Optional
 from crawlee.crawlers import PlaywrightCrawler
 from crawlee.crawlers import PlaywrightCrawlingContext
 
+from .config import CRAWLEE_TIMEOUT
+
 
 class CrawleeFetchError(RuntimeError):
     """Raised when Crawlee cannot return content for a URL."""
@@ -21,7 +23,7 @@ class CrawleeFetchError(RuntimeError):
 class CrawleeFetchConfig:
     """Configuration for Crawlee fallback fetches."""
 
-    timeout: float = 60.0
+    timeout: float = CRAWLEE_TIMEOUT
     headless: bool = True
     browser_type: str = "chromium"
 

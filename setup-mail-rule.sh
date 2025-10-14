@@ -73,12 +73,15 @@ fi
 echo ""
 log_info "Configuring AppleScript..."
 
-# Replace {{EMAIL}} placeholder with actual email
-sed "s|{{EMAIL}}|$USER_EMAIL|g" "$TEMPLATE_FILE" > "$TARGET_FILE"
+# Replace {{EMAIL}} and {{REPO_PATH}} placeholders
+sed -e "s|{{EMAIL}}|$USER_EMAIL|g" \
+    -e "s|{{REPO_PATH}}|$REPO_ROOT|g" \
+    "$TEMPLATE_FILE" > "$TARGET_FILE"
 
 if [ -f "$TARGET_FILE" ]; then
     log_success "AppleScript installed: $TARGET_FILE"
     log_success "Configured for: $USER_EMAIL"
+    log_success "Repository path: $REPO_ROOT"
 else
     log_error "Failed to create AppleScript"
     exit 1

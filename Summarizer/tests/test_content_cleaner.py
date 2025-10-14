@@ -25,3 +25,18 @@ def test_extract_content_strips_navigation():
 
     assert "Topics" not in text
     assert "Podcasts" not in text
+
+
+def test_extract_content_handles_readability_failure(monkeypatch):
+    class FailingDocument:
+        def __init__(self, html: str) -> None:
+            self.html = html
+
+        def summary(self, html_partial: bool = True) -> str:
+            raise RuntimeError("readability failure")
+
+    monkeypatch.setattr("Summarizer.content_cleaner.Document", FailingDocument)
+
+    html = "<html><body><article><p>Fallback content survives.</p></article></body></html>"
+    text = extract_content(html)
+    assert "Fallback content survives." in text

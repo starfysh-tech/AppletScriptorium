@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Iterable, List, Optional, Tuple
 
 from .article_fetcher import FetchConfig, FetchError, fetch_article, clear_cache
+from .config import DEFAULT_MODEL, MAX_WORKERS
 from .content_cleaner import extract_content
 from .digest_renderer import render_digest_html, render_digest_text
 from .link_extractor import extract_links_from_eml
@@ -22,7 +23,6 @@ from .summarizer import SummarizerConfig, SummarizerError, summarize_article
 PACKAGE_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGE_ROOT.parent
 APPLESCRIPT = PACKAGE_ROOT / "fetch-alert-source.applescript"
-DEFAULT_MODEL = "granite4:tiny-h"
 
 
 def slugify(value: str) -> str:
@@ -151,8 +151,8 @@ def process_articles(
     summaries = []
     failures = []
 
-    # Process articles in parallel (max 5 workers to avoid overwhelming sites/LLM)
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    # Process articles in parallel (see config.MAX_WORKERS for worker count)
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         # Submit all tasks
         future_to_idx = {
             executor.submit(_process_single_article, idx, link, articles_dir, fetch_cfg, sum_cfg): idx
@@ -294,7 +294,18 @@ def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[
 
     The Mail rule AppleScript will open this .eml file, copy rendered HTML,
     and paste into a compose window for sending.
+
+    Args:
+        output_dir: Directory containing digest.html
+        recipients: Non-empty list of email addresses (at least one required)
+        sender: Optional sender address
+
+    Raises:
+        ValueError: If recipients list is empty
     """
+    if not recipients:
+        raise ValueError("Email digest requires at least one recipient via --email-digest or ALERT_DIGEST_EMAIL")
+
     import email
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
@@ -307,7 +318,7 @@ def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[
     html_content = html_path.read_text(encoding="utf-8")
 
     # Use first recipient for To: field (Mail rule will handle actual sending)
-    recipient = recipients[0] if recipients else "recipient@example.com"
+    recipient = recipients[0]
 
     # Create MIME multipart message with HTML
     msg = MIMEMultipart('alternative')

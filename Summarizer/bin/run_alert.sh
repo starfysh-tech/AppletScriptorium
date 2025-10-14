@@ -9,6 +9,7 @@ MODEL_VAR="${ALERT_MODEL:-}"
 MAX_ARTICLES_VAR="${ALERT_MAX_ARTICLES:-}"
 DIGEST_EMAIL_VAR="${ALERT_DIGEST_EMAIL:-}"
 EMAIL_RECIPIENT_VAR="${ALERT_EMAIL_RECIPIENT:-}"
+EMAIL_SENDER_VAR="${ALERT_EMAIL_SENDER:-}"
 NOTIFY_ON_SUCCESS_VAR="${ALERT_NOTIFY_ON_SUCCESS:-0}"
 
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
@@ -27,6 +28,7 @@ if [[ -n "${DIGEST_EMAIL_VAR}" ]]; then
   done
   unset __digest_recipients
 fi
+[[ -n "${EMAIL_SENDER_VAR}" ]] && ARGS+=(--email-sender "$EMAIL_SENDER_VAR")
 
 {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting run with args: ${ARGS[*]}"

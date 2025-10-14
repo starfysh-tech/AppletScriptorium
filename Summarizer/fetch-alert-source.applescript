@@ -1,7 +1,7 @@
 -- fetch-alert-source.applescript
 -- Trigger: invoked manually to capture the most recent inbox message source.
 -- Usage: osascript Summarizer/fetch-alert-source.applescript [/tmp/output.eml] [subject_filter]
--- Note: When run via Mail rule, the rule passes the triggering message directly via process-pro-alert.scpt
+-- Note: When run via Mail rule, the rule passes the triggering message directly via process-alert.scpt
 
 
 on run argv

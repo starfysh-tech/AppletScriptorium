@@ -6,15 +6,17 @@ import argparse
 from pathlib import Path
 
 from link_extractor import (
-    DEFAULT_EML,
-    DEFAULT_HTML,
-    DEFAULT_LINKS_JSON,
-    DEFAULT_LINKS_TSV,
     extract_links_from_html,
     read_html_from_eml,
     write_links_json,
     write_links_tsv,
 )
+
+SAMPLES_DIR = Path(__file__).parent / "Samples"
+FIXTURE_EML = SAMPLES_DIR / "google-alert-sample-2025-10-06.eml"
+FIXTURE_HTML = SAMPLES_DIR / "google-alert-sample-2025-10-06.html"
+FIXTURE_LINKS_TSV = SAMPLES_DIR / "google-alert-sample-2025-10-06-links.tsv"
+FIXTURE_LINKS_JSON = SAMPLES_DIR / "google-alert-sample-2025-10-06-links.json"
 
 
 def main() -> None:
@@ -23,25 +25,25 @@ def main() -> None:
         "eml",
         nargs="?",
         type=Path,
-        default=DEFAULT_EML,
+        default=FIXTURE_EML,
         help="Path to the Google Alert .eml file (defaults to the committed fixture).",
     )
     parser.add_argument(
         "--html",
         type=Path,
-        default=DEFAULT_HTML,
+        default=FIXTURE_HTML,
         help="Where to write the decoded HTML body.",
     )
     parser.add_argument(
         "--links",
         type=Path,
-        default=DEFAULT_LINKS_TSV,
+        default=FIXTURE_LINKS_TSV,
         help="Where to write the expected link/title pairs (TSV).",
     )
     parser.add_argument(
         "--links-json",
         type=Path,
-        default=DEFAULT_LINKS_JSON,
+        default=FIXTURE_LINKS_JSON,
         help="Where to write the structured JSON output.",
     )
     args = parser.parse_args()

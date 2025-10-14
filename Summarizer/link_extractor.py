@@ -19,12 +19,6 @@ from urllib.parse import parse_qs, urlparse
 
 from bs4 import BeautifulSoup
 
-SAMPLES_DIR = Path(__file__).parent / "Samples"
-DEFAULT_EML = SAMPLES_DIR / "google-alert-sample-2025-10-06.eml"
-DEFAULT_HTML = SAMPLES_DIR / "google-alert-sample-2025-10-06.html"
-DEFAULT_LINKS_TSV = SAMPLES_DIR / "google-alert-sample-2025-10-06-links.tsv"
-DEFAULT_LINKS_JSON = SAMPLES_DIR / "google-alert-sample-2025-10-06-links.json"
-
 
 @dataclass(frozen=True)
 class LinkRecord:
@@ -140,10 +134,8 @@ def run_cli(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Extract link/title metadata from a Google Alert export.")
     parser.add_argument(
         "input_path",
-        nargs="?",
         type=Path,
-        default=DEFAULT_HTML,
-        help="Path to the alert `.html` or `.eml` file (defaults to the committed sample).",
+        help="Path to the alert `.html` or `.eml` file.",
     )
     parser.add_argument(
         "--output",
@@ -183,8 +175,4 @@ __all__ = [
     "run_cli",
     "write_links_json",
     "write_links_tsv",
-    "DEFAULT_EML",
-    "DEFAULT_HTML",
-    "DEFAULT_LINKS_TSV",
-    "DEFAULT_LINKS_JSON",
 ]

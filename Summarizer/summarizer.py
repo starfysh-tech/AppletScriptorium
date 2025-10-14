@@ -5,6 +5,8 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any, Callable, List
 
+from .config import DEFAULT_MODEL, TEMPERATURE, MAX_TOKENS
+
 
 class SummarizerError(RuntimeError):
     """Raised when summary generation fails."""
@@ -12,9 +14,9 @@ class SummarizerError(RuntimeError):
 
 @dataclass(frozen=True)
 class SummarizerConfig:
-    model: str = "granite4:tiny-h"
-    temperature: float = 0.1
-    max_tokens: int = 8192
+    model: str = DEFAULT_MODEL
+    temperature: float = TEMPERATURE
+    max_tokens: int = MAX_TOKENS
 
 
 ArticleDict = dict[str, Any]

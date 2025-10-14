@@ -9,31 +9,15 @@ from urllib.parse import urlparse
 
 import httpx
 
+from .config import (
+    CRAWLEE_DOMAINS,
+    CRAWLEE_MIN_TIMEOUT,
+    DEFAULT_HEADERS,
+    HEADED_DOMAINS,
+    HTTP_TIMEOUT,
+    MAX_RETRIES,
+)
 from .crawlee_fetcher import CrawleeFetchConfig, CrawleeFetchError, fetch_with_crawlee_sync
-
-_DEFAULT_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-}
-
-_CRAWLEE_MIN_TIMEOUT = 60.0
-_CRAWLEE_DOMAINS = {
-    "dailynews.ascopubs.org",
-    "ascopubs.org",
-    "www.urotoday.com",
-    "ashpublications.org",
-    "www.jacc.org",
-    "www.medrxiv.org",
-    "pmc.ncbi.nlm.nih.gov",
-    "obgyn.onlinelibrary.wiley.com",
-    "www.sciencedirect.com",
-    "www.news10.com",
-}
-
-# Domains that require headed mode (headless=False) due to aggressive bot detection
-_HEADED_DOMAINS = {
-    "www.news10.com",
-}
 
 _CACHE: Dict[str, str] = {}
 
@@ -54,8 +38,8 @@ def clear_cache() -> None:
 
 @dataclass(frozen=True)
 class FetchConfig:
-    timeout: float = 10.0
-    max_retries: int = 2
+    timeout: float = HTTP_TIMEOUT
+    max_retries: int = MAX_RETRIES
     allow_cache: bool = True
 
 
@@ -66,7 +50,7 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
     if cfg.allow_cache and url in _CACHE:
         return _CACHE[url]
 
-    headers = dict(_DEFAULT_HEADERS)
+    headers = dict(DEFAULT_HEADERS)
     headers.update(_env_headers_for(url))
     last_error: Exception | None = None
     attempted_crawlee = False
@@ -91,7 +75,7 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
             ):
                 attempted_crawlee = True
                 try:
-                    crawlee_timeout = max(cfg.timeout, _CRAWLEE_MIN_TIMEOUT)
+                    crawlee_timeout = max(cfg.timeout, CRAWLEE_MIN_TIMEOUT)
                     # Use headed mode for domains with aggressive bot detection
                     headless = not _requires_headed_mode(url)
                     content = fetch_with_crawlee_sync(
@@ -113,13 +97,13 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
 
 def _should_use_crawlee(url: str) -> bool:
     domain = urlparse(url).netloc
-    return any(domain.endswith(candidate) for candidate in _CRAWLEE_DOMAINS)
+    return any(domain.endswith(candidate) for candidate in CRAWLEE_DOMAINS)
 
 
 def _requires_headed_mode(url: str) -> bool:
     """Check if URL requires headed (non-headless) browser mode."""
     domain = urlparse(url).netloc
-    return any(domain.endswith(candidate) for candidate in _HEADED_DOMAINS)
+    return any(domain.endswith(candidate) for candidate in HEADED_DOMAINS)
 
 
 def _env_headers_for(url: str) -> Dict[str, str]:

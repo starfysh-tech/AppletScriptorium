@@ -216,6 +216,7 @@ See the PRD for detailed acceptance criteria and future extensions (JS rendering
 
 ## CLI / Automation
 - `python3 -m Summarizer.cli run --output-dir /path/to/run` runs the full pipeline (fetches latest alert, fetches articles, summarizes, renders digests). This now works without adjusting `PYTHONPATH`.
+- **Configuration defaults** are in `Summarizer/config.py` (model, timeouts, parallelism, domain lists). Override via CLI flags or ALERT_* environment variables.
 - **Parallel processing**: Articles are fetched and summarized concurrently using ThreadPoolExecutor (max 5 workers), reducing execution time by ~70% compared to sequential processing.
 - Optional flags:
   - `--model MODEL` overrides the Ollama model (default: granite4:tiny-h).
@@ -261,7 +262,11 @@ No manual steps required—works with any Google Alert topic.
 
 **Note:** Cron scheduling is useful for generating digests on a fixed schedule. For real-time processing when alerts arrive, use Mail rules instead (see above).
 
-1. Set optional environment variables in `~/.alert-env` (sourced by cron):
+**The `~/.alert-env` file is ONLY needed for cron automation.** It is NOT required for:
+- Mail rule automation (recommended) — recipient configured in `process-alert.scpt` template
+- Direct CLI usage — use command-line flags or export env vars in your shell
+
+1. Create `~/.alert-env` and set optional environment variables (sourced by cron):
    - `ALERT_EMAIL_RECIPIENT` — address to notify on failure (requires `mail`)
    - `ALERT_NOTIFY_ON_SUCCESS=1` to also notify when runs succeed
    - `ALERT_OUTPUT_DIR`, `ALERT_MODEL`, `ALERT_MAX_ARTICLES` tune destination/behavior

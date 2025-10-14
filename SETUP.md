@@ -132,6 +132,28 @@ mkdir -p runs
 
 ## Configuration
 
+### System Permissions Required
+
+Different usage modes require different macOS permissions:
+
+#### Mail Rule Automation (Recommended)
+**Required permission:**
+- **Accessibility**: System Settings → Privacy & Security → Accessibility
+  - Add **Mail.app** and enable
+  - Allows AppleScript to automate keyboard actions (copy/paste digest into compose window)
+
+**Setup timing:** Grant after running `./setup-mail-rule.sh` and creating the Mail rule
+
+#### Manual CLI Usage
+**Required permission:**
+- **Automation**: System Settings → Privacy & Security → Automation
+  - Enable **Terminal → Mail**
+  - Allows AppleScript to capture inbox messages when running `python3 -m Summarizer.cli run`
+
+**Setup timing:** Grant when first running manual CLI commands that access Mail.app
+
+**Note:** If using both modes, you'll need both permissions.
+
 ### Mail.app Setup (for automation)
 
 #### For Mail Rule Automation (Recommended)
@@ -157,6 +179,8 @@ This creates `~/Library/Application Scripts/com.apple.mail/process-alert.scpt` a
 See detailed instructions in: `Summarizer/MAIL_RULE_SETUP.md`
 
 #### For Cron Automation (Alternative)
+
+**The `~/.alert-env` file is ONLY needed for cron automation.** Skip this section if using Mail rule automation (recommended).
 
 1. Copy template and customize:
    ```bash
@@ -301,22 +325,6 @@ python3 -m Summarizer.cli run \
 ---
 
 ## Troubleshooting
-
-### Python Dependencies Fail to Install
-
-**Issue**: `uv pip install` fails with compilation or permission errors
-
-**Solutions**:
-```bash
-# Ensure UV is installed
-brew install uv
-
-# Install Xcode Command Line Tools (if missing)
-xcode-select --install
-
-# Retry installation (UV_SYSTEM_PYTHON=true uses system Python with user site-packages)
-UV_SYSTEM_PYTHON=true uv pip install --python python3 -r Summarizer/requirements.txt
-```
 
 ### Ollama Model Not Found
 
