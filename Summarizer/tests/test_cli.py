@@ -97,7 +97,7 @@ def test_cli_run_pipeline_env_recipients(tmp_path: Path, monkeypatch: pytest.Mon
     monkeypatch.setattr(cli, "load_links", fake_load_links)
     monkeypatch.setattr(cli, "process_articles", fake_process)
     monkeypatch.setattr(cli, "send_digest_email", fake_send)
-    monkeypatch.setenv("PRO_ALERT_DIGEST_EMAIL", "one@example.com, two@example.com")
+    monkeypatch.setenv("ALERT_DIGEST_EMAIL", "one@example.com, two@example.com")
 
     args = argparse.Namespace(
         command="run",

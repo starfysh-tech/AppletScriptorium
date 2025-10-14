@@ -215,8 +215,6 @@ Supported variables:
 - `ALERT_MAX_ARTICLES`: Cap on articles processed
 - `ALERT_HTTP_HEADERS_JSON`: Custom HTTP headers for fetching
 
-**Backward compatibility:** Old `PRO_ALERT_*` variable names still work but new `ALERT_*` names are preferred.
-
 ## Manual CLI Usage
 
 You can still run the pipeline manually without triggering the Mail rule:

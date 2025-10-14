@@ -63,8 +63,6 @@ Optional environment variables (set in `~/.alert-env`):
 - `ALERT_DIGEST_EMAIL` — comma-separated recipients for the generated digest
 - `ALERT_EMAIL_SENDER` — address used to select the Mail.app account for digest delivery
 
-**Backward compatibility:** Old `PRO_ALERT_*` variable names still work but new `ALERT_*` names are preferred.
-
 ## 4. Cron Setup
 
 1. Create `~/.alert-env` and export any of the variables above (or copy from `Summarizer/templates/alert-env.template`).

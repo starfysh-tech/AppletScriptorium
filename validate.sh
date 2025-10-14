@@ -68,7 +68,7 @@ echo "=============================================="
 echo ""
 
 # Check 1: System commands
-log_info "Checking system commands..."
+log_info "[1/10] Checking system commands (brew, python3, ollama, git, osascript)..."
 check_command "brew" "Homebrew"
 check_command "python3" "Python 3"
 check_command "ollama" "Ollama"
@@ -77,7 +77,7 @@ check_command "osascript" "AppleScript"
 echo ""
 
 # Check 2: Python version
-log_info "Checking Python version..."
+log_info "[2/10] Checking Python version (>= 3.11 required)..."
 PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}')
 PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
 PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
@@ -90,7 +90,7 @@ fi
 echo ""
 
 # Check 3: Python packages
-log_info "Checking Python packages..."
+log_info "[3/10] Checking Python packages (beautifulsoup4, httpx, readability-lxml, crawlee, pytest)..."
 PACKAGES=("beautifulsoup4" "httpx" "readability-lxml" "crawlee" "pytest")
 for pkg in "${PACKAGES[@]}"; do
     if $PYTHON_CMD -m pip show "$pkg" >/dev/null 2>&1; then
@@ -102,7 +102,7 @@ done
 echo ""
 
 # Check 4: Playwright
-log_info "Checking Playwright..."
+log_info "[4/10] Checking Playwright (for Cloudflare-protected sites)..."
 if $PYTHON_CMD -c "from playwright.sync_api import sync_playwright; print('OK')" >/dev/null 2>&1; then
     log_pass "Playwright installed"
 else
@@ -112,7 +112,7 @@ fi
 echo ""
 
 # Check 5: Ollama service
-log_info "Checking Ollama service..."
+log_info "[5/10] Checking Ollama service (must be running)..."
 if pgrep -x "ollama" >/dev/null; then
     log_pass "Ollama service running"
 else
@@ -130,7 +130,7 @@ fi
 echo ""
 
 # Check 7: Repository structure
-log_info "Checking repository structure..."
+log_info "[7/10] Checking repository structure (Summarizer/, tests/, Samples/, templates/, runs/)..."
 DIRS=("Summarizer" "Summarizer/tests" "Summarizer/Samples" "Summarizer/templates" "runs")
 for dir in "${DIRS[@]}"; do
     if [ -d "$REPO_ROOT/$dir" ]; then
@@ -142,7 +142,7 @@ done
 echo ""
 
 # Check 8: Scripts are executable
-log_info "Checking script permissions..."
+log_info "[8/10] Checking script permissions (install.sh, setup-mail-rule.sh, validate.sh, run_workflow.sh)..."
 SCRIPTS=("install.sh" "setup-mail-rule.sh" "validate.sh" "run_workflow.sh")
 for script in "${SCRIPTS[@]}"; do
     if [ -x "$REPO_ROOT/$script" ]; then
@@ -155,7 +155,7 @@ done
 echo ""
 
 # Check 9: Run test suite
-log_info "Running test suite..."
+log_info "[9/10] Running test suite (21 tests)..."
 if $PYTHON_CMD -m pytest "$REPO_ROOT/Summarizer/tests" -q >/dev/null 2>&1; then
     log_pass "Test suite passed"
 else
@@ -165,7 +165,7 @@ fi
 echo ""
 
 # Check 10: Mail rule setup (optional)
-log_info "Checking Mail rule setup (optional)..."
+log_info "[10/10] Checking Mail rule setup (process-alert.scpt)..."
 MAIL_SCRIPT="$HOME/Library/Application Scripts/com.apple.mail/process-alert.scpt"
 if [ -f "$MAIL_SCRIPT" ]; then
     log_pass "Mail AppleScript installed"

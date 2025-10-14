@@ -190,8 +190,6 @@ export ALERT_EMAIL_SENDER="your-email@example.com"
 export ALERT_HTTP_HEADERS_JSON='{"example.com": {"Cookie": "session=abc"}}'
 ```
 
-**Backward compatibility:** Old `PRO_ALERT_*` variable names still work but new `ALERT_*` names are preferred.
-
 Reload shell:
 ```bash
 source ~/.zshrc  # or ~/.bash_profile

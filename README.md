@@ -130,7 +130,6 @@ python3 -m Summarizer.cli run \
 ## Article Fetching
 - Use `Summarizer/article_fetcher.py` in scripts or REPL sessions to retrieve article HTML.
 - Provide extra headers (cookies, auth tokens) by exporting `ALERT_HTTP_HEADERS_JSON`, e.g. `'{"example.com": {"Cookie": "session=abc"}}'`.
-  - **Backward compatibility:** Old `PRO_ALERT_*` variable names still work but new `ALERT_*` names are preferred.
 - The fetcher caches responses in-memory for the life of the process; call `article_fetcher.clear_cache()` in tests to reset state.
 - Install the browser dependencies once per machine: `python3 -m pip install -r Summarizer/requirements.txt` followed by `python3 -m playwright install` (Crawlee drives Playwright behind the scenes).
 - For Cloudflare-guarded publishers (`dailynews.ascopubs.org`, `ashpublications.org`, `obgyn.onlinelibrary.wiley.com`, etc.) install Playwright so the headless fallback can render the page:
@@ -268,7 +267,6 @@ No manual steps required—works with any Google Alert topic.
    - `ALERT_OUTPUT_DIR`, `ALERT_MODEL`, `ALERT_MAX_ARTICLES` tune destination/behavior
    - `ALERT_DIGEST_EMAIL` — comma-separated recipients for the digest (equivalent to repeating `--email-digest`)
    - `ALERT_EMAIL_SENDER` — sender address to select the Mail.app account used for digests
-   - **Backward compatibility:** Old `PRO_ALERT_*` variable names still work but new `ALERT_*` names are preferred
 2. Add the job (edit with `crontab -e`):
    ```cron
    0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /Users/you/Code/AppletScriptorium/Summarizer/bin/run_alert.sh'

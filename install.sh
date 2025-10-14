@@ -87,7 +87,7 @@ echo ""
 
 # Step 3: Install Python dependencies
 log_info "Step 3/8: Installing Python dependencies..."
-if $PYTHON_CMD -m pip install --user -r "$REPO_ROOT/Summarizer/requirements.txt" >/dev/null 2>&1; then
+if $PYTHON_CMD -m pip install --user -r "$REPO_ROOT/Summarizer/requirements.txt"; then
     log_success "Python dependencies installed"
 else
     log_error "Failed to install Python dependencies"
@@ -98,9 +98,9 @@ fi
 echo ""
 
 # Step 4: Install Playwright browsers
-log_info "Step 4/8: Installing Playwright browsers..."
-if $PYTHON_CMD -m playwright install >/dev/null 2>&1; then
-    log_success "Playwright browsers installed (~200MB)"
+log_info "Step 4/8: Installing Playwright browsers (~200MB download)..."
+if $PYTHON_CMD -m playwright install; then
+    log_success "Playwright browsers installed"
 else
     log_warn "Playwright installation had issues (non-critical)"
     log_info "You can retry with: python3 -m playwright install"
@@ -122,8 +122,8 @@ fi
 if ollama list | grep -q "granite4:tiny-h"; then
     log_success "Ollama model 'granite4:tiny-h' already installed"
 else
-    log_info "Pulling Ollama model 'granite4:tiny-h' (~1GB, may take a few minutes)..."
-    if ollama pull granite4:tiny-h >/dev/null 2>&1; then
+    log_info "Pulling Ollama model 'granite4:tiny-h' (~1GB, this may take a few minutes)..."
+    if ollama pull granite4:tiny-h; then
         log_success "Ollama model installed"
     else
         log_error "Failed to pull Ollama model"
@@ -151,8 +151,8 @@ log_success "Scripts made executable, runs/ directory created"
 echo ""
 
 # Step 7: Run tests
-log_info "Step 7/8: Running test suite..."
-if $PYTHON_CMD -m pytest "$REPO_ROOT/Summarizer/tests" -q >/dev/null 2>&1; then
+log_info "Step 7/8: Running test suite (21 tests)..."
+if $PYTHON_CMD -m pytest "$REPO_ROOT/Summarizer/tests" -q; then
     log_success "All tests passed"
 else
     log_warn "Some tests failed (non-critical for basic usage)"

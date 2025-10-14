@@ -108,7 +108,7 @@ def test_fetch_includes_env_headers(monkeypatch: pytest.MonkeyPatch):
 
         return FakeResponse()
 
-    monkeypatch.setenv("PRO_ALERT_HTTP_HEADERS_JSON", '{"example.com": {"Cookie": "session=abc"}}')
+    monkeypatch.setenv("ALERT_HTTP_HEADERS_JSON", '{"example.com": {"Cookie": "session=abc"}}')
     monkeypatch.setattr(httpx, "get", fake_get)
 
     fetch_article("https://example.com/path", FetchConfig(allow_cache=False))

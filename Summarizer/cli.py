@@ -254,8 +254,15 @@ def run_pipeline(args: argparse.Namespace) -> Path:
     recipients: List[str] = []
     if args.email_digest:
         recipients.extend(args.email_digest)
-    # Backward compatibility: ALERT_DIGEST_EMAIL takes precedence over PRO_ALERT_DIGEST_EMAIL
-    env_recipients = os.environ.get("ALERT_DIGEST_EMAIL", os.environ.get("PRO_ALERT_DIGEST_EMAIL"))
+
+    # Check for deprecated env var and fail fast with helpful message
+    if "PRO_ALERT_DIGEST_EMAIL" in os.environ:
+        raise RuntimeError(
+            "PRO_ALERT_DIGEST_EMAIL is deprecated. Update to ALERT_DIGEST_EMAIL in your config.\n"
+            f"Run: sed -i '' 's/PRO_ALERT_/ALERT_/g' ~/.alert-env"
+        )
+
+    env_recipients = os.environ.get("ALERT_DIGEST_EMAIL")
     if env_recipients:
         for token in env_recipients.replace(";", ",").split(","):
             address = token.strip()
@@ -267,8 +274,13 @@ def run_pipeline(args: argparse.Namespace) -> Path:
         if args.email_sender:
             sender_address = args.email_sender.strip() or None
         if sender_address is None:
-            # Backward compatibility: ALERT_EMAIL_SENDER takes precedence over PRO_ALERT_EMAIL_SENDER
-            env_sender = os.environ.get("ALERT_EMAIL_SENDER", os.environ.get("PRO_ALERT_EMAIL_SENDER"))
+            # Check for deprecated env var
+            if "PRO_ALERT_EMAIL_SENDER" in os.environ:
+                raise RuntimeError(
+                    "PRO_ALERT_EMAIL_SENDER is deprecated. Update to ALERT_EMAIL_SENDER in your config.\n"
+                    f"Run: sed -i '' 's/PRO_ALERT_/ALERT_/g' ~/.alert-env"
+                )
+            env_sender = os.environ.get("ALERT_EMAIL_SENDER")
             if env_sender:
                 sender_address = env_sender.strip() or None
 

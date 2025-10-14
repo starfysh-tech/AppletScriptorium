@@ -121,7 +121,6 @@ python3 Summarizer/clean-alert.py --format json Summarizer/Samples/google-alert-
 - Parallel processing: ThreadPoolExecutor with max 5 workers (~70% faster than sequential)
 - In-memory caching for the life of the process
 - Custom headers via `ALERT_HTTP_HEADERS_JSON` env var: `'{"example.com": {"Cookie": "session=abc"}}'`
-- **Backward compatibility:** Old `PRO_ALERT_*` variable names still work but new `ALERT_*` names are preferred
 
 ### Summarization
 - Requires local Ollama installation with `granite4:tiny-h` model pulled
@@ -148,7 +147,6 @@ python3 Summarizer/clean-alert.py --format json Summarizer/Samples/google-alert-
   - `ALERT_DIGEST_EMAIL` — comma-separated digest recipients
   - `ALERT_EMAIL_SENDER` — Mail.app account for sending
   - `ALERT_OUTPUT_DIR`, `ALERT_MODEL`, `ALERT_MAX_ARTICLES` — behavior tuning
-  - **Backward compatibility:** Old `PRO_ALERT_*` variable names still work but new `ALERT_*` names are preferred
 
 ## Coding Conventions
 
@@ -167,3 +165,4 @@ python3 Summarizer/clean-alert.py --format json Summarizer/Samples/google-alert-
 - Document configuration requirements (env vars, subjects) in README and PRD
 - Provide script usage examples or tests with each change
 - Document simplifying assumptions inline or in PRD
+- **Breaking changes policy**: No backward compatibility maintained—breaking changes documented in release notes only
