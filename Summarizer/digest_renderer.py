@@ -202,7 +202,7 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
         "<html lang=\"en\">\n"
         "<head>\n"
         "  <meta charset=\"utf-8\" />\n"
-        "  <title>PRO Alert Digest</title>\n"
+        "  <title>Google Alert Intelligence</title>\n"
         "  <style>\n"
         "    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 2rem; color: #222; }\n"
         "    header { margin-bottom: 2rem; }\n"
@@ -217,7 +217,7 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
         "  </style>\n"
         "</head>\n"
         "<body>\n"
-        f"<header><h1>PRO Alert Digest</h1><p>{generated_at:%B %d, %Y}</p></header>\n"
+        f"<header><h1>Google Alert Intelligence</h1><p>{generated_at:%B %d, %Y}</p></header>\n"
         f"{exec_block}\n"
         f"{insights_block}\n"
         f"{inner}\n"
@@ -232,7 +232,7 @@ def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | Non
     missing = missing or []
     article_list = list(articles)
 
-    lines = [f"PRO Alert Digest — {generated_at:%B %d, %Y}", ""]
+    lines = [f"Google Alert Intelligence — {generated_at:%B %d, %Y}", ""]
 
     # Add executive summary
     exec_summaries = generate_executive_summary(article_list)

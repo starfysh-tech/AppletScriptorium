@@ -19,7 +19,7 @@ SAMPLE_SUMMARY = {
 
 def test_render_digest_html(tmp_path: Path):
     html_output = render_digest_html([SAMPLE_SUMMARY])
-    assert "PRO Alert Digest" in html_output
+    assert "Google Alert Intelligence" in html_output
     assert "ASCO Daily News" in html_output
     # Executive summary adds 1 bullet, plus 3 article bullets = 4 total
     assert html_output.count("<li>bullet") == 4
@@ -28,7 +28,7 @@ def test_render_digest_html(tmp_path: Path):
 def test_render_digest_text():
     text_output = render_digest_text([SAMPLE_SUMMARY])
     lines = text_output.splitlines()
-    assert lines[0].startswith("PRO Alert Digest —")
+    assert lines[0].startswith("Google Alert Intelligence —")
     assert any("bullet 1" in line for line in lines)
     assert "ASCO Daily News" in text_output
 

@@ -310,7 +310,7 @@ def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[
 
     # Create MIME multipart message with HTML
     msg = MIMEMultipart('alternative')
-    msg['Subject'] = f"PRO Alert Digest — {datetime.now().strftime('%B %d, %Y')}"
+    msg['Subject'] = f"Google Alert Intelligence — {datetime.now().strftime('%B %d, %Y')}"
     msg['From'] = sender if sender else recipient
     msg['To'] = recipient
 
