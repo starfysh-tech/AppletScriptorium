@@ -31,12 +31,7 @@ Complete instructions for setting up AppletScriptorium on a new macOS computer.
    brew install python@3.11
    ```
 
-3. **UV** (fast Python package manager)
-   ```bash
-   brew install uv
-   ```
-
-4. **Ollama** (local LLM runtime)
+3. **Ollama** (local LLM runtime)
    ```bash
    brew install ollama
    ```
@@ -99,13 +94,13 @@ cd AppletScriptorium
 
 #### 2. Install Python Dependencies
 ```bash
-# System Python (for Mail rule automation) with UV
-UV_SYSTEM_PYTHON=true uv pip install --python python3 -r Summarizer/requirements.txt
+# System Python (for Mail rule automation)
+python3 -m pip install --user -r Summarizer/requirements.txt
 ```
 
 **Required packages:** beautifulsoup4, pytest, httpx, readability-lxml, markdownify, crawlee, browserforge, apify_fingerprint_datapoints
 
-**Note:** UV is ~10-100x faster than pip. `UV_SYSTEM_PYTHON=true` tells UV to use system Python with user site-packages (like `pip install --user`), required for Mail rule automation.
+**Note:** The `--user` flag installs to user site-packages without requiring root, which is required for Mail rule automation.
 
 #### 3. Install Playwright
 ```bash

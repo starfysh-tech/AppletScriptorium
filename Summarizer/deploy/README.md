@@ -22,7 +22,7 @@ To run the pipeline on a fixed schedule from your Mac, follow the steps below. T
 
 Install Python dependencies once:
 ```bash
-UV_SYSTEM_PYTHON=true uv pip install --python python3 -r Summarizer/requirements.txt
+python3 -m pip install --user -r Summarizer/requirements.txt
 ```
 
 ## 2. Test the Pipeline Manually
@@ -88,7 +88,7 @@ Or replay into a scratch directory (limit article count if needed):
 ```bash
 python3 -m Summarizer.cli run --output-dir runs/manual-replay --max-articles 3
 ```
-- For Cloudflare-guarded links, install Playwright (`UV_SYSTEM_PYTHON=true uv pip install --python python3 playwright` then `playwright install`) so the automation can render the challenge pages headlessly.
+- For Cloudflare-guarded links, install Playwright (`python3 -m pip install --user playwright` then `playwright install`) so the automation can render the challenge pages headlessly.
 - To email the digest automatically, export `ALERT_DIGEST_EMAIL` (comma-separated) and optionally `ALERT_EMAIL_SENDER` before running the CLI or wrapper; the plaintext digest is handed to Mail.app via AppleScript.
 
 ## 7. Future Enhancements
