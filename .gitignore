@@ -16,3 +16,11 @@ htmlcov/
 
 # Editor backups
 *~
+*.backup
+
+# Runtime outputs
+runs/
+storage/
+
+# Claude Code configuration
+.claude/
