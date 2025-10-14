@@ -82,3 +82,43 @@ HEADED_DOMAINS = [
 # Digest email subject line template
 # {date} will be formatted as "%B %d, %Y" (e.g., "October 14, 2025")
 DIGEST_SUBJECT_TEMPLATE = "Google Alert Intelligence — {date}"
+
+
+# =============================================================================
+# Summarization Prompt
+# =============================================================================
+
+# Template for article summarization prompt sent to LLM
+# Customize this to change the summary format or focus area
+SUMMARY_PROMPT_TEMPLATE = """
+Summarize this article in exactly 4 bullets.
+
+CRITICAL: You MUST generate exactly 4 bullets, one for each label below. Start directly with bullets - NO preamble or meta-commentary.
+
+Format (tags go INSIDE bold markers before colon):
+- **KEY FINDING**: [One sentence with specific metrics or main insight]
+- **TACTICAL WIN [action-tag]**: [Specific actionable practice or implementation]
+- **MARKET SIGNAL [urgency-tag]**: [Trend, shift, or competitive development]
+- **CONCERN**: [Limitation, contradiction, or assumption to question]
+
+Action tags for TACTICAL WIN (inside bold):
+[SHIP NOW] = Quick win available immediately
+[ROADMAP] = Requires planning/multi-step effort
+[WATCH] = Early signal, no action yet
+
+Urgency tags for MARKET SIGNAL (inside bold):
+[🔴 URGENT] = Competitive threat or pressing deadline
+[🟡 NOTABLE] = Significant trend or shift
+[⚫ CONTEXT] = Background information
+
+Example correct format:
+- **KEY FINDING**: 67% of participants reported improved outcomes, reducing discontinuation by 30%.
+- **TACTICAL WIN [SHIP NOW]**: Implement automated reminders at day 3 to boost completion rates.
+- **MARKET SIGNAL [🔴 URGENT]**: Competitor launched similar feature with 12-month advantage.
+- **CONCERN**: Self-selection bias may skew results toward more engaged users.
+
+Requirements:
+- Each bullet <30 words (aim for <25)
+- Extract specific numbers, percentages, metrics when available
+- Focus on actionable insights and strategic implications
+"""

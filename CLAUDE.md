@@ -97,7 +97,7 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability|crawlee"
 - Mail rule conditions filter by From/Subject (e.g., `From: googlealerts-noreply@google.com`, `Subject: Google Alert -`)
 - AppleScript (`process-alert.scpt`) saves triggering message, runs Python pipeline, creates and sends HTML digest email
 - Code is topic-agnostic—Mail rule conditions do ALL filtering
-- See `Summarizer/MAIL_RULE_SETUP.md` for configuration details
+- See `docs/SETUP.md` (Mail Rule Automation section) for configuration details
 
 ### Article Fetching Strategy
 - Primary: httpx with user-agent headers
@@ -262,9 +262,9 @@ osascript Summarizer/fetch-alert-source.applescript \
 
 ## Documentation Location Guide
 
-- **Setup/Installation**: See `SETUP.md`
+- **Setup/Installation**: See `docs/SETUP.md`
 - **Usage/CLI examples**: See `README.md`
-- **Troubleshooting**: See `TROUBLESHOOTING.md`
-- **Mail rule configuration**: See `SETUP.md` (Mail Rule Automation section)
+- **Troubleshooting**: See `docs/TROUBLESHOOTING.md`
+- **Mail rule configuration**: See `docs/SETUP.md` (Mail Rule Automation section)
 - **Architecture/PRD**: See `Summarizer/PRO Alert Summarizer PRD.md`
 - **This file**: Claude Code behavior guidance only

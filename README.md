@@ -2,9 +2,31 @@
 
 AppletScriptorium is a collection of macOS automation agents orchestrated through AppleScript, shell, and Python helpers. The first agent, **Summarizer**, watches Mail.app for Google Alerts, extracts article links, fetches pages, summarizes them with a local LLM, and generates intelligent digest emails.
 
+## How It Works
+
+Subscribe to Google Alerts on any topics you care about (tech trends, competitor news, research papers, etc.). When an alert arrives in your inbox, the Summarizer automatically processes it:
+
+![Workflow Diagram](docs/workflow-diagram.png)
+
+**The automated workflow:**
+
+1. **Captures** the alert email from Mail.app
+2. **Extracts** all article links from the email
+3. **Fetches** each article's full content
+4. **Summarizes** every article using a local AI model (runs privately on your Mac)
+5. **Generates** an intelligent digest email with:
+   - Executive summary across all articles
+   - 4-bullet summaries per article (key findings, actionable insights, market signals, concerns)
+   - Cross-article themes and patterns
+6. **Delivers** the digest to your inbox
+
+All processing happens locally on your Mac—no data sent to external services. The entire workflow runs automatically when alerts arrive (or on a schedule you control).
+
+**Customize:** Edit `Summarizer/config.py` to adjust the AI model, summary format, timeouts, or any other behavior.
+
 ## Quick Start
 
-**New to AppletScriptorium?** See the complete setup guide: **[SETUP.md](./SETUP.md)**
+**New to AppletScriptorium?** See the complete setup guide: **[SETUP.md](./docs/SETUP.md)**
 
 ```bash
 cd ~/Code
@@ -15,7 +37,7 @@ cd AppletScriptorium
 ./validate.sh          # Verify installation
 ```
 
-**Troubleshooting?** See **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)**
+**Troubleshooting?** See **[TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)**
 
 ---
 
@@ -25,6 +47,11 @@ cd AppletScriptorium
 .
 ├── AGENTS.md                     # AI assistant guidelines (Codex, Gemini, etc.)
 ├── CLAUDE.md                     # Claude Code development guide
+├── docs/                         # Documentation
+│   ├── SETUP.md                  # Installation guide
+│   ├── TROUBLESHOOTING.md        # Common issues and solutions
+│   ├── workflow-diagram.png      # Visual workflow diagram
+│   └── workflow-diagram.mmd      # Mermaid source for diagram
 ├── Summarizer/                   # Google Alert Intelligence agent
 │   ├── config.py                 # Configuration constants
 │   ├── cli.py                    # Main orchestrator
@@ -38,8 +65,6 @@ cd AppletScriptorium
 │   ├── requirements.txt          # Python dependencies
 │   ├── Samples/                  # Fixtures for regression tests
 │   └── tests/                    # Pytest suite
-├── SETUP.md                      # Installation guide
-├── TROUBLESHOOTING.md            # Common issues and solutions
 └── README.md                     # This file
 ```
 
@@ -63,7 +88,7 @@ Event-driven processing triggered when Google Alerts arrive:
 **Workflow:**
 Alert arrives → Mail rule triggers → Pipeline runs → Digest email sent automatically
 
-See **[SETUP.md](./SETUP.md)** for detailed configuration.
+See **[SETUP.md](./docs/SETUP.md)** for detailed configuration.
 
 ### CLI
 
@@ -104,7 +129,7 @@ For fixed-schedule digests instead of event-driven processing:
    0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /path/to/Summarizer/bin/run_alert.sh'
    ```
 
-See **[SETUP.md](./SETUP.md)** for cron configuration details.
+See **[SETUP.md](./docs/SETUP.md)** for cron configuration details.
 
 ---
 
@@ -136,7 +161,7 @@ python3 -m pytest Summarizer/tests/test_link_extractor.py -v
 
 ## Support
 
-- **Setup issues**: [SETUP.md](./SETUP.md)
-- **Troubleshooting**: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
+- **Setup issues**: [SETUP.md](./docs/SETUP.md)
+- **Troubleshooting**: [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)
 - **Development**: [CLAUDE.md](./CLAUDE.md) or [AGENTS.md](./AGENTS.md)
 - **Logs**: `runs/*/workflow.log`

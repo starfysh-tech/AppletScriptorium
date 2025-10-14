@@ -1,0 +1,11 @@
+graph LR
+    A[📧 Google Alert<br/>arrives<br/><i>Email</i>] --> B[⚙️ Mail Rule<br/>triggers<br/><i>Mail.app</i>]
+    B --> C[🔗 Extract<br/>article links<br/><i>Python</i>]
+    C --> D[📄 Fetch full<br/>articles<br/><i>Python + Playwright</i>]
+    D --> E[🤖 Summarize<br/>with AI<br/><i>Ollama</i>]
+    E --> F[✉️ Generate<br/>digest<br/><i>Python</i>]
+    F --> G[📬 Deliver to<br/>inbox<br/><i>Mail.app</i>]
+
+    style A fill:#e1f5ff
+    style G fill:#d4edda
+    style E fill:#fff3cd

@@ -5,7 +5,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any, Callable, List
 
-from .config import DEFAULT_MODEL, TEMPERATURE, MAX_TOKENS
+from .config import DEFAULT_MODEL, TEMPERATURE, MAX_TOKENS, SUMMARY_PROMPT_TEMPLATE
 
 
 class SummarizerError(RuntimeError):
@@ -64,34 +64,7 @@ def _build_prompt(article: ArticleDict) -> str:
         content_text = str(content)
 
     title = article.get("title", "")
-    instructions = (
-        "Summarize this article about Patient-Reported Outcomes (PROs) in healthcare in exactly 4 bullets.\n\n"
-        "CRITICAL: You MUST generate exactly 4 bullets, one for each label below. Start directly with bullets - NO preamble or meta-commentary.\n\n"
-        "Format (tags go INSIDE bold markers before colon):\n"
-        "- **KEY FINDING**: [One sentence with specific metrics]\n"
-        "- **TACTICAL WIN [action-tag]**: [Specific implementation practice]\n"
-        "- **MARKET SIGNAL [urgency-tag]**: [Trend affecting PRO adoption/competition]\n"
-        "- **CONCERN**: [Limitation, contradiction, or assumption to question]\n\n"
-        "Action tags for TACTICAL WIN (inside bold):\n"
-        "[SHIP NOW] = Quick win available this sprint\n"
-        "[ROADMAP] = Requires planning/multi-sprint effort\n"
-        "[WATCH] = Early signal, no action yet\n\n"
-        "Urgency tags for MARKET SIGNAL (inside bold):\n"
-        "[🔴 URGENT] = Competitive threat or regulatory deadline\n"
-        "[🟡 NOTABLE] = Significant trend or shift\n"
-        "[⚫ CONTEXT] = Background information\n\n"
-        "Example correct format:\n"
-        "- **KEY FINDING**: 67% of patients completed assessments, reducing discontinuation risk by 30%.\n"
-        "- **TACTICAL WIN [SHIP NOW]**: Implement auto-reminders at day 3 to boost completion rates.\n"
-        "- **MARKET SIGNAL [🔴 URGENT]**: FDA requiring PRO data in trials within 12 months.\n"
-        "- **CONCERN**: Self-selection bias may skew results toward healthier patients.\n\n"
-        "Requirements:\n"
-        "- Each bullet <30 words (aim for <25)\n"
-        "- Focus on product strategy for ePRO solution builders\n"
-        "- Focus on clinical validity of PRO approach\n"
-        "- Extract specific numbers, percentages, metrics"
-    )
-    return f"Title: {title}\n\nArticle content:\n{content_text}\n\n{instructions}"
+    return f"Title: {title}\n\nArticle content:\n{content_text}\n\n{SUMMARY_PROMPT_TEMPLATE}"
 
 
 def _run_with_ollama(prompt: str, cfg: SummarizerConfig) -> str:
