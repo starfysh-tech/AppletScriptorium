@@ -1,0 +1,19 @@
+{
+  "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+  "url": "https://www.jacc.org/doi/abs/10.1016/j.jacadv.2025.102204",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "Patient-reported outcomes in older adults with transthyretin amyloid cardiomyopathy (TTCM) highlight the need for tailored management strategies that prioritize functional status and symptom burden."
+    },
+    {
+      "type": "bullet",
+      "text": "The study underscores the importance of incorporating patient perspectives into clinical decision-making, particularly regarding treatment options such as TTE-CMR and initiation of TTR-modulating therapies in the elderly population."
+    },
+    {
+      "type": "bullet",
+      "text": "Operational insights suggest that enhancing patient-reported outcome measures could improve data collection processes, ultimately leading to better-informed patient care plans and more effective communication between healthcare providers and older adult patients with TTCM."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

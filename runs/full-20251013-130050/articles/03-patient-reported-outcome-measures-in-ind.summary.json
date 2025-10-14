@@ -1,0 +1,19 @@
+{
+  "title": "Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer",
+  "url": "https://ascopubs.org/doi/10.1200/OA-25-00051",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "The study focuses on patient-reported outcome measures in individuals with hereditary or sporadic kidney cancer, providing valuable insights into the impact of these conditions on patients' quality of life."
+    },
+    {
+      "type": "bullet",
+      "text": "Collaborative research efforts among multiple institutions highlight the importance of a multidisciplinary approach in studying and managing complex medical conditions like kidney cancer."
+    },
+    {
+      "type": "bullet",
+      "text": "The inclusion of experts from various backgrounds (clinical, scientific, and programmatic) underscores the comprehensive nature of the research, aiming to improve patient care and outcomes through better understanding and treatment strategies."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

@@ -1,0 +1,56 @@
+[2025-10-13 18:39:38,967] Output directory: /Users/randallnoval/Code/AppletScriptorium/runs/alert-20251013-183934
+[2025-10-13 18:39:42,373] OK: wrote alert 68ecf9a7.050a0220.7e6d8.83f8googlealerts@google.com to /Users/randallnoval/Code/AppletScriptorium/runs/alert-20251013-183934/alert.eml
+[2025-10-13 18:39:42,373] Extracting link metadata
+[2025-10-13 18:39:42,394] [fetch] https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391
+[2025-10-13 18:39:42,647] HTTP Request: GET https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391 "HTTP/1.1 403 Forbidden"
+[2025-10-13 18:40:05,328] [summarize] Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications
+[2025-10-13 18:40:05,331] [fetch] https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204
+[2025-10-13 18:40:05,505] HTTP Request: GET https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204 "HTTP/1.1 403 Forbidden"
+[2025-10-13 18:40:23,048] [summarize] Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC
+[2025-10-13 18:40:23,052] [fetch] https://ascopubs.org/doi/10.1200/OA-25-00051
+[2025-10-13 18:40:23,137] HTTP Request: GET https://ascopubs.org/doi/10.1200/OA-25-00051 "HTTP/1.1 403 Forbidden"
+[2025-10-13 18:40:40,307] [summarize] Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer
+[2025-10-13 18:40:40,308] [fetch] https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1
+[2025-10-13 18:40:40,432] HTTP Request: GET https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1 "HTTP/1.1 403 Forbidden"
+[2025-10-13 18:40:55,520] [summarize] Patient-Reported Symptom Assessment and Early Chemotherapy Discontinuation in ... - medRxiv
+[2025-10-13 18:40:55,522] [fetch] https://www.sciencedirect.com/science/article/pii/S2666638325002804
+[2025-10-13 18:40:56,009] HTTP Request: GET https://www.sciencedirect.com/science/article/pii/S2666638325002804 "HTTP/1.1 200 OK"
+[2025-10-13 18:41:02,184] [summarize] Strong Correlation of PROMIS Upper Extremity and Shoulder Arthroplasty Smart Score to ...
+[2025-10-13 18:41:02,185] [fetch] https://www.jacc.org/doi/abs/10.1016/j.jacadv.2025.102204
+[2025-10-13 18:41:02,341] HTTP Request: GET https://www.jacc.org/doi/abs/10.1016/j.jacadv.2025.102204 "HTTP/1.1 403 Forbidden"
+[2025-10-13 18:41:15,556] [summarize] Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC
+[2025-10-13 18:41:15,558] [fetch] https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X
+[2025-10-13 18:41:15,932] HTTP Request: GET https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X "HTTP/1.1 200 OK"
+[2025-10-13 18:41:22,708] [summarize] P127. Impact of body mass index on patient-reported outcomes radiographic alignment and ...
+[2025-10-13 18:41:22,710] [fetch] https://www.medscape.com/viewarticle/move-toward-assessing-well-being-psoriasis-biologic-2025a1000rgw
+[2025-10-13 18:41:22,924] HTTP Request: GET https://www.medscape.com/viewarticle/move-toward-assessing-well-being-psoriasis-biologic-2025a1000rgw "HTTP/1.1 200 OK"
+[2025-10-13 18:41:32,881] [summarize] New Patient Outcome Assessed in Psoriasis Biologic Trial - Medscape
+[2025-10-13 18:41:32,882] [fetch] https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes
+[2025-10-13 18:41:33,004] HTTP Request: GET https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes "HTTP/1.1 403 Forbidden"
+[2025-10-13 18:41:40,826] [fetch][ERROR] Failed to fetch https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes: exhausted retries (last error: Failed to fetch https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes: crawlee fallback failed: subprocess failed: │ retry_histogram               │ [0, 0, 0, 0, 0, 0, 0, 0, 0, 1] │
+│ request_avg_failed_duration   │ 307.3ms                        │
+│ request_avg_finished_duration │ None                           │
+│ requests_finished_per_minute  │ 0                              │
+│ requests_failed_per_minute    │ 9                              │
+│ request_total_duration        │ 307.3ms                        │
+│ requests_total                │ 1                              │
+│ crawler_runtime               │ 6.10s                          │
+└───────────────────────────────┴────────────────────────────────┘
+{"error": "Crawler finished without returning content"})
+[2025-10-13 18:41:40,847] [fetch] https://www.nature.com/articles/s41598-025-14553-4
+[2025-10-13 18:41:41,099] HTTP Request: GET https://www.nature.com/articles/s41598-025-14553-4 "HTTP/1.1 303 See Other"
+[2025-10-13 18:41:41,253] HTTP Request: GET https://idp.nature.com/authorize?response_type=cookie&client_id=grover&redirect_uri=https%3A%2F%2Fwww.nature.com%2Farticles%2Fs41598-025-14553-4 "HTTP/1.1 302 Found"
+[2025-10-13 18:41:41,362] HTTP Request: GET https://idp.nature.com/transit?redirect_uri=https%3A%2F%2Fwww.nature.com%2Farticles%2Fs41598-025-14553-4&code=11db0642-c2b0-4875-875e-af22f410b773 "HTTP/1.1 302 Found"
+[2025-10-13 18:41:41,660] HTTP Request: GET https://www.nature.com/articles/s41598-025-14553-4 "HTTP/1.1 200 OK"
+[2025-10-13 18:41:58,717] [summarize] Patient-reported vision impairment in low luminance relates to visual function in age ... - Nature
+[2025-10-13 18:41:58,735] [missing] https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes — exhausted retries (last error: Failed to fetch https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes: crawlee fallback failed: subprocess failed: │ retry_histogram               │ [0, 0, 0, 0, 0, 0, 0, 0, 0, 1] │
+│ request_avg_failed_duration   │ 307.3ms                        │
+│ request_avg_finished_duration │ None                           │
+│ requests_finished_per_minute  │ 0                              │
+│ requests_failed_per_minute    │ 9                              │
+│ request_total_duration        │ 307.3ms                        │
+│ requests_total                │ 1                              │
+│ crawler_runtime               │ 6.10s                          │
+└───────────────────────────────┴────────────────────────────────┘
+{"error": "Crawler finished without returning content"})
+[2025-10-13 18:41:58,735] Run complete. Summaries generated: 9

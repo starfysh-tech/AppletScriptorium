@@ -1,0 +1,19 @@
+{
+  "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+  "url": "https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "Patient-reported outcomes (PROs) have gained increasing attention as key endpoints in transthyretin amyloid cardiomyopathy (ATTR-CM) studies and heart failure trials, providing a holistic evaluation of treatment impact."
+    },
+    {
+      "type": "bullet",
+      "text": "A recent analysis found that EQ-5D-5 L and Minnesota Living with Heart Failure Questionnaire were predictors of all-cause mortality in ATTR-CM patients, demonstrating the importance of PROs in assessing disease burden."
+    },
+    {
+      "type": "bullet",
+      "text": "Composite endpoints or \"win\" ratio approaches incorporating functional endpoints like 6-minute walk distance and PRO measures are increasingly favored in ATTR-CM trials to capture treatment effects beyond traditional cardiovascular outcomes."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

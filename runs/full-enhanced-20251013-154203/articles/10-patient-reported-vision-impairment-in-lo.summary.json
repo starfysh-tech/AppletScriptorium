@@ -1,0 +1,23 @@
+{
+  "title": "Patient-reported vision impairment in low luminance relates to visual function in age ... - Nature",
+  "url": "https://www.nature.com/articles/s41598-025-14553-4",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: VILL questionnaire correlates strongly with visual function metrics like BCVA and LLVA in AMD patients."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN** [ROADMAP]: Implement Rasch model validation for PROMs to enhance cross-study comparability in clinical trials."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL** 🔴 URGENT: Growing demand for patient-reported outcomes (PRO) in regulatory submissions as AMD treatments advance."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Lack of standardized scoring across PROMs may complicate integration with ePRO platforms, challenging data harmonization."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

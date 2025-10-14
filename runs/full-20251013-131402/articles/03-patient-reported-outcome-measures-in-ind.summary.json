@@ -1,0 +1,19 @@
+{
+  "title": "Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer",
+  "url": "https://ascopubs.org/doi/10.1200/OA-25-00051",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "The collaboration of multidisciplinary teams in an Italian VHL clinic has facilitated comprehensive patient care for individuals with hereditary kidney cancer."
+    },
+    {
+      "type": "bullet",
+      "text": "Patient-reported outcome measures are essential for assessing quality of life and symptom burden in kidney cancer patients, enabling personalized management strategies."
+    },
+    {
+      "type": "bullet",
+      "text": "Regular monitoring using standardized tools helps identify early signs of complications or disease progression, allowing timely interventions to improve outcomes."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

@@ -1,0 +1,36 @@
+[2025-10-13 17:26:03,549] Output directory: /Users/randallnoval/Code/AppletScriptorium/runs/test-final-20251013-172601
+[2025-10-13 17:26:04,348] OK: wrote alert 68ecf9a7.050a0220.7e6d8.83f8googlealerts@google.com to /Users/randallnoval/Code/AppletScriptorium/runs/test-final-20251013-172601/alert.eml
+[2025-10-13 17:26:04,348] Extracting link metadata
+[2025-10-13 17:26:04,357] [fetch] https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391
+[2025-10-13 17:26:04,462] HTTP Request: GET https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391 "HTTP/1.1 403 Forbidden"
+[2025-10-13 17:26:27,111] [summarize] Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications
+[2025-10-13 17:26:27,116] [fetch] https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204
+[2025-10-13 17:26:27,603] HTTP Request: GET https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204 "HTTP/1.1 403 Forbidden"
+[2025-10-13 17:26:46,611] [summarize] Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC
+[2025-10-13 17:26:46,624] [fetch] https://ascopubs.org/doi/10.1200/OA-25-00051
+[2025-10-13 17:26:47,035] HTTP Request: GET https://ascopubs.org/doi/10.1200/OA-25-00051 "HTTP/1.1 403 Forbidden"
+[2025-10-13 17:27:21,451] [fetch][ERROR] Failed to fetch https://ascopubs.org/doi/10.1200/OA-25-00051: exhausted retries (last error: Failed to fetch https://ascopubs.org/doi/10.1200/OA-25-00051: crawlee fallback failed: subprocess failed: │ retry_histogram               │ [1]    │
+│ request_avg_failed_duration   │ 31.19s │
+│ request_avg_finished_duration │ None   │
+│ requests_finished_per_minute  │ 0      │
+│ requests_failed_per_minute    │ 1      │
+│ request_total_duration        │ 31.19s │
+│ requests_total                │ 1      │
+│ crawler_runtime               │ 31.82s │
+└───────────────────────────────┴────────┘
+{"error": "Crawler finished without returning content"})
+[2025-10-13 17:27:21,480] [fetch] https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1
+[2025-10-13 17:27:22,265] HTTP Request: GET https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1 "HTTP/1.1 403 Forbidden"
+[2025-10-13 17:27:52,347] [summarize] Patient-Reported Symptom Assessment and Early Chemotherapy Discontinuation in ... - medRxiv
+[2025-10-13 17:27:57,273] [mail] sent digest to randall@mqol.com
+[2025-10-13 17:27:57,274] [missing] https://ascopubs.org/doi/10.1200/OA-25-00051 — exhausted retries (last error: Failed to fetch https://ascopubs.org/doi/10.1200/OA-25-00051: crawlee fallback failed: subprocess failed: │ retry_histogram               │ [1]    │
+│ request_avg_failed_duration   │ 31.19s │
+│ request_avg_finished_duration │ None   │
+│ requests_finished_per_minute  │ 0      │
+│ requests_failed_per_minute    │ 1      │
+│ request_total_duration        │ 31.19s │
+│ requests_total                │ 1      │
+│ crawler_runtime               │ 31.82s │
+└───────────────────────────────┴────────┘
+{"error": "Crawler finished without returning content"})
+[2025-10-13 17:27:57,274] Run complete. Summaries generated: 3

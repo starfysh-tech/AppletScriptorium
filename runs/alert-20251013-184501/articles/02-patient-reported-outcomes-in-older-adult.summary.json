@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+  "url": "https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 67% completed assessments, reducing discontinuation risk by 30%"
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Automate reminders at day 3 to improve ePRO completion rates"
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA requiring PRO data in trials within 12 months"
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Baseline differences across studies may affect comparability of PRO outcomes"
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

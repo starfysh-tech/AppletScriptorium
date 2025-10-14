@@ -1,0 +1,15 @@
+{
+  "title": "OutcomeMD Launches First Data Intelligence Network for Healthcare Powered by Patient ...",
+  "url": "https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "By leveraging anonymized PROMs, OutcomeMD creates a bridge between healthcare providers and the biopharmaceutical industry, potentially saving about $1 trillion in wasted spend by transforming patient feedback into informed, actionable insights that enhance treatment decisions and quality benchmarks."
+    },
+    {
+      "type": "bullet",
+      "text": "The Patient Experience Data Network enables healthcare providers to earn revenue through the accurate collection and use of de-identified PROMs data shared with biopharmaceutical companies, while also offering patients a platform to ensure their voices are heard in both clinical settings and research environments.'"
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

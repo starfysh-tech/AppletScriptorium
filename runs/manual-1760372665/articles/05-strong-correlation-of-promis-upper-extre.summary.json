@@ -1,0 +1,19 @@
+{
+  "title": "Strong Correlation of PROMIS Upper Extremity and Shoulder Arthroplasty Smart Score to ...",
+  "url": "https://www.sciencedirect.com/science/article/pii/S2666638325002804",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "PROMIS UE and SAS scores demonstrate strong correlations with the legacy ASES score in assessing patient-reported outcomes following shoulder arthroplasty, suggesting their effectiveness as alternatives for evaluating upper extremity function."
+    },
+    {
+      "type": "bullet",
+      "text": "Both PROMIS UE and SAS show excellent-good correlations with ASES at various follow-up points (6 months, 1 year, and minimum 2 years), indicating their sensitivity and utility across different time frames post-surgery."
+    },
+    {
+      "type": "bullet",
+      "text": "Ceiling effect analysis reveals minimal limitations in the range of scores achieved by patients on both PROMIS UE and SAS, highlighting their capability to capture a broad spectrum of functional outcomes effectively."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

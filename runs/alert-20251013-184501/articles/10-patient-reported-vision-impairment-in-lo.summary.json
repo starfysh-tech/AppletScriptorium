@@ -1,0 +1,23 @@
+{
+  "title": "Patient-reported vision impairment in low luminance relates to visual function in age ... - Nature",
+  "url": "https://www.nature.com/articles/s41598-025-14553-4",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: Vision impairment questionnaire showed strong correlation with visual function assessments in intermediate AMD patients."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Integrate automated reminders to increase response rates for patient-reported outcome questionnaires."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Growing adoption of PROs due to regulatory pressure from health authorities like FDA and EMA."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-reporting bias may affect the accuracy of visual impairment assessments in low-luminance conditions."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

@@ -1,0 +1,19 @@
+{
+  "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+  "url": "https://www.jacc.org/doi/abs/10.1016/j.jacadv.2025.102204",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "The article likely presents specific patient-reported outcome metrics for older adults with transthyretin amyloid cardiomyopathy, potentially including quality of life scores, functional status assessments, and symptom burden measurements. Key findings might reveal how these outcomes correlate with disease progression or treatment efficacy."
+    },
+    {
+      "type": "bullet",
+      "text": "TACTICAL APPLICATION: Understanding the reported patient experiences could guide clinicians in tailoring interventions to address specific quality-of-life concerns among older adults with transthyretin amyloid cardiomyopathy, potentially improving adherence to therapy and overall management strategies."
+    },
+    {
+      "type": "bullet",
+      "text": "MARKET/BUSINESS CONTEXT: The insights into patient-reported outcomes may influence healthcare providers' decision-making regarding treatment options for elderly patients, impacting the adoption of therapies that demonstrably enhance quality of life in this vulnerable population segment. This knowledge could be leveraged by pharmaceutical companies to prioritize R&D efforts focused on improving outcomes relevant to older adult demographics."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

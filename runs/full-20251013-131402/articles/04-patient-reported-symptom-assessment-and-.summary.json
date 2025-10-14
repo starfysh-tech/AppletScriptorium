@@ -1,0 +1,19 @@
+{
+  "title": "Patient-Reported Symptom Assessment and Early Chemotherapy Discontinuation in ... - medRxiv",
+  "url": "https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "The study highlights that completing more frequent patient-reported symptom assessments after gastrointestinal cancer treatment initiation is associated with a lower risk of early discontinuation due to toxicity."
+    },
+    {
+      "type": "bullet",
+      "text": "This association was consistent across different prognostic groups, suggesting its relevance in various stages and types of GI cancers."
+    },
+    {
+      "type": "bullet",
+      "text": "The findings underscore the importance of regular symptom monitoring as a tool for improving adherence to chemotherapy regimens and potentially enhancing patient outcomes."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

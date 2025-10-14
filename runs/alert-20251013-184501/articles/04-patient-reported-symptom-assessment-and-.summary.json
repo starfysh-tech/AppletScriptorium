@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Symptom Assessment and Early Chemotherapy Discontinuation in ... - medRxiv",
+  "url": "https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 67% completion reduced early discontinuation risk by 30%, demonstrating PRO's clinical validity."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Deploy day-3 auto-reminders to improve completion rates and patient outcomes."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Rising regulatory pressure for PRO data in trials could accelerate ePRO adoption."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-selection bias may limit generalizability of findings to all GI cancer populations."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

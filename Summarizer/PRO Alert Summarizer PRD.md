@@ -21,9 +21,9 @@ AppletScriptorium/
     refresh-fixtures.py
     requirements.txt
     Samples/
-      google-alert-patient-reported-outcome-2025-10-06.eml
-      google-alert-patient-reported-outcome-2025-10-06.html
-      google-alert-patient-reported-outcome-2025-10-06-links.tsv
+      google-alert-sample-2025-10-06.eml
+      google-alert-sample-2025-10-06.html
+      google-alert-sample-2025-10-06-links.tsv
     PRO Alert Summarizer PRD.md
     ...additional fixtures...
 ```
@@ -43,7 +43,7 @@ AppletScriptorium/
 Maintain the following checklist; update status and supporting docs after you confirm a task is complete.
 
 - [x] **0. Scaffolding & Bootstrap** – Confirmed agent structure, added `Summarizer/requirements.txt`, and shipped `fetch-alert-source.applescript` plus README notes so the latest Mail alert source can be captured locally.
-- [x] **1. Ground Truth Fixtures** – Regenerated the 09:12 alert fixtures (`google-alert-patient-reported-outcome-2025-10-06.*`), captured the decoded HTML plus link TSV via `refresh-fixtures.py`, and updated docs so contributors can rebuild and diff the baseline.
+- [x] **1. Ground Truth Fixtures** – Regenerated the 09:12 alert fixtures (`google-alert-sample-2025-10-06.*`), captured the decoded HTML plus link TSV via `refresh-fixtures.py`, and updated docs so contributors can rebuild and diff the baseline.
 - [x] **2. Robust Link Extraction** – Introduced `link_extractor.py` with `.eml`/`.html` support, unwrapped Google redirects, wired the CLI via `clean-alert.py`, and added pytest coverage against the 09:12 fixtures.
 - [x] **3. Metadata & Deduping Layer** – Extraction now captures publisher/snippet metadata, dedupes by canonical URL, emits TSV+JSON fixtures, and documentation outlines the schema and validation flow.
 - [x] **4. Article Fetching Adapter** – Shipped `article_fetcher.py` with httpx-based retries, in-memory cache, and pytest coverage with mocked transports; requirements now list httpx.

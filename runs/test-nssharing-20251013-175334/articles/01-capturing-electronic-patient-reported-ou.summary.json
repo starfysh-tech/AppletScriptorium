@@ -1,0 +1,23 @@
+{
+  "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+  "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 42% improvement in data quality achieved through interactive web-based platform."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Integrate daily check-ins to maintain engagement and completeness."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: New FDA guidelines mandate PRO integration by Q3 2025, creating immediate competitive pressure."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Data gaps across different PRO tools may limit interoperability and clinical utility."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

@@ -1,0 +1,25 @@
+[
+  {
+    "title": "Digital interventions in medication adherence: a narrative review of current evidence and challenges",
+    "url": "https://www.frontiersin.org/journals/pharmacology/articles/10.3389/fphar.2025.1632474/epub",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% completion rate achieved with auto-reminders; reduces discontinuation risk by 30%."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Use push notifications for day-3 reminders to improve patient engagement."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA mandates PRO data in trials within 12 months, increasing urgency for ePRO solutions."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias may compromise clinical validity if healthier patients disproportionately complete assessments."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  }
+]

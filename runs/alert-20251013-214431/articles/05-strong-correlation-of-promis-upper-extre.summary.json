@@ -1,0 +1,23 @@
+{
+  "title": "Strong Correlation of PROMIS Upper Extremity and Shoulder Arthroplasty Smart Score to ...",
+  "url": "https://www.sciencedirect.com/science/article/pii/S2666638325002804",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: PROMIS UE and SAS showed strong correlations with ASES (r =0.647–0.761) across 2-year follow-up."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Prioritize integration of PROMIS tools in ePRO platforms for shoulder arthroplasty trials."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: Increased FDA scrutiny on PRO validity could accelerate adoption of standardized measures like PROMIS and SAS."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-selection bias may limit the generalizability of findings to broader patient populations."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

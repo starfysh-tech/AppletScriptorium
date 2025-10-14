@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer",
+  "url": "https://ascopubs.org/doi/10.1200/OA-25-00051",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: Patient-reported outcomes improved data collection efficiency by 40% in kidney cancer trials."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Integrate mobile app with AI reminders to enhance completion rates."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Increasing adoption of digital PRO platforms due to rising chronic disease prevalence."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-selection bias may skew results toward healthier patients."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

@@ -1,0 +1,23 @@
+{
+  "title": "P127. Impact of body mass index on patient-reported outcomes radiographic alignment and ...",
+  "url": "https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: Patients with BMI ≥35 had higher in-hospital complications (2.0% vs 7.8%, p=0.032) and lower postoperative physical health improvements compared to those with BMI <35."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN**: [SHIP NOW] Implement pre-surgical patient screening for BMI >35 to tailor surgical planning and manage expectations regarding recovery."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL**: 🔴 URGENT = Competitive threat or regulatory deadline, as studies increasingly highlight BMI's impact on PROs post-ACDF."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: ⚫ CONTEXT, while BMI affects short-term outcomes, its long-term stability after ACDF remains unchanged, suggesting potential overemphasis on immediate postoperative metrics."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

@@ -1,0 +1,35 @@
+{
+  "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+  "url": "https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "The Kansas City Cardiomyopathy Questionnaire (KCCQ) and Minnesota Living with Heart Failure Questionnaire (MLHFQ), as well as the Euro-Qol 5 dimension-5 levels (EQ-5D-5 L), were found to be predictive of all-cause mortality in ATTR-CM, independent of biomarkers. [KEY FINDINGS]"
+    },
+    {
+      "type": "bullet",
+      "text": "Tafamidis was observed to slow the decline of all components of KCCQ scores with a mean difference in change of 13 over 40% improvement at 30 months. Acoramidis led to improved quality of life assessed by KCCQ over 30 months with a mean difference in change of 9.94 points. [KEY FINDINGS]"
+    },
+    {
+      "type": "bullet",
+      "text": "The ATTR-ACT trial showed consistent slowing in the decline of HR-QoL in ATTR-CM trials, despite the shift towards enrolling progressively \"less sick\" populations. [KEY FINDINGS]"
+    },
+    {
+      "type": "bullet",
+      "text": "Vutrisiran resulted in less decline of KCCQ score with a mean difference of 5.8 points compared to placebo in patients with transthyretin amyloidosis. [KEY FINDINGS]"
+    },
+    {
+      "type": "bullet",
+      "text": "PROs can provide a more holistic evaluation of how treatments and procedures may impact the patient as an individual, helping improve shared decision-making, treatment escalation, and assessment of treatment response. [TACTICAL APPLICATION]"
+    },
+    {
+      "type": "bullet",
+      "text": "Cardiovascular outcomes like all-cause mortality, cardiovascular mortality, and HF hospitalization have strong precedent in driving FDA approval but typically require large numbers of patients and long periods of follow-up to accrue sufficient events. However, there is a shift towards recognition that symptom improvement and functional status are important to patients and clinically significant. [MARKET/BUSINESS CONTEXT]"
+    },
+    {
+      "type": "bullet",
+      "text": "PROs may be used to follow treatment effect, monitor for decline, or compare different treatments in ATTR-CM. Caution should be exercised when directly comparing outcomes between trials. [TACTICAL APPLICATION]"
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

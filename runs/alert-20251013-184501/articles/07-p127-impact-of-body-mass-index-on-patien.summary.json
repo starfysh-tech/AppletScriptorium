@@ -1,0 +1,23 @@
+{
+  "title": "P127. Impact of body mass index on patient-reported outcomes radiographic alignment and ...",
+  "url": "https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: Patients with BMI ≥35 experienced higher in-hospital complications (7.8% vs 2.0%) despite similar sagittal alignment stability."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [ROADMAP]**: Develop automated ePRO reminders to improve compliance and data quality for high-BMI patients."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Growing emphasis on PRO integration in clinical trials as part of FDA's post-market commitments."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-selection bias in BMI grouping may underrepresent true complication risks in obese populations."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

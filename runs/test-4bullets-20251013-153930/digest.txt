@@ -1,0 +1,11 @@
+PRO Alert Digest — October 13, 2025
+
+Summary of today's articles:
+- Patient-reported outcomes (PROs) in oncology can improve care coordination and patient engagement, potentially reducing hospital readmissions by up to 15%.
+
+Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications
+  https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391
+    - **KEY FINDING**: Patient-reported outcomes (PROs) in oncology can improve care coordination and patient engagement, potentially reducing hospital readmissions by up to 15%.
+    - **TACTICAL WIN**: [SHIP NOW] Implement real-time PRO dashboards integrated into electronic health records for timely intervention and personalized treatment adjustments.
+    - **MARKET SIGNAL**: 🔴 URGENT - New FDA guidelines may require PRO data capture in clinical trials, creating a competitive pressure to standardize reporting mechanisms within 12 months.
+    - **CONCERN**: ⚫ CONTEXT - Concerns about data privacy and the complexity of integrating diverse PRO tools into existing oncology practice workflows could hinder widespread adoption.

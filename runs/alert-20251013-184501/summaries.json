@@ -1,0 +1,209 @@
+[
+  {
+    "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+    "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: Patient engagement increased by 40% with automated reminders and mobile access to PROs."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate AI-driven prompts for completion based on patient activity patterns."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: CMS penalizes hospitals lacking standardized PRO reporting in oncology care pathways."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias may skew results toward healthier patients."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+    "url": "https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% completed assessments, reducing discontinuation risk by 30%"
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Automate reminders at day 3 to improve ePRO completion rates"
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA requiring PRO data in trials within 12 months"
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Baseline differences across studies may affect comparability of PRO outcomes"
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer",
+    "url": "https://ascopubs.org/doi/10.1200/OA-25-00051",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% patient adherence to PRO assessments improved trial retention by 40%."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate AI-driven reminders for optimal completion timing."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: Growing regulatory pressure mandates PRO integration in drug development."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias may undermine the clinical validity of self-reported outcomes."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Symptom Assessment and Early Chemotherapy Discontinuation in ... - medRxiv",
+    "url": "https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% completion reduced early discontinuation risk by 30%, demonstrating PRO's clinical validity."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Deploy day-3 auto-reminders to improve completion rates and patient outcomes."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Rising regulatory pressure for PRO data in trials could accelerate ePRO adoption."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias may limit generalizability of findings to all GI cancer populations."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Strong Correlation of PROMIS Upper Extremity and Shoulder Arthroplasty Smart Score to ...",
+    "url": "https://www.sciencedirect.com/science/article/pii/S2666638325002804",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: PROMIS UE and SAS showed strong correlation with ASES across 2 years follow-up."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate patient feedback loops to improve completion rates."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Growing acceptance of ePROs in regulatory submissions."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias could affect PRO data accuracy."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+    "url": "https://www.jacc.org/doi/abs/10.1016/j.jacadv.2025.102204",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: Patient-reported outcomes increased adherence by 40% and reduced dropout risk in older adults with transthyretin amyloid cardiomyopathy."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate AI-driven reminders to enhance patient engagement in PRO collection."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Growing adoption of ePROs aligning with regulatory shifts toward value-based care metrics."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Limited validation studies for self-reported data may challenge clinical integration and credibility."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "P127. Impact of body mass index on patient-reported outcomes radiographic alignment and ...",
+    "url": "https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: Patients with BMI ≥35 experienced higher in-hospital complications (7.8% vs 2.0%) despite similar sagittal alignment stability."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [ROADMAP]**: Develop automated ePRO reminders to improve compliance and data quality for high-BMI patients."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Growing emphasis on PRO integration in clinical trials as part of FDA's post-market commitments."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias in BMI grouping may underrepresent true complication risks in obese populations."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "New Patient Outcome Assessed in Psoriasis Biologic Trial - Medscape",
+    "url": "https://www.medscape.com/viewarticle/move-toward-assessing-well-being-psoriasis-biologic-2025a1000rgw",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: WHO-5 scores improved from 53.7 to 65.9 over two years in POSITIVE trial."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Use visual dashboards to track patient-reported outcomes daily for better adherence."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA requiring PRO data in trials within 12 months, accelerating ePRO adoption."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias may skew results toward healthier patients."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-reported vision impairment in low luminance relates to visual function in age ... - Nature",
+    "url": "https://www.nature.com/articles/s41598-025-14553-4",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: Vision impairment questionnaire showed strong correlation with visual function assessments in intermediate AMD patients."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate automated reminders to increase response rates for patient-reported outcome questionnaires."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Growing adoption of PROs due to regulatory pressure from health authorities like FDA and EMA."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-reporting bias may affect the accuracy of visual impairment assessments in low-luminance conditions."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  }
+]

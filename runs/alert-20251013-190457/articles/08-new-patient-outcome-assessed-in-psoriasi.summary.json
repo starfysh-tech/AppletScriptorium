@@ -1,0 +1,23 @@
+{
+  "title": "New Patient Outcome Assessed in Psoriasis Biologic Trial - Medscape",
+  "url": "https://www.medscape.com/viewarticle/move-toward-assessing-well-being-psoriasis-biologic-2025a1000rgw",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 67% completion rate achieved with PROs in psoriasis trial; WHO-5 Well-Being Index showed improvement from baseline to follow-up."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Integrate automated PRO reminders at key intervals (e.g., day 3, week 4) to enhance patient engagement and data completeness."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: Increased regulatory pressure for PRO inclusion in trials; compliance may soon be a requirement rather than an option."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-selection bias could affect the representativeness of PRO data; efforts are needed to ensure diverse patient participation."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

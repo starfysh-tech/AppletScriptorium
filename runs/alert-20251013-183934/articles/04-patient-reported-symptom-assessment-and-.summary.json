@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Symptom Assessment and Early Chemotherapy Discontinuation in ... - medRxiv",
+  "url": "https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: Completing assessments reduced early discontinuation risk by 30% in GI cancer patients receiving CTX."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Integrate automated reminders at day 3 post-initiation to improve assessment completion rates."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA mandates PRO data inclusion in trials starting December 2025, highlighting regulatory pressure for ePRO solutions."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-selection bias may limit the clinical validity of PRO-based discontinuation risk assessments."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

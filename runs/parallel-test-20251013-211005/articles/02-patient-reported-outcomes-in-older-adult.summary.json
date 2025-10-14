@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+  "url": "https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 67% completion rate with auto-reminders; [ROADMAP] to integrate reminders in future versions."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Prioritize HIPAA-compliant data storage for secure patient-provided PROs."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA prioritizing PRO integration across HF and ATTR-CM trials within 12 months."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Patient selection bias could inflate HR-QoL improvements, affecting clinical validity."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

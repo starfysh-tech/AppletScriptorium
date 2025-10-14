@@ -13,10 +13,10 @@ from urllib.parse import parse_qs, urlparse
 from bs4 import BeautifulSoup
 
 SAMPLES_DIR = Path(__file__).parent / "Samples"
-DEFAULT_EML = SAMPLES_DIR / "google-alert-patient-reported-outcome-2025-10-06.eml"
-DEFAULT_HTML = SAMPLES_DIR / "google-alert-patient-reported-outcome-2025-10-06.html"
-DEFAULT_LINKS_TSV = SAMPLES_DIR / "google-alert-patient-reported-outcome-2025-10-06-links.tsv"
-DEFAULT_LINKS_JSON = SAMPLES_DIR / "google-alert-patient-reported-outcome-2025-10-06-links.json"
+DEFAULT_EML = SAMPLES_DIR / "google-alert-sample-2025-10-06.eml"
+DEFAULT_HTML = SAMPLES_DIR / "google-alert-sample-2025-10-06.html"
+DEFAULT_LINKS_TSV = SAMPLES_DIR / "google-alert-sample-2025-10-06-links.tsv"
+DEFAULT_LINKS_JSON = SAMPLES_DIR / "google-alert-sample-2025-10-06-links.json"
 
 
 @dataclass(frozen=True)

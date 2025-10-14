@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Symptom Assessment and Early Chemotherapy Discontinuation in ... - medRxiv",
+  "url": "https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 67% of GI cancer patients completed assessments, lowering early discontinuation risk by ~30%, with consistent results across prognostic groups."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Automate day-3 reminders to improve symptom assessment completion rates among patients."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA now mandates PRO data in trials within 12 months, emphasizing clinical validity of patient-reported outcomes."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Study limited by self-selection bias; healthier patients may complete assessments more frequently."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

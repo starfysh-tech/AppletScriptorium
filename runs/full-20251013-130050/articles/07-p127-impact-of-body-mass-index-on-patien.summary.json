@@ -1,0 +1,19 @@
+{
+  "title": "P127. Impact of body mass index on patient-reported outcomes radiographic alignment and ...",
+  "url": "https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**Higher In-Hospital Complication Rates**: Patients with a BMI ≥35 exhibited significantly higher rates of in-hospital complications post-ACDF compared to those with lower BMIs."
+    },
+    {
+      "type": "bullet",
+      "text": "**Impact on Patient-Reported Outcomes**: Despite similar long-term sagittal alignment and reoperation rates, patients with higher BMI reported less pain relief, poorer physical health improvements, and reduced functional outcomes at multiple follow-up points."
+    },
+    {
+      "type": "bullet",
+      "text": "**Importance of Tailored Surgical Planning**: The findings suggest that while BMI does not significantly impact the stability or need for revision surgeries following ACDF, it plays a crucial role in predicting postoperative complications and recovery timelines, necessitating careful patient selection and possibly tailored surgical approaches."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

@@ -1,0 +1,71 @@
+[
+  {
+    "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+    "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% of patients completed assessments, reducing discontinuation risk by 30%."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate AI-driven prompts to optimize timing and format for higher engagement."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Growing adoption of digital PRO platforms as standards in oncology trials."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Limited validation studies raise questions about cross-platform clinical validity."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+    "url": "https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: EQ-5D-5 L and MLHFQ predictive of all-cause mortality in ATTR-CM patients."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate auto-reminders to improve PRO completion rates in trials."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA prioritizing PRO data for faster approval in heart failure and amyloid cardiomyopathy trials."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias may limit clinical validity of patient-reported outcomes."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer",
+    "url": "https://ascopubs.org/doi/10.1200/OA-25-00051",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% completion rate achieved through tailored reminders, improving trial retention."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate AI-driven adaptive questionnaires to reduce burden and enhance engagement."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: EU mandates PRO integration in all clinical trials by 2025 for faster approvals."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Limited accessibility may exclude certain demographics, affecting overall study validity."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  }
+]

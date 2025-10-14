@@ -1,0 +1,41 @@
+[2025-10-13 13:00:52,555] Output directory: /Users/randallnoval/Code/AppletScriptorium/runs/full-20251013-130050
+[2025-10-13 13:00:53,473] OK: wrote alert 68ecf9a7.050a0220.7e6d8.83f8googlealerts@google.com to /Users/randallnoval/Code/AppletScriptorium/runs/full-20251013-130050/alert.eml
+[2025-10-13 13:00:53,474] Extracting link metadata
+[2025-10-13 13:00:53,488] [fetch] https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391
+[2025-10-13 13:00:53,793] HTTP Request: GET https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391 "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:01:22,247] [summarize] Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications
+[2025-10-13 13:01:22,339] [fetch] https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204
+[2025-10-13 13:01:23,002] HTTP Request: GET https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204 "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:01:52,175] [summarize] Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC
+[2025-10-13 13:01:52,194] [fetch] https://ascopubs.org/doi/10.1200/OA-25-00051
+[2025-10-13 13:01:52,413] HTTP Request: GET https://ascopubs.org/doi/10.1200/OA-25-00051 "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:02:38,090] [summarize] Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer
+[2025-10-13 13:02:38,164] [fetch] https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1
+[2025-10-13 13:02:39,161] HTTP Request: GET https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1 "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:03:09,995] [summarize] Patient-Reported Symptom Assessment and Early Chemotherapy Discontinuation in ... - medRxiv
+[2025-10-13 13:03:10,014] [fetch] https://www.sciencedirect.com/science/article/pii/S2666638325002804
+[2025-10-13 13:03:10,669] HTTP Request: GET https://www.sciencedirect.com/science/article/pii/S2666638325002804 "HTTP/1.1 200 OK"
+[2025-10-13 13:03:25,475] [summarize] Strong Correlation of PROMIS Upper Extremity and Shoulder Arthroplasty Smart Score to ...
+[2025-10-13 13:03:25,490] [fetch] https://www.jacc.org/doi/abs/10.1016/j.jacadv.2025.102204
+[2025-10-13 13:03:25,758] HTTP Request: GET https://www.jacc.org/doi/abs/10.1016/j.jacadv.2025.102204 "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:03:50,476] [summarize] Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC
+[2025-10-13 13:03:50,552] [fetch] https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X
+[2025-10-13 13:03:51,448] HTTP Request: GET https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X "HTTP/1.1 200 OK"
+[2025-10-13 13:04:10,821] [summarize] P127. Impact of body mass index on patient-reported outcomes radiographic alignment and ...
+[2025-10-13 13:04:10,995] [fetch] https://www.medscape.com/viewarticle/move-toward-assessing-well-being-psoriasis-biologic-2025a1000rgw
+[2025-10-13 13:04:12,138] HTTP Request: GET https://www.medscape.com/viewarticle/move-toward-assessing-well-being-psoriasis-biologic-2025a1000rgw "HTTP/1.1 200 OK"
+[2025-10-13 13:04:39,144] [summarize] New Patient Outcome Assessed in Psoriasis Biologic Trial - Medscape
+[2025-10-13 13:04:39,192] [fetch] https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes
+[2025-10-13 13:04:39,772] HTTP Request: GET https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:04:40,148] HTTP Request: GET https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:04:40,266] HTTP Request: GET https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:04:40,276] [fetch][ERROR] Failed to fetch https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes: exhausted retries (last error: Failed to fetch https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes: HTTP 403:  <!DOCTYPE html> <html lang="en">   <head>     <meta charset="utf-8" />     <meta name="viewport" content="width=device-width, initial-scale=1" />     <meta name="description" content="px-captcha" /> )
+[2025-10-13 13:04:40,354] [fetch] https://www.nature.com/articles/s41598-025-14553-4
+[2025-10-13 13:04:40,582] HTTP Request: GET https://www.nature.com/articles/s41598-025-14553-4 "HTTP/1.1 303 See Other"
+[2025-10-13 13:04:40,732] HTTP Request: GET https://idp.nature.com/authorize?response_type=cookie&client_id=grover&redirect_uri=https%3A%2F%2Fwww.nature.com%2Farticles%2Fs41598-025-14553-4 "HTTP/1.1 302 Found"
+[2025-10-13 13:04:40,844] HTTP Request: GET https://idp.nature.com/transit?redirect_uri=https%3A%2F%2Fwww.nature.com%2Farticles%2Fs41598-025-14553-4&code=c005ff0e-11eb-4fdd-8b09-adc2bd381ca7 "HTTP/1.1 302 Found"
+[2025-10-13 13:04:41,204] HTTP Request: GET https://www.nature.com/articles/s41598-025-14553-4 "HTTP/1.1 200 OK"
+[2025-10-13 13:05:16,233] [summarize] Patient-reported vision impairment in low luminance relates to visual function in age ... - Nature
+[2025-10-13 13:05:25,524] [mail] sent digest to randall@mqol.com
+[2025-10-13 13:05:25,529] [missing] https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes — exhausted retries (last error: Failed to fetch https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes: HTTP 403:  <!DOCTYPE html> <html lang="en">   <head>     <meta charset="utf-8" />     <meta name="viewport" content="width=device-width, initial-scale=1" />     <meta name="description" content="px-captcha" /> )
+[2025-10-13 13:05:25,534] Run complete. Summaries generated: 9

@@ -1,6 +1,6 @@
 # AppletScriptorium — Summarizer Module
 
-AppletScriptorium is a collection of macOS automation agents orchestrated through AppleScript, shell, and Python helpers. The first agent, **PRO Alert Summarizer**, watches Mail.app for Google Alerts about Patient Reported Outcomes, extracts article links, fetches the corresponding pages, summarizes them with an LLM, and prepares a digest email with clickable links.
+AppletScriptorium is a collection of macOS automation agents orchestrated through AppleScript, shell, and Python helpers. The first agent, **Summarizer**, watches Mail.app for Google Alerts about Patient Reported Outcomes, extracts article links, fetches the corresponding pages, summarizes them with an LLM, and prepares a digest email with clickable links.
 
 
 ## Quick Start
@@ -50,10 +50,10 @@ For complete setup instructions including Mail rule automation and troubleshooti
 │   ├── refresh-fixtures.py       # Helper to rebuild committed samples
 │   ├── requirements.txt          # Python dependencies for the agent
 │   ├── Samples/
-│   │   ├── google-alert-patient-reported-outcome-2025-10-06.eml
-│   │   ├── google-alert-patient-reported-outcome-2025-10-06.html
-│   │   ├── google-alert-patient-reported-outcome-2025-10-06-links.tsv
-│   │   └── google-alert-patient-reported-outcome-2025-10-06-links.json
+│   │   ├── google-alert-sample-2025-10-06.eml
+│   │   ├── google-alert-sample-2025-10-06.html
+│   │   ├── google-alert-sample-2025-10-06-links.tsv
+│   │   └── google-alert-sample-2025-10-06-links.json
 │   ├── Samples/articles/         # Sample fetched article HTML for cleaning
 │   └── PRO Alert Summarizer PRD.md
 ├── LICENSE
@@ -67,7 +67,7 @@ Future agents (Mailer, Orchestrator, etc.) will live alongside `Summarizer/`. Sh
    - For development/testing, you can optionally use a virtual environment: `python3 -m venv .venv && source .venv/bin/activate`
 2. Refresh the raw alert fixture (safe to overwrite the committed file):
    ```bash
-   osascript Summarizer/fetch-alert-source.applescript Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06.eml
+   osascript Summarizer/fetch-alert-source.applescript Summarizer/Samples/google-alert-sample-2025-10-06.eml
    ```
 3. Regenerate the decoded HTML body and expected link list:
    ```bash
@@ -75,7 +75,7 @@ Future agents (Mailer, Orchestrator, etc.) will live alongside `Summarizer/`. Sh
    ```
 4. Inspect the parsed output on the command line (TSV by default):
    ```bash
-   python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06.eml | head
+   python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head
    ```
 5. Emit JSON instead when you need structured metadata:
    ```bash
@@ -84,8 +84,8 @@ Future agents (Mailer, Orchestrator, etc.) will live alongside `Summarizer/`. Sh
 6. When the parser changes, rebuild scratch artifacts and diff against the fixtures:
    ```bash
    Summarizer/refresh-fixtures.py --links /tmp/alert-links.tsv --links-json /tmp/alert-links.json --html /tmp/alert.html
-   diff -u Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06-links.tsv /tmp/alert-links.tsv
-   diff -u Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06-links.json /tmp/alert-links.json
+   diff -u Summarizer/Samples/google-alert-sample-2025-10-06-links.tsv /tmp/alert-links.tsv
+   diff -u Summarizer/Samples/google-alert-sample-2025-10-06-links.json /tmp/alert-links.json
    ```
 7. Refer to `Summarizer/PRO Alert Summarizer PRD.md` for the staged roadmap (fixtures → link extraction → fetcher → summarizer → digest).
 

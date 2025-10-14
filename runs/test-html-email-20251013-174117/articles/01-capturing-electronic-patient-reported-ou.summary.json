@@ -1,0 +1,23 @@
+{
+  "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+  "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 67% completion rate achieved by leveraging mobile tools and auto-reminders."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [ROADMAP]**: Integrate machine learning to personalize reminder timing for optimal engagement."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Increasing focus on PRO integration in clinical trials due to regulatory pressure."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Disparities in access to technology may limit effectiveness among underserved populations."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

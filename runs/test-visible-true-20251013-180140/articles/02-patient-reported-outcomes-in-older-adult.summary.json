@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+  "url": "https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: EQ-5D-5 L and MLHFQ predictive of all-cause mortality in ATTR-CM patients."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Integrate auto-reminders to improve PRO completion rates in trials."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA prioritizing PRO data for faster approval in heart failure and amyloid cardiomyopathy trials."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-selection bias may limit clinical validity of patient-reported outcomes."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

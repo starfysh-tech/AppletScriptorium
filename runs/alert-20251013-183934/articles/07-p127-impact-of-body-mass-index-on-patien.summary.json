@@ -1,0 +1,23 @@
+{
+  "title": "P127. Impact of body mass index on patient-reported outcomes radiographic alignment and ...",
+  "url": "https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: Patients with BMI ≥35 had higher in-hospital complication rates (2.0% vs 7.8%, p=0.032)."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [ROADMAP]**: Develop tailored ePRO modules focusing on pain management for high-BMI patients."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [⚫ CONTEXT]**: BMI is an emerging factor in PRO studies, warranting further investigation."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-selection bias may affect the representativeness of high-BMI patient cohort."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

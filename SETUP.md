@@ -269,7 +269,7 @@ cd /Users/YOUR_USERNAME/Code/AppletScriptorium
 
 # Parse sample alert (no network calls)
 python3 Summarizer/clean-alert.py \
-  Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06.eml | head
+  Summarizer/Samples/google-alert-sample-2025-10-06.eml | head
 
 # Should output TSV with article links
 ```

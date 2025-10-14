@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+  "url": "https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: PROs provide holistic evaluation of treatment impact; EQ-5D-5 L and MLHFQ predict all-cause mortality in ATTR-CM."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN**: [SHIP NOW] Implement ePRO solutions with validated questionnaires (KCCQ, NYHA) for real-time patient monitoring and decision-making."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL**: 🔴 URGENT - FDA approval trends favor PRO-based endpoints; competitors may adopt similar strategies."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: ⚫ CONTEXT - Inconsistent PRO outcomes vs clinical results; caution needed in interpreting trial data."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

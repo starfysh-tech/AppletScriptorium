@@ -1,0 +1,8 @@
+[2025-10-13 12:24:42,733] Output directory: /Users/randallnoval/Code/AppletScriptorium/runs/manual-1760372665
+[2025-10-13 12:24:44,773] OK: wrote alert 68ecf9a7.050a0220.7e6d8.83f8googlealerts@google.com to /Users/randallnoval/Code/AppletScriptorium/runs/manual-1760372665/alert.eml
+[2025-10-13 12:24:44,774] Extracting link metadata
+[2025-10-13 12:24:44,839] [fetch] https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391
+[2025-10-13 12:24:45,098] HTTP Request: GET https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391 "HTTP/1.1 403 Forbidden"
+[2025-10-13 12:24:45,138] No configuration set, implicitly creating and using default Configuration.
+[2025-10-13 12:24:45,170] No storage client set, implicitly creating and using default FileSystemStorageClient.
+[2025-10-13 12:24:45,170] No event manager set, implicitly creating and using default LocalEventManager.

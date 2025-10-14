@@ -11,11 +11,11 @@ The maintainer will issue focused tasks sequentially (e.g., “write AppleScript
 Document assumptions in the PRD or README so future tasks start with full context, and call out when a deliberately simple approach was chosen.
 
 ## Project Structure & Module Organization
-Each automation agent lives at the repository root (current module: `Summarizer/`). Keep fixtures, scripts, and docs self-contained within the agent directory. Shared utilities will eventually reside in `shared/`, but avoid cross-linking until that package exists. Preserve sample artifacts under `Summarizer/Samples/` (committed `google-alert-patient-reported-outcome-2025-10-06.*` files) because they anchor regression tests.
+Each automation agent lives at the repository root (current module: `Summarizer/`). Keep fixtures, scripts, and docs self-contained within the agent directory. Shared utilities will eventually reside in `shared/`, but avoid cross-linking until that package exists. Preserve sample artifacts under `Summarizer/Samples/` (committed `google-alert-sample-2025-10-06.*` files) because they anchor regression tests.
 
 ## Build, Test, and Development Commands
 Use Python 3.11+.
-- `osascript Summarizer/fetch-alert-source.applescript Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06.eml` refreshes the raw alert fixture in-place.
+- `osascript Summarizer/fetch-alert-source.applescript Summarizer/Samples/google-alert-sample-2025-10-06.eml` refreshes the raw alert fixture in-place.
 - `Summarizer/refresh-fixtures.py` rebuilds the decoded HTML and expected link list.
 - `python3 'Summarizer/clean-alert.py'` still prints anchor text/URLs from the fixture for quick spot checks.
 - `python3 -m venv .venv && source .venv/bin/activate` creates an isolated environment.

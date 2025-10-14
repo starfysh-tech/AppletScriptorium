@@ -1,0 +1,19 @@
+{
+  "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+  "url": "https://www.jacc.org/doi/abs/10.1016/j.jacadv.2025.102204",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "The study highlights the importance of patient-reported outcomes in assessing quality of life for older adults with transthyretin amyloid cardiomyopathy (ATTR-CM), emphasizing the need for tailored management strategies that prioritize functional capacity and symptom burden."
+    },
+    {
+      "type": "bullet",
+      "text": "Operational insights suggest integrating comprehensive geriatric assessments into clinical practice to better understand the unique challenges faced by older patients with ATTR-CM, potentially leading to more personalized treatment plans."
+    },
+    {
+      "type": "bullet",
+      "text": "The research underscores the value of multidisciplinary care teams in managing ATTR-CM in the elderly, advocating for collaborative efforts between cardiologists, geriatricians, and other specialists to optimize patient outcomes and enhance adherence to therapy."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

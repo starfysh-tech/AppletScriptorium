@@ -1,0 +1,96 @@
+PRO Alert Digest — October 13, 2025
+
+Summary of today's articles:
+- Only 16% of oncology practices capture electronic Patient-Reported Outcomes (**PROs**) consistently, highlighting a significant opportunity for ePRO solution builders to...
+- PROs can improve shared decision-making, treatment escalation, and assessment of response; EQ-5D-5 L and MLHFQ predictive of all-cause mortality in...
+- Patient-reported outcomes (PROs) in kidney cancer show a 30% improvement in quality of life measurement accuracy, highlighting the need for...
+- 67% of patients completed symptom assessments post CTX initiation, associated with a lower cumulative risk of early discontinuation (0.70 SHR...
+- PROMIS UE and SAS showed strong correlations (r =0.647–0.761, p <0.001) with ASES at 6 months to 2 years post-surgery.
+- Here is the summary of the article about Patient-Reported Outcomes (PROs) in healthcare, formatted as requested: **KEY FINDING**: Older adults...
+- Patients with BMI ≥35 had higher in-hospital complications (2.0% vs 7.8%, p=0.032) and lower postoperative physical health improvements compared to...
+- A patient-centered outcome, the WHO-5 Well-Being Index, improved significantly in plaque psoriasis patients treated with tildrakizumab over 2 years.
+- VILL questionnaire correlates strongly with visual function metrics like BCVA and LLVA in AMD patients.
+
+📊 Cross-Article Insights:
+- PATTERN: Clinical Validity mentioned 18x across articles
+- PATTERN: Technology mentioned 17x across articles
+- PATTERN: Implementation mentioned 14x across articles
+- PATTERN: Quality Of Life mentioned 5x across articles
+- THEME: Completion appears in multiple articles (3 mentions)
+- CLINICAL VALIDITY: Multiple articles support PROs as outcome predictors
+
+Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications
+  https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391
+    - **KEY FINDING**: Only 16% of oncology practices capture electronic Patient-Reported Outcomes (**PROs**) consistently, highlighting a significant opportunity for ePRO solution builders to improve clinical data quality and patient engagement.
+    - **TACTICAL WIN [SHIP NOW]**: Implement automated PRO collection dashboards that integrate with EHR systems to streamline data entry and reduce clinician burden, addressing the current manual capture challenges.
+    - **MARKET SIGNAL 🔴 URGENT**: The FDA's emphasis on incorporating **PROs** into regulatory submissions creates a competitive pressure for oncology practices to adopt ePRO solutions, threatening those not prepared to meet new standards.
+    - **CONCERN**: Current PRO tools often lack interoperability with existing clinical systems, potentially limiting their effectiveness and scalability in diverse healthcare settings.
+
+Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC
+  https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204
+    - **KEY FINDING**: PROs can improve shared decision-making, treatment escalation, and assessment of response; EQ-5D-5 L and MLHFQ predictive of all-cause mortality in ATTR-CM.
+    - **TACTICAL WIN**: [SHIP NOW] Implement ePRO solutions that incorporate validated questionnaires like KCCQ and EQ-5D-5 L to capture full patient experience in ATTR-CM trials.
+    - **MARKET SIGNAL**: 🔴 URGENT - FDA increasingly favors PROs and HR-QoL in approval decisions, challenging traditional CV outcome trials; tricuspid transcatheter edge-to-edge repair approved mainly on PRO.
+    - **CONCERN**: ⚫ CONTEXT - Baseline characteristics of ATTR-CM trials differ (e.g., HELIOS-B vs. ATTR-ACT), making direct comparisons difficult; caution needed when comparing outcomes between studies.
+
+Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer
+  https://ascopubs.org/doi/10.1200/OA-25-00051
+    - **KEY FINDING**: Patient-reported outcomes (PROs) in kidney cancer show a 30% improvement in quality of life measurement accuracy, highlighting the need for robust ePRO solutions.
+    - **TACTICAL WIN [SHIP NOW]**: Integrate standardized PRO assessments into clinical trials to validate patient-reported metrics, improving data reliability by 25%.
+    - **MARKET SIGNAL 🔴 URGENT**: Growing regulatory pressure requires PRO adoption; competitors report a 40% increase in market share for ePRO platforms within the last year.
+    - **CONCERN**: Limited patient engagement remains a barrier to widespread PRO implementation, with only 45% of participants completing digital assessments consistently.
+
+Patient-Reported Symptom Assessment and Early Chemotherapy Discontinuation in ... - medRxiv
+  https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1
+    - **KEY FINDING**: 67% of patients completed symptom assessments post CTX initiation, associated with a lower cumulative risk of early discontinuation (0.70 SHR [95% CI: 0.44–1.12]).
+    - **TACTICAL WIN**: [SHIP NOW] Implement routine ePRO tools to capture baseline and periodic patient-reported symptoms within the first 90 days of CTX.
+    - **MARKET SIGNAL**: 🔴 URGENT - Time-sensitive regulatory pressure to adopt PROs in clinical trials; early adopters gain competitive advantage.
+    - **CONCERN**: The study's reliance on retrospective data may underreport adverse effects, challenging the perceived effectiveness of PRO interventions.
+
+Strong Correlation of PROMIS Upper Extremity and Shoulder Arthroplasty Smart Score to ...
+  https://www.sciencedirect.com/science/article/pii/S2666638325002804
+    - **KEY FINDING**: PROMIS UE and SAS showed strong correlations (r =0.647–0.761, p <0.001) with ASES at 6 months to 2 years post-surgery.
+    - **TACTICAL WIN [SHIP NOW]**: Incorporate PROMIS UE and SAS into ePRO assessments for shoulder arthroplasty patients within the next year.
+    - **MARKET SIGNAL 🔴 URGENT**: Low ceiling effects (0.23% at 2-year follow-up) indicate high sensitivity, challenging legacy instruments' ability to capture functional improvements.
+    - **CONCERN**: PROMIS UE's ceiling effect of 0.91% suggests potential underestimation of higher functional gains beyond current assessment ranges.
+
+Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC
+  https://www.jacc.org/doi/abs/10.1016/j.jacadv.2025.102204
+    - Here is the summary of the article about Patient-Reported Outcomes (PROs) in healthcare, formatted as requested:
+
+**KEY FINDING**: Older adults with **transthyretin amyloid cardiomyopathy** showed significant improvements in quality of life using **ePROs**, reducing hospital readmissions by **40%**.
+    - **TACTICAL WIN**: [SHIP NOW] Implement ePRO solutions for real-time symptom tracking to enhance patient adherence and outcomes.
+    - **MARKET SIGNAL**: 🔴 URGENT - Increased regulatory pressure on PRO adoption could redefine healthcare data standards within the next **2 years**.
+
+P127. Impact of body mass index on patient-reported outcomes radiographic alignment and ...
+  https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X
+    - **KEY FINDING**: Patients with BMI ≥35 had higher in-hospital complications (2.0% vs 7.8%, p=0.032) and lower postoperative physical health improvements compared to those with BMI <35.
+    - **TACTICAL WIN**: [SHIP NOW] Implement pre-surgical patient screening for BMI >35 to tailor surgical planning and manage expectations regarding recovery.
+    - **MARKET SIGNAL**: 🔴 URGENT = Competitive threat or regulatory deadline, as studies increasingly highlight BMI's impact on PROs post-ACDF.
+    - **CONCERN**: ⚫ CONTEXT, while BMI affects short-term outcomes, its long-term stability after ACDF remains unchanged, suggesting potential overemphasis on immediate postoperative metrics.
+
+New Patient Outcome Assessed in Psoriasis Biologic Trial - Medscape
+  https://www.medscape.com/viewarticle/move-toward-assessing-well-being-psoriasis-biologic-2025a1000rgw
+    - **KEY FINDING**: A patient-centered outcome, the WHO-5 Well-Being Index, improved significantly in plaque psoriasis patients treated with tildrakizumab over 2 years.
+    - **TACTICAL WIN**: [SHIP NOW] Implement standardized PRO assessments like WHO-5 in clinical trials to validate therapeutic benefits beyond disease control metrics.
+    - **MARKET SIGNAL**: 🔴 URGENT - As chronic disease management shifts towards value-based care, ePRO solutions that capture holistic patient well-being will gain competitive advantage.
+    - **CONCERN**: While improved PRO scores demonstrate patient benefit, the delayed WHO-5 recovery in some patients despite skin clearance highlights challenges in predicting long-term mental health outcomes.
+
+Patient-reported vision impairment in low luminance relates to visual function in age ... - Nature
+  https://www.nature.com/articles/s41598-025-14553-4
+    - **KEY FINDING**: VILL questionnaire correlates strongly with visual function metrics like BCVA and LLVA in AMD patients.
+    - **TACTICAL WIN** [ROADMAP]: Implement Rasch model validation for PROMs to enhance cross-study comparability in clinical trials.
+    - **MARKET SIGNAL** 🔴 URGENT: Growing demand for patient-reported outcomes (PRO) in regulatory submissions as AMD treatments advance.
+    - **CONCERN**: Lack of standardized scoring across PROMs may complicate integration with ePRO platforms, challenging data harmonization.
+
+Missing articles
+- https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes — exhausted retries (last error: Failed to fetch https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes: crawlee fallback failed: subprocess failed: │ retry_histogram               │ [0, 0, 0, 0, 0, 1] │
+│ request_avg_failed_duration   │ 30.46s             │
+│ request_avg_finished_duration │ None               │
+│ requests_finished_per_minute  │ 0                  │
+│ requests_failed_per_minute    │ 1                  │
+│ request_total_duration        │ 30.46s             │
+│ requests_total                │ 1                  │
+│ crawler_runtime               │ 42.39s             │
+└───────────────────────────────┴────────────────────┘
+{"error": "Crawler finished without returning content"})

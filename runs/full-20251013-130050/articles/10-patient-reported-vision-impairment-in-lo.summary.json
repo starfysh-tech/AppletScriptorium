@@ -1,0 +1,19 @@
+{
+  "title": "Patient-reported vision impairment in low luminance relates to visual function in age ... - Nature",
+  "url": "https://www.nature.com/articles/s41598-025-14553-4",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "The VILL questionnaire, a patient-reported outcome measure specifically designed for individuals with age-related macular degeneration (AMD), effectively assesses vision-related quality of life in low-luminance and low-contrast situations."
+    },
+    {
+      "type": "bullet",
+      "text": "Visual function assessments conducted as part of the MACUSTAR study show that visual impairment in low luminance relates to functional outcomes in AMD patients, supporting the use of the VILL questionnaire in clinical trials for intermediate AMD."
+    },
+    {
+      "type": "bullet",
+      "text": "The relationship between vision impairment and visual function parameters was robustly analyzed across different subgroups, highlighting the importance of considering both eyes' visual health when assessing impact on quality of life."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

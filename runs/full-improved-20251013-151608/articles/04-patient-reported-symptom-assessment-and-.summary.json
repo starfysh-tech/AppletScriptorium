@@ -1,0 +1,19 @@
+{
+  "title": "Patient-Reported Symptom Assessment and Early Chemotherapy Discontinuation in ... - medRxiv",
+  "url": "https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "Among 1,178 patients, 67% completed symptom assessments at CTX initiation and during follow-up, indicating a significant portion of patients engaged in post-initiation assessments."
+    },
+    {
+      "type": "bullet",
+      "text": "After adjusting for demographic and clinical covariates and time-varying bias, completing post-initiation assessments was associated with a lower cumulative risk of early discontinuation (SHR: 0.70 [95% CI: 0.44–1.12]), suggesting that more frequent symptom assessments could reduce the likelihood of early CTX discontinuation."
+    },
+    {
+      "type": "bullet",
+      "text": "The results were generally consistent across prognostic groups, indicating that the association between assessment completion and reduced early discontinuation is robust across different stages and types of GI cancers."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

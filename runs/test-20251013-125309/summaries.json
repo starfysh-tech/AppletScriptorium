@@ -1,0 +1,59 @@
+[
+  {
+    "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+    "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "The study highlights the importance of capturing electronic patient reported outcomes (ePRO) in oncology practice to enhance patient-centered care and improve treatment decisions."
+      },
+      {
+        "type": "bullet",
+        "text": "Implementing ePRO systems can lead to better monitoring of patients' symptoms and quality of life during cancer treatment, allowing for timely interventions and adjustments to therapy."
+      },
+      {
+        "type": "bullet",
+        "text": "Integration of ePRO into standard clinical workflows requires robust data management and analysis capabilities to ensure that the insights gained are actionable and directly inform patient care."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+    "url": "https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "PROs can provide a more holistic evaluation of how treatments impact patients as individuals, helping improve shared decision-making, treatment escalation, and assessment of treatment response in older adults with transthyretin amyloid cardiomyopathy (ATTR-CM)."
+      },
+      {
+        "type": "bullet",
+        "text": "The Minnesota Living with Heart Failure Questionnaire (MLHFQ) and Euro-Qol 5 dimension-5 levels (EQ-5D-5 L) were predictors of all-cause mortality independent of biomarkers in ATTR-CM, demonstrating the importance of PROs alongside traditional clinical outcomes."
+      },
+      {
+        "type": "bullet",
+        "text": "Despite challenges posed by increasingly \"less sick\" populations in ATTR-CM trials and a shift towards favorable FDA approval based on PRO and HR-QoL, CV outcome trials will remain costly. Favoring composite endpoints or win ratio approaches that include functional endpoints like 6-minute walk distance and patient-reported outcome measures can provide valuable insights into disease progression and treatment effects in ATTR-CM."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer",
+    "url": "https://ascopubs.org/doi/10.1200/OA-25-00051",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "The study emphasizes the importance of patient-reported outcome measures in understanding the impact of hereditary and sporadic kidney cancer on individuals' quality of life."
+      },
+      {
+        "type": "bullet",
+        "text": "It highlights the need for comprehensive care that integrates clinical outcomes with patients' subjective experiences and perspectives."
+      },
+      {
+        "type": "bullet",
+        "text": "The collaborative effort of a multidisciplinary team, including experts in VHL syndrome (Von Hippel-Lindau), underscores the complexity of managing these cancers and the value of coordinated patient care."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  }
+]

@@ -1,0 +1,261 @@
+Delivered-To: randall@mqol.com
+Received: by 2002:a05:7300:3c05:b0:272:695d:183c with SMTP id e5csp3489548dys;
+        Sun, 12 Oct 2025 06:03:36 -0700 (PDT)
+X-Received: by 2002:a05:690c:6805:b0:729:5655:3444 with SMTP id 00721157ae682-780e173d23dmr218633757b3.25.1760274216704;
+        Sun, 12 Oct 2025 06:03:36 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1760274216; cv=none;
+        d=google.com; s=arc-20240605;
+        b=aENeejip4xo1iZ/4wuU9pHoygeBw2ST8cwsO3Znpb3QShHNeJt/0TZ6e2UAYON3gRL
+         GsX1EwOoSmEe9Afo7r08T5S5orQjStxQuow2i/ujKHyD03SmQPJupVmUX46wJgKkiEyI
+         BGHzdHcLAuWP+ev2lj8VVm+HzzjRgqgRe/SuFSfUqS2+DELoeaN8uDv+I1Cmu3GRZTJU
+         Jf0b+EWkFdBSTnXyTtEhHgcbrfPhj6dX7vcTNPMmatOIOTpEqpYgi8SLFz59/+RsL3ih
+         uLeDk3zDr/XnnIuHScRV3ScJdP+MCA0r+vdermQBXMYbmW9AarG2OLk/oWgoqcKZXipy
+         TYOw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:from:subject:message-id:list-unsubscribe:list-id:date
+         :mime-version:dkim-signature;
+        bh=DLhOLmuhZ/IwHjTMeBvk9nlUgQ2hRZD0t0Q7MJ3Fsts=;
+        fh=AJHKXsaUWn3OHSDNQCeEeo7A8Mkhe8tlj31ZshnoW4M=;
+        b=hJAXTMxsBmy951UtHjwdxoG4WzVcZEwSQEdABq0am413YMeDkUZBXAOpDbQskPJV6B
+         6rO2MbL2VSgkjVKtzMoguuEk3Wlsk/cX1DAWfhhGxxIyazoG4bvTFFbSfGSTv0P9GRqv
+         Zk+wpR7pbKGFnA5K7rjbc5bQBoL3We0mHET57CqlyimF06c6xeflu/7aJZZ6jn/Z0Ahv
+         tY90xsH8tVPrI3J2A4yjFm+Eh9WSd/almMZe6d8vJMIZvZYGXC52CZZB/vd0naz3dXOb
+         tw4zMfm2Lc3bYr94OBPcPrjHOLwGpdu+G9lLZnMtnxHPP1VNraLNbdI9zsnF+eD0LKpU
+         wwDA==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@google.com header.s=20230601 header.b=mDwX40aK;
+       spf=pass (google.com: domain of 3kkfrabqkb3mxffxcvrcvikj-efivgcpxffxcv.tfdireurccdhfc.tfd@alerts.bounces.google.com designates 209.85.220.69 as permitted sender) smtp.mailfrom=3KKfraBQKB3MXffXcVRcVikj-efiVgcpXffXcV.TfdiReURccdhfc.Tfd@alerts.bounces.google.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=google.com;
+       dara=neutral header.i=@mqol.com
+Return-Path: <3KKfraBQKB3MXffXcVRcVikj-efiVgcpXffXcV.TfdiReURccdhfc.Tfd@alerts.bounces.google.com>
+Received: from mail-sor-f69.google.com (mail-sor-f69.google.com. [209.85.220.69])
+        by mx.google.com with SMTPS id 00721157ae682-78106ee3b72sor54292727b3.8.2025.10.12.06.03.36
+        for <randall@mqol.com>
+        (Google Transport Security);
+        Sun, 12 Oct 2025 06:03:36 -0700 (PDT)
+Received-SPF: pass (google.com: domain of 3kkfrabqkb3mxffxcvrcvikj-efivgcpxffxcv.tfdireurccdhfc.tfd@alerts.bounces.google.com designates 209.85.220.69 as permitted sender) client-ip=209.85.220.69;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@google.com header.s=20230601 header.b=mDwX40aK;
+       spf=pass (google.com: domain of 3kkfrabqkb3mxffxcvrcvikj-efivgcpxffxcv.tfdireurccdhfc.tfd@alerts.bounces.google.com designates 209.85.220.69 as permitted sender) smtp.mailfrom=3KKfraBQKB3MXffXcVRcVikj-efiVgcpXffXcV.TfdiReURccdhfc.Tfd@alerts.bounces.google.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=google.com;
+       dara=neutral header.i=@mqol.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20230601; t=1760274216; x=1760879016; darn=mqol.com;
+        h=to:from:subject:message-id:list-unsubscribe:list-id:date
+         :mime-version:from:to:cc:subject:date:message-id:reply-to;
+        bh=DLhOLmuhZ/IwHjTMeBvk9nlUgQ2hRZD0t0Q7MJ3Fsts=;
+        b=mDwX40aKMzXag8I+b76BCVvxJbMyOuW4gj+FohXr/mhk8G9vp926ImZhfvlmzEtqQV
+         spLl+GOFHapJdy/QDwFMsctCwXIIH0IHo33c+RxYVTzj9BQWp6tXeX5VLbX2h8WCsGtt
+         NX8VW3IbSBjsHJS7kvKLrJLmGziItCZsbJj4rNO1taHVkc5crt9+27NPywTonGCls+Nq
+         EL3AL8a8sl1wsmRcHd45pY2jDbjF+HnZJAYRBWYOw+ycMhxlnp3A83XNbGgPL0Q+lAZm
+         uC7BDVH+1Ra9/EKwu5qaOOIHPeoGC8xJ4z7JT7KX+1syOQGyw/Y5c1s+tNm8YDE6g6lU
+         GfRA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1760274216; x=1760879016;
+        h=to:from:subject:message-id:list-unsubscribe:list-id:date
+         :mime-version:x-gm-message-state:from:to:cc:subject:date:message-id
+         :reply-to;
+        bh=DLhOLmuhZ/IwHjTMeBvk9nlUgQ2hRZD0t0Q7MJ3Fsts=;
+        b=Xb1p2vmrnb7rKgpE8gh5rhaWJgcDBmtbQzvc5uC4+0Sg9UEbM4ItS2CMWV/Qrkc0ay
+         Vk3e8c70v8Mh1hR1EN9V2Q2gncwBuWkpVl91Z0zz/3ZDdEO2QDnJo8a6GiA2eHrq6k7d
+         /sipAhxVC/33+xhRg8nZK0Ok9SZEsUAFGj6b5++SW+MdtBLhJTnZaSNEfDkeJzo9/SY3
+         LtbQCtfehebNpN13h5YjTiK1EHCSIRMDm4VoX32MZW2tuqOUWsf7QTRHDwliYw8luPiJ
+         2rJnoa4leouY9JZoASPrRJgDwel9OwshD4Y4rklywWjZA7bWAhPAZuRbOxhjqtfm3uqA
+         U7sg==
+X-Gm-Message-State: AOJu0Yx2oNBh0RyOp0hN/f4DO610l3IZ0x1q3eL4+w2TN9NFU7aXnjzF
+	qGfxNlfHQx4qI4/G+b/TLFbRDSLaRdyutt1lr6U=
+X-Google-Smtp-Source: AGHT+IEzl9i25iQXhpJLCOpd9a2TArGCYC3wykAPJgKGtBozEIRmV8rZu8Fj4Z3d3igjWdbaTNU=
+MIME-Version: 1.0
+X-Received: by 2002:a05:690e:ed4:b0:63b:a4f9:fbf4 with SMTP id
+ 956f58d0204a3-63ccb9050camr13000789d50.31.1760274216335; Sun, 12 Oct 2025
+ 06:03:36 -0700 (PDT)
+Date: Sun, 12 Oct 2025 06:03:36 -0700
+List-Id: <2350214105879500704.alerts.google.com>
+List-Unsubscribe: <mailto:ur@unsubscribe.alerts.google.com?subject=AB2Xq4izeur_lKOMxh6IAW2CI6fJ6t64u1-LJLg>
+Message-ID: <68eba728.050a0220.7e6d8.6da8googlealerts@google.com>
+Subject: =?UTF-8?Q?Google_Alert_=2D_=E2=80=9CMedication_reminder=E2=80=9D?=
+From: Google Alerts <googlealerts-noreply@google.com>
+To: randall@mqol.com
+Content-Type: multipart/alternative; boundary="0000000000005f38750640f5c7e0"
+
+--0000000000005f38750640f5c7e0
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+
+PT09IE5ld3MgLSAxIG5ldyByZXN1bHQgZm9yIFvigJxNZWRpY2F0aW9uIHJlbWluZGVy4oCdXSA9
+PT0NCg0KRGlnaXRhbCBpbnRlcnZlbnRpb25zIGluIG1lZGljYXRpb24gYWRoZXJlbmNlOiBhIG5h
+cnJhdGl2ZSByZXZpZXcgb2YNCmN1cnJlbnQgZXZpZGVuY2UgYW5kIGNoYWxsZW5nZXMNCkZyb250
+aWVycw0KRm9yIGV4YW1wbGUsIGEgc3VydmV5IG9mIG1lZGljYXRpb24gcmVtaW5kZXIgYXBwIHVz
+ZXJzIGluIFNpbmdhcG9yZSAuLi4NCm1lZGljYXRpb24gcmVtaW5kZXIgYXBwICd1c2UgYW5kIHVz
+ZSBpbnRlbnRpb24nIGFtb25nIG9sZGVyIGFkdWx0cyAuLi4NCjxodHRwczovL3d3dy5nb29nbGUu
+Y29tL3VybD9yY3Q9aiZzYT10JnVybD1odHRwczovL3d3dy5mcm9udGllcnNpbi5vcmcvam91cm5h
+bHMvcGhhcm1hY29sb2d5L2FydGljbGVzLzEwLjMzODkvZnBoYXIuMjAyNS4xNjMyNDc0L2VwdWIm
+Y3Q9Z2EmY2Q9Q0FFWUFDb1VNVFl3TVRBMk5ERTVOREEyTmpneU5ERXhORFF5R2psaE9UVmpOemsx
+TjJSa1pEZzBZVGs2WTI5dE9tVnVPbFZUJnVzZz1BT3ZWYXcwWnJBY2tKRmpvVlc4c0NwSWJOUG0y
+Pg0KDQoNCi0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0g
+LSAtIC0gLSAtIC0gLSAtIC0NClVuc3Vic2NyaWJlIGZyb20gdGhpcyBHb29nbGUgQWxlcnQ6DQo8
+aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbS9hbGVydHMvcmVtb3ZlP3NvdXJjZT1hbGVydHNtYWlsJmhs
+PWVuJmdsPVVTJm1zZ2lkPU1UWXdNVEEyTkRFNU5EQTJOamd5TkRFeE5EUSZzPUFCMlhxNGl6ZXVy
+X2xLT014aDZJQVcyQ0k2Zko2dDY0dTEtTEpMZz4NCg0KQ3JlYXRlIGFub3RoZXIgR29vZ2xlIEFs
+ZXJ0Og0KPGh0dHBzOi8vd3d3Lmdvb2dsZS5jb20vYWxlcnRzP3NvdXJjZT1hbGVydHNtYWlsJmhs
+PWVuJmdsPVVTJm1zZ2lkPU1UWXdNVEEyTkRFNU5EQTJOamd5TkRFeE5EUT4NCg0KU2lnbiBpbiB0
+byBtYW5hZ2UgeW91ciBhbGVydHM6DQo8aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbS9hbGVydHM/c291
+cmNlPWFsZXJ0c21haWwmaGw9ZW4mZ2w9VVMmbXNnaWQ9TVRZd01UQTJOREU1TkRBMk5qZ3lOREV4
+TkRRPg0K
+--0000000000005f38750640f5c7e0
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<html lang=3D"en-US"> <head> </head> <body> <div>  <script data-scope=3D"in=
+boxmarkup" type=3D"application/json">{
+  "api_version": "1.0",
+  "publisher": {
+    "api_key": "668269e72cfedea31b22524041ff21d9",
+    "name": "Google Alerts"
+  },
+  "entity": {
+    "external_key": "Google Alert - =E2=80=9CMedication reminder=E2=80=9D",
+    "title": "Google Alert - =E2=80=9CMedication reminder=E2=80=9D",
+    "subtitle": "Latest: October 12, 2025",
+    "avatar_image_url": "https://www.gstatic.com/images/branding/product/1x=
+/gsa_512dp.png",
+    "main_image_url": "https://www.gstatic.com/bt/C3341AA7A1A076756462EE2E5=
+CD71C11/smartmail/mobile/il_newspaper_header_r1.png"
+  },
+  "updates": {
+    "snippets": [ {
+      "icon": "BOOKMARK",
+      "message": "Digital interventions in medication adherence: a narrativ=
+e review of current evidence and challenges"
+    } ]
+  },
+  "cards": [ {
+    "title": "Google Alert - =E2=80=9CMedication reminder=E2=80=9D",
+    "subtitle": "Highlights from the latest email",
+    "actions": [ {
+      "name": "See more results",
+      "url": "https://www.google.com/alerts?s=3DAB2Xq4izeur_lKOMxh6IAW2CI6f=
+J6t64u1-LJLg\u0026start=3D1759928702\u0026end=3D1760274215\u0026source=3Dal=
+ertsmail\u0026hl=3Den\u0026gl=3DUS\u0026msgid=3DMTYwMTA2NDE5NDA2NjgyNDExNDQ=
+#history"
+    } ],
+    "widgets": [ {
+      "type": "LINK",
+      "title": "Digital interventions in medication adherence: a narrative =
+review of current evidence and challenges",
+      "description": "For example, a survey of medication reminder app user=
+s in Singapore ... medication reminder app 'use and use intention' among ol=
+der adults ...",
+      "url": "https://www.google.com/url?rct=3Dj\u0026sa=3Dt\u0026url=3Dhtt=
+ps://www.frontiersin.org/journals/pharmacology/articles/10.3389/fphar.2025.=
+1632474/epub\u0026ct=3Dga\u0026cd=3DCAEYACoUMTYwMTA2NDE5NDA2NjgyNDExNDQyGjl=
+hOTVjNzk1N2RkZDg0YTk6Y29tOmVuOlVT\u0026usg=3DAOvVaw0ZrAckJFjoVW8sCpIbNPm2"
+    } ]
+  } ]
+}
+</script> <!--[if mso]>
+ <table><tr><td width=3D650>
+<![endif]-->
+ <div style=3D"width:100%;max-width:650px"> <div style=3D"font-family:Arial=
+"> <table style=3D"border-collapse:collapse;border-left:1px solid #e4e4e4;b=
+order-right:1px solid #e4e4e4"> <tr> <td style=3D"background-color:#f8f8f8;=
+padding-left:18px;border-bottom:1px solid #e4e4e4;border-top:1px solid #e4e=
+4e4"></td> <td valign=3D"middle" style=3D"padding:13px 10px 8px 0px;backgro=
+und-color:#f8f8f8;border-top:1px solid #e4e4e4;border-bottom:1px solid #e4e=
+4e4"> <a href=3D"https://www.google.com/alerts?source=3Dalertsmail&amp;hl=
+=3Den&amp;gl=3DUS&amp;msgid=3DMTYwMTA2NDE5NDA2NjgyNDExNDQ" style=3D"text-de=
+coration:none"> <img src=3D"https://www.google.com/intl/en_us/alerts/logo.p=
+ng?cd=3DKhQxNjAxMDY0MTk0MDY2ODI0MTE0NA" alt=3D"Google" border=3D"0" height=
+=3D"25"> </a> </td> <td style=3D"background-color:#f8f8f8;padding-left:18px=
+;border-top:1px solid #e4e4e4;border-bottom:1px solid #e4e4e4"></td> </tr> =
+ <tr> <td style=3D"padding-left:32px"></td> <td style=3D"padding:18px 0px 0=
+px 0px;vertical-align:middle;line-height:20px;font-family:Arial"> <span sty=
+le=3D"color:#262626;font-size:22px">=E2=80=9CMedication reminder=E2=80=9D</=
+span> <div style=3D"vertical-align:top;padding-top:6px;color:#aaa;font-size=
+:12px;line-height:16px"> <span>Daily update</span> <span style=3D"padding:0=
+px 4px 0px 4px">&sdot;</span> <a style=3D"color:#aaa;text-decoration:none">=
+October 12, 2025</a> </div> </td> <td style=3D"padding-left:32px"></td> </t=
+r>  <tr> <td style=3D"padding-left:18px"></td> <td style=3D"padding:16px 0p=
+x 12px 0px;border-bottom:1px solid #e4e4e4"> <span style=3D"font-size:12px;=
+color:#737373"> NEWS </span> </td> <td style=3D"padding-right:18px"></td> <=
+/tr>   <tr itemscope=3D"" itemtype=3D"http://schema.org/Article"> <td style=
+=3D"padding-left:18px"></td> <td style=3D"padding:18px 0px 12px 0px;vertica=
+l-align:top;font-family:Arial"> <a></a> <div>  <span style=3D"padding:0px 6=
+px 0px 0px"> <a href=3D"https://www.google.com/url?rct=3Dj&amp;sa=3Dt&amp;u=
+rl=3Dhttps://www.frontiersin.org/journals/pharmacology/articles/10.3389/fph=
+ar.2025.1632474/epub&amp;ct=3Dga&amp;cd=3DCAEYACoUMTYwMTA2NDE5NDA2NjgyNDExN=
+DQyGjlhOTVjNzk1N2RkZDg0YTk6Y29tOmVuOlVT&amp;usg=3DAOvVaw0ZrAckJFjoVW8sCpIbN=
+Pm2" itemprop=3D"url" style=3D"color:#427fed;display:inline;text-decoration=
+:none;font-size:16px;line-height:20px"> <span itemprop=3D"name">Digital int=
+erventions in medication adherence: a narrative review of current evidence =
+and challenges</span> </a> </span>  <div> <div style=3D"padding:2px 0px 8px=
+ 0px"> <div itemprop=3D"publisher" itemscope=3D"" itemtype=3D"http://schema=
+.org/Organization" style=3D"color:#737373;font-size:12px"> <a style=3D"text=
+-decoration:none;color:#737373"> <span itemprop=3D"name">Frontiers</span> <=
+/a> </div> <div itemprop=3D"description" style=3D"color:#252525;padding:2px=
+ 0px 0px 0px;font-size:12px;line-height:18px">For example, a survey of <b>m=
+edication reminder</b> app users in Singapore ... <b>medication reminder</b=
+> app &#39;use and use intention&#39; among older adults&nbsp;...</div> </d=
+iv>   <table> <tr> <td width=3D"16" style=3D"padding-right:6px"> <a href=3D=
+"https://www.google.com/alerts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://w=
+ww.frontiersin.org/journals/pharmacology/articles/10.3389/fphar.2025.163247=
+4/epub&amp;ss=3Dfb&amp;rt=3DDigital+interventions+in+medication+adherence:+=
+a+narrative+review+of+current+evidence+and+challenges&amp;cd=3DKhQxNjAxMDY0=
+MTk0MDY2ODI0MTE0NDIaOWE5NWM3OTU3ZGRkODRhOTpjb206ZW46VVM&amp;ssp=3DAMJHsmV4v=
+C07Yd90KHHf5R-E-TUMAw5fWQ" style=3D"text-decoration:none"> <img alt=3D"Face=
+book" src=3D"https://www.gstatic.com/alerts/images/fb-24.png" border=3D"0" =
+height=3D"16" width=3D"16"></a> </td> <td width=3D"16" style=3D"padding-rig=
+ht:6px"> <a href=3D"https://www.google.com/alerts/share?hl=3Den&amp;gl=3DUS=
+&amp;ru=3Dhttps://www.frontiersin.org/journals/pharmacology/articles/10.338=
+9/fphar.2025.1632474/epub&amp;ss=3Dtw&amp;rt=3DDigital+interventions+in+med=
+ication+adherence:+a+narrative+review+of+current+evidence+and+challenges&am=
+p;cd=3DKhQxNjAxMDY0MTk0MDY2ODI0MTE0NDIaOWE5NWM3OTU3ZGRkODRhOTpjb206ZW46VVM&=
+amp;ssp=3DAMJHsmV4vC07Yd90KHHf5R-E-TUMAw5fWQ" style=3D"text-decoration:none=
+"> <img alt=3D"Twitter" src=3D"https://www.gstatic.com/alerts/images/tw-24.=
+png" border=3D"0" height=3D"16" width=3D"16"></a> </td> <td style=3D"paddin=
+g:0px 0px 6px 15px;font-family:Arial"> <a href=3D"https://www.google.com/al=
+erts/feedback?ffu=3Dhttps://www.frontiersin.org/journals/pharmacology/artic=
+les/10.3389/fphar.2025.1632474/epub&amp;source=3Dalertsmail&amp;hl=3Den&amp=
+;gl=3DUS&amp;msgid=3DMTYwMTA2NDE5NDA2NjgyNDExNDQ&amp;s=3DAB2Xq4izeur_lKOMxh=
+6IAW2CI6fJ6t64u1-LJLg" style=3D"text-decoration:none;vertical-align:middle;=
+color:#aaa;font-size:10px"> Flag as irrelevant </a> </td> </tr> </table>  <=
+/div> </div> </td> <td style=3D"padding-right:18px"></td> </tr>    <tr> <td=
+ colspan=3D"3" valign=3D"middle" style=3D"background-color:#f8f8f8;font-siz=
+e:14px;vertical-align:middle;text-align:center;padding:10px 10px 10px 10px;=
+line-height:20px;border:1px solid #e4e4e4;font-family:Arial"> <a href=3D"ht=
+tps://www.google.com/alerts?s=3DAB2Xq4izeur_lKOMxh6IAW2CI6fJ6t64u1-LJLg&amp=
+;start=3D1759928702&amp;end=3D1760274215&amp;source=3Dalertsmail&amp;hl=3De=
+n&amp;gl=3DUS&amp;msgid=3DMTYwMTA2NDE5NDA2NjgyNDExNDQ#history" style=3D"tex=
+t-decoration:none;vertical-align:middle;color:#427fed">  See more results  =
+</a> <span style=3D"font-size:12px;padding-left:15px;padding-right:15px;col=
+or:#aaa">|</span> <a href=3D"https://www.google.com/alerts/edit?source=3Dal=
+ertsmail&amp;hl=3Den&amp;gl=3DUS&amp;msgid=3DMTYwMTA2NDE5NDA2NjgyNDExNDQ&am=
+p;s=3DAB2Xq4izeur_lKOMxh6IAW2CI6fJ6t64u1-LJLg&amp;email=3Drandall%40mqol.co=
+m" style=3D"text-decoration:none;vertical-align:middle;color:#427fed">Edit =
+this alert</a>  </td> </tr>  </table> <table style=3D"padding-top:6px;font-=
+size:12px;color:#252525;text-align:center;width:100%"> <tr> <td style=3D"fo=
+nt-family:Arial">  You have received this email because you have subscribed=
+ to <b>Google Alerts</b>. <div> <a href=3D"https://www.google.com/alerts/re=
+move?source=3Dalertsmail&amp;hl=3Den&amp;gl=3DUS&amp;msgid=3DMTYwMTA2NDE5ND=
+A2NjgyNDExNDQ&amp;s=3DAB2Xq4izeur_lKOMxh6IAW2CI6fJ6t64u1-LJLg" style=3D"tex=
+t-decoration:none;color:#427fed">Unsubscribe</a> <span style=3D"padding:0px=
+ 4px 0px 4px;color:#252525">|</span> <a href=3D"https://www.google.com/aler=
+ts?source=3Dalertsmail&amp;hl=3Den&amp;gl=3DUS&amp;msgid=3DMTYwMTA2NDE5NDA2=
+NjgyNDExNDQ" style=3D"text-decoration:none;color:#427fed">  View all your a=
+lerts  </a> </div> </td> </tr> <tr> <td style=3D"padding:6px 10px 0px 0px;f=
+ont-family:Arial"> <a href=3D"https://www.google.com/alerts/feeds/057300965=
+26662177387/16488521384535872206" style=3D"text-decoration:none;color:#427f=
+ed"> <img src=3D"https://www.gstatic.com/alerts/images/rss-16.gif" alt=3D"R=
+SS" border=3D"0" style=3D"padding:0px 8px 0px 0px;vertical-align:middle"> <=
+span style=3D"display:inline;line-height:16px;vertical-align:middle"> Recei=
+ve this alert as RSS feed </span> </a> </td> </tr> <tr> <td style=3D"paddin=
+g:6px 0px 0px 0px;font-family:Arial"> <a href=3D"https://www.google.com/ale=
+rts?source=3Dalertsmail&amp;hl=3Den&amp;gl=3DUS&amp;msgid=3DMTYwMTA2NDE5NDA=
+2NjgyNDExNDQ&amp;s=3DAB2Xq4izeur_lKOMxh6IAW2CI6fJ6t64u1-LJLg&amp;ffu=3D" st=
+yle=3D"text-decoration:none;color:#427fed"> <div style=3D"display:inline;li=
+ne-height:16px;vertical-align:middle"> Send Feedback </div> </a> </td> </tr=
+> </table> </div> </div> <!--[if mso]>
+</td></tr></table>
+<![endif]-->  </div>  </body> </html>
+--0000000000005f38750640f5c7e0--

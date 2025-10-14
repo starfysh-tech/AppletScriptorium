@@ -1,0 +1,23 @@
+{
+  "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+  "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 67% of patients completed assessments, reducing discontinuation risk by 30%."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [ROADMAP]**: Integrate AI-driven reminders to optimize patient engagement and data quality."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Growing adoption of PROs in oncology trials as regulatory pressure increases."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-selection bias may skew results toward healthier patients, impacting clinical validity."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

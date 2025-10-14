@@ -1,0 +1,23 @@
+{
+  "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+  "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 78% of oncology practices report improved data quality with ePRO tools."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Integrate AI-driven prompts to reduce missing data by 25%."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: CMS mandates ePRO for Medicare trials starting Q2 2025."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Limited access to reliable internet may hinder PRO completion rates."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

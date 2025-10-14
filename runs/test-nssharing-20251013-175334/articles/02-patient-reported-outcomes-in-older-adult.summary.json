@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+  "url": "https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: Patient-reported outcomes predict all-cause mortality and HF hospitalization in ATTR-CM."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [ROADMAP]**: Integrate AI-driven ePRO platforms to enhance data quality and compliance rates."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA prioritizing PROs for FDA approval pathways, emphasizing clinical validity."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-selection bias in trials may underrepresent severe cases, impacting external validity."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

@@ -1,0 +1,43 @@
+{
+  "title": "P127. Impact of body mass index on patient-reported outcomes radiographic alignment and ...",
+  "url": "https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "Between the two groups, patients with BMI ≥35 had a significantly higher rate of in-hospital complications (2.0% vs 7.8%, p=0.032), including swelling, tachycardia, clonus, and other PACU irregularities."
+    },
+    {
+      "type": "bullet",
+      "text": "**KEY FINDINGS**: Higher complication rates in obese patients post-ACDF."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL APPLICATIONS**: Increased vigilance and tailored postoperative care may be necessary for obese patients to mitigate higher complication risks."
+    },
+    {
+      "type": "bullet",
+      "text": "Sagittal alignment parameters remained stable between groups at immediate and final follow-ups, indicating that BMI does not affect long-term cervical stability following ACDF."
+    },
+    {
+      "type": "bullet",
+      "text": "**KEY FINDINGS**: No significant difference in sagittal alignment metrics between low and high BMI groups postoperatively."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL APPLICATIONS**: Surgical planning can be standardized across different BMIs without adjusting for expected changes in sagittal alignment."
+    },
+    {
+      "type": "bullet",
+      "text": "Patients with BMI ≥35 reported less postoperative pain relief (1-year arm VAS: 7.36 ± 1.83) and physical health improvements compared to those with lower BMI (e.g., 6-month Global Physical Health index: 44.09 ± 8.87 vs. 33.94 ± 4.12)."
+    },
+    {
+      "type": "bullet",
+      "text": "**KEY FINDINGS**: Higher BMI group experienced less postoperative pain relief and slower physical health recovery."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL APPLICATIONS**: Clinicians should set realistic expectations for pain management and recovery timelines, particularly in obese patients undergoing ACDF."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

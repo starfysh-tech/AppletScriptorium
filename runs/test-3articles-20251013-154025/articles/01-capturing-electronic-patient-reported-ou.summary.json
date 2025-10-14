@@ -1,0 +1,23 @@
+{
+  "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+  "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: Over 60% of oncology practices struggle to capture electronic Patient-Reported Outcomes (**PROs**) effectively, highlighting a critical gap in clinical data collection and patient engagement."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN** [SHIP NOW]: Implement AI-driven interfaces for PROs that simplify data entry for patients while ensuring high compliance rates among oncology patients."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL** 🔴 URGENT: With FDA guidelines tightening on digital health tools, early adopters of robust PRO platforms could gain a competitive edge in the rapidly evolving oncology tech market."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: The current lack of standardized PRO metrics poses a challenge for cross-study comparability, potentially undermining the clinical validity of emerging oncology treatments."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

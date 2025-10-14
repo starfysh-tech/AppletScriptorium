@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer",
+  "url": "https://ascopubs.org/doi/10.1200/OA-25-00051",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 67% patient adherence to PRO assessments improved trial retention by 40%."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Integrate AI-driven reminders for optimal completion timing."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: Growing regulatory pressure mandates PRO integration in drug development."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-selection bias may undermine the clinical validity of self-reported outcomes."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

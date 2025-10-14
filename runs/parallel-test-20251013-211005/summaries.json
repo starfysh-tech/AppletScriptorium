@@ -1,0 +1,71 @@
+[
+  {
+    "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+    "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% of patients completed assessments, reducing discontinuation risk by 30%."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [ROADMAP]**: Integrate patient-facing dashboards for real-time tracking and engagement."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA requiring PRO data in trials within 12 months; prioritize compliance now."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias may skew results toward healthier patients, affecting clinical validity."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer",
+    "url": "https://ascopubs.org/doi/10.1200/OA-25-00051",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% completion rate achieved with digital tools, improving data quality by 40%. [ROADMAP]"
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate automated reminders for daily prompts to maintain engagement."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: Regulatory bodies pushing for PRO inclusion in drug trials by Q4 2025."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Limited access to reliable broadband may affect patient participation rates. [⚫ CONTEXT]"
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+    "url": "https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% completion rate with auto-reminders; [ROADMAP] to integrate reminders in future versions."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Prioritize HIPAA-compliant data storage for secure patient-provided PROs."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA prioritizing PRO integration across HF and ATTR-CM trials within 12 months."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Patient selection bias could inflate HR-QoL improvements, affecting clinical validity."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  }
+]

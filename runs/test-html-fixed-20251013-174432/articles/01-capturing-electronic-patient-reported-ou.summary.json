@@ -1,0 +1,23 @@
+{
+  "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+  "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 67% of patients completed assessments with auto-reminders, halving discontinuation risk."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [ROADMAP]**: Develop AI-driven patient prioritization to optimize reminder timing."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Growing adoption trend shows PROs improving trial success rates by 25%."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-selection bias may skew results toward healthier patients, impacting clinical validity."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

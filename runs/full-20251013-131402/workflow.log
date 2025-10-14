@@ -1,0 +1,38 @@
+[2025-10-13 13:14:03,880] Output directory: /Users/randallnoval/Code/AppletScriptorium/runs/full-20251013-131402
+[2025-10-13 13:14:04,657] OK: wrote alert 68ecf9a7.050a0220.7e6d8.83f8googlealerts@google.com to /Users/randallnoval/Code/AppletScriptorium/runs/full-20251013-131402/alert.eml
+[2025-10-13 13:14:04,657] Extracting link metadata
+[2025-10-13 13:14:04,667] [fetch] https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391
+[2025-10-13 13:14:04,830] HTTP Request: GET https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391 "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:14:25,147] [summarize] Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications
+[2025-10-13 13:14:25,150] [fetch] https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204
+[2025-10-13 13:14:25,320] HTTP Request: GET https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204 "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:14:50,438] [summarize] Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC
+[2025-10-13 13:14:50,497] [fetch] https://ascopubs.org/doi/10.1200/OA-25-00051
+[2025-10-13 13:14:50,865] HTTP Request: GET https://ascopubs.org/doi/10.1200/OA-25-00051 "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:15:28,985] [summarize] Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer
+[2025-10-13 13:15:29,013] [fetch] https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1
+[2025-10-13 13:15:29,406] HTTP Request: GET https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1 "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:15:58,845] [summarize] Patient-Reported Symptom Assessment and Early Chemotherapy Discontinuation in ... - medRxiv
+[2025-10-13 13:15:58,897] [fetch] https://www.sciencedirect.com/science/article/pii/S2666638325002804
+[2025-10-13 13:15:59,739] HTTP Request: GET https://www.sciencedirect.com/science/article/pii/S2666638325002804 "HTTP/1.1 200 OK"
+[2025-10-13 13:16:18,412] [summarize] Strong Correlation of PROMIS Upper Extremity and Shoulder Arthroplasty Smart Score to ...
+[2025-10-13 13:16:18,450] [fetch] https://www.jacc.org/doi/abs/10.1016/j.jacadv.2025.102204
+[2025-10-13 13:16:18,781] HTTP Request: GET https://www.jacc.org/doi/abs/10.1016/j.jacadv.2025.102204 "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:16:41,254] [summarize] Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC
+[2025-10-13 13:16:41,273] [fetch] https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X
+[2025-10-13 13:16:42,147] HTTP Request: GET https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X "HTTP/1.1 200 OK"
+[2025-10-13 13:16:53,997] [summarize] P127. Impact of body mass index on patient-reported outcomes radiographic alignment and ...
+[2025-10-13 13:16:54,021] [fetch] https://www.medscape.com/viewarticle/move-toward-assessing-well-being-psoriasis-biologic-2025a1000rgw
+[2025-10-13 13:16:55,148] HTTP Request: GET https://www.medscape.com/viewarticle/move-toward-assessing-well-being-psoriasis-biologic-2025a1000rgw "HTTP/1.1 200 OK"
+[2025-10-13 13:17:26,625] [summarize] New Patient Outcome Assessed in Psoriasis Biologic Trial - Medscape
+[2025-10-13 13:17:26,653] [fetch] https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes
+[2025-10-13 13:17:27,241] HTTP Request: GET https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes "HTTP/1.1 403 Forbidden"
+[2025-10-13 13:18:24,336] [summarize] OutcomeMD Launches First Data Intelligence Network for Healthcare Powered by Patient ...
+[2025-10-13 13:18:24,372] [fetch] https://www.nature.com/articles/s41598-025-14553-4
+[2025-10-13 13:18:25,061] HTTP Request: GET https://www.nature.com/articles/s41598-025-14553-4 "HTTP/1.1 303 See Other"
+[2025-10-13 13:18:25,291] HTTP Request: GET https://idp.nature.com/authorize?response_type=cookie&client_id=grover&redirect_uri=https%3A%2F%2Fwww.nature.com%2Farticles%2Fs41598-025-14553-4 "HTTP/1.1 302 Found"
+[2025-10-13 13:18:25,402] HTTP Request: GET https://idp.nature.com/transit?redirect_uri=https%3A%2F%2Fwww.nature.com%2Farticles%2Fs41598-025-14553-4&code=3d44cd8c-550e-4afe-a69b-3d0a9cd6c9aa "HTTP/1.1 302 Found"
+[2025-10-13 13:18:25,715] HTTP Request: GET https://www.nature.com/articles/s41598-025-14553-4 "HTTP/1.1 200 OK"
+[2025-10-13 13:18:52,927] [summarize] Patient-reported vision impairment in low luminance relates to visual function in age ... - Nature
+[2025-10-13 13:19:02,615] [mail] sent digest to randall@mqol.com
+[2025-10-13 13:19:02,616] Run complete. Summaries generated: 10

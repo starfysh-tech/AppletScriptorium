@@ -52,7 +52,7 @@ python3 -m pytest -v
 ```bash
 # Refresh raw alert fixture (captures most recent message matching subject)
 osascript Summarizer/fetch-alert-source.applescript \
-  Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06.eml \
+  Summarizer/Samples/google-alert-sample-2025-10-06.eml \
   "Patient reported outcome"
 
 # Rebuild decoded HTML and expected link list
@@ -60,7 +60,7 @@ Summarizer/refresh-fixtures.py
 
 # Validate changes against committed fixtures
 Summarizer/refresh-fixtures.py --links /tmp/alert-links.tsv --links-json /tmp/alert-links.json --html /tmp/alert.html
-diff -u Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06-links.tsv /tmp/alert-links.tsv
+diff -u Summarizer/Samples/google-alert-sample-2025-10-06-links.tsv /tmp/alert-links.tsv
 ```
 
 ### Running the Pipeline
@@ -99,10 +99,10 @@ python3 -m Summarizer.cli run \
 ### Quick Validation
 ```bash
 # Parse alert and view links (TSV format)
-python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06.eml | head
+python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head
 
 # Parse alert and view links (JSON format)
-python3 Summarizer/clean-alert.py --format json Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06.eml | jq '.' | head
+python3 Summarizer/clean-alert.py --format json Summarizer/Samples/google-alert-sample-2025-10-06.eml | jq '.' | head
 ```
 
 ## Key Technical Details

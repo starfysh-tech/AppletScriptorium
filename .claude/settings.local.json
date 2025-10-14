@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(osascript:*)",
+      "Bash(ollama list:*)",
+      "Bash(cat:*)",
+      "Bash(python3 -m pytest:*)",
+      "Bash(python3:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

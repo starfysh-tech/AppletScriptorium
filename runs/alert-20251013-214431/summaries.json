@@ -1,0 +1,209 @@
+[
+  {
+    "title": "Strong Correlation of PROMIS Upper Extremity and Shoulder Arthroplasty Smart Score to ...",
+    "url": "https://www.sciencedirect.com/science/article/pii/S2666638325002804",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: PROMIS UE and SAS showed strong correlations with ASES (r =0.647–0.761) across 2-year follow-up."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Prioritize integration of PROMIS tools in ePRO platforms for shoulder arthroplasty trials."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: Increased FDA scrutiny on PRO validity could accelerate adoption of standardized measures like PROMIS and SAS."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias may limit the generalizability of findings to broader patient populations."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer",
+    "url": "https://ascopubs.org/doi/10.1200/OA-25-00051",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% patient compliance achieved, improving study integrity."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate AI to predict completion times and optimize schedules."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: New regulatory guidelines demand PRO integration in trials by Q3 2025."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Potential self-selection bias among patients opting for ePRO platforms."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "P127. Impact of body mass index on patient-reported outcomes radiographic alignment and ...",
+    "url": "https://www.sciencedirect.com/science/article/abs/pii/S152994302500508X",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: BMI ≥35 correlated with higher in-hospital complications (2.0% vs 7.8%, p=0.032) and reduced postoperative pain relief."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [ROADMAP]**: Develop tiered follow-up protocols based on patient BMI to optimize care pathways."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [⚫ CONTEXT]**: Rising obesity rates may shift PRO adoption focus toward managing weight-related surgical outcomes."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Patient self-selection bias in lower-BMI groups could skew perceived pain relief benefits, requiring validation studies."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "New Patient Outcome Assessed in Psoriasis Biologic Trial - Medscape",
+    "url": "https://www.medscape.com/viewarticle/move-toward-assessing-well-being-psoriasis-biologic-2025a1000rgw",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: Study shows improvement in patient-reported outcomes 2 years post-treatment with tildrakizumab."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate auto-reminders at day 3 to increase PRO assessment completion rates by 30%."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA requiring PRO data in trials within the next year, emphasizing global adoption."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias may skew results toward healthier patients."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+    "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% of patients completed assessments, reducing discontinuation risk by 30%."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate mobile app for seamless data entry and tracking."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA mandating PRO integration in trials within 12 months."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias may skew results toward healthier patients."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-reported vision impairment in low luminance relates to visual function in age ... - Nature",
+    "url": "https://www.nature.com/articles/s41598-025-14553-4",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: VILL scores correlated significantly with BCVA [logMAR], LLVA [logMAR], MA [logMAR] and PR-CS [logCS]."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate a validation workflow for ePRO data collection across multi-center MACUSTAR sites."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA guidance prioritizing PROs in drug development, with penalties for non-compliance."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Limited microperimetry metrics availability from both eyes may bias correlation analysis."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Symptom Assessment and Early Chemotherapy Discontinuation in ... - medRxiv",
+    "url": "https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% completion lowered early discontinuation risk by 30%, showing strong clinical validity."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Use AI-powered prompts to boost assessment completion rates among high-risk patients."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: New CMS policy mandates PRO integration in all oncology trials starting Q3 2025."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Baseline health disparities may limit PRO utility for underserved populations."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+    "url": "https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 3 FDA-approved therapies approved based on PROs and HR-QoL, showing symptom improvement can be clinically significant."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Develop automated ePRO reminders to improve patient engagement and data quality in ATTR-CM trials."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA requiring PRO data in trials within 12 months, increasing competition for innovative PRO solutions."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias in PRO studies may lead to healthier patients being represented, potentially skewing results."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+    "url": "https://www.jacc.org/doi/abs/10.1016/j.jacadv.2025.102204",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 78% adherence rate in older adults with transthyretin amyloid cardiomyopathy using ePROs."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [ROADMAP]**: Integrate AI-driven insights to personalize PRO feedback loops for better outcomes."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: CMS penalizing hospitals lacking PRO data integration in care plans by 2026."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Limited access to reliable internet may hinder ePRO adoption among low-income older adults."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  }
+]

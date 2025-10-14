@@ -1,0 +1,14 @@
+[2025-10-13 18:01:41,940] Output directory: /Users/randallnoval/Code/AppletScriptorium/runs/test-visible-true-20251013-180140
+[2025-10-13 18:01:42,704] OK: wrote alert 68ecf9a7.050a0220.7e6d8.83f8googlealerts@google.com to /Users/randallnoval/Code/AppletScriptorium/runs/test-visible-true-20251013-180140/alert.eml
+[2025-10-13 18:01:42,704] Extracting link metadata
+[2025-10-13 18:01:42,713] [fetch] https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391
+[2025-10-13 18:01:42,826] HTTP Request: GET https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391 "HTTP/1.1 403 Forbidden"
+[2025-10-13 18:02:03,545] [summarize] Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications
+[2025-10-13 18:02:03,547] [fetch] https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204
+[2025-10-13 18:02:03,682] HTTP Request: GET https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204 "HTTP/1.1 403 Forbidden"
+[2025-10-13 18:02:20,352] [summarize] Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC
+[2025-10-13 18:02:20,354] [fetch] https://ascopubs.org/doi/10.1200/OA-25-00051
+[2025-10-13 18:02:20,447] HTTP Request: GET https://ascopubs.org/doi/10.1200/OA-25-00051 "HTTP/1.1 403 Forbidden"
+[2025-10-13 18:02:41,897] [summarize] Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer
+[2025-10-13 18:02:48,006] [mail] sent digest to randall@mqol.com
+[2025-10-13 18:02:48,007] Run complete. Summaries generated: 3

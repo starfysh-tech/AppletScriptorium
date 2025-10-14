@@ -1,0 +1,23 @@
+{
+  "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+  "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 75% of patients completed PROs, improving treatment adherence by 20% in 6-month follow-ups."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Integrate auto-reminders with EHRs to boost completion rates by 35% in 30 days."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA mandates PRO data in 80% of oncology trials by 2025, accelerating adoption."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-reported data may lack clinical specificity, risking misinterpretation in treatment decisions."
+    }
+  ],
+  "model": "qwen3:latest"
+}

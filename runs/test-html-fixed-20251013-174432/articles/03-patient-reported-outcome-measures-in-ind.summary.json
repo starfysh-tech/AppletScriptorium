@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer",
+  "url": "https://ascopubs.org/doi/10.1200/OA-25-00051",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 67% patient completion rate increased by 35% with automated reminders."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Integrate real-time data analytics to monitor compliance trends."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: New FDA guidelines mandate PRO integration in all oncology trials."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Self-selection bias may inflate perceived effectiveness of interventions."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

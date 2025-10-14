@@ -1,0 +1,11 @@
+[2025-10-13 16:59:21,644] Output directory: /Users/randallnoval/Code/AppletScriptorium/runs/final-fixed-20251013-165920
+[2025-10-13 16:59:22,376] OK: wrote alert 68ecf9a7.050a0220.7e6d8.83f8googlealerts@google.com to /Users/randallnoval/Code/AppletScriptorium/runs/final-fixed-20251013-165920/alert.eml
+[2025-10-13 16:59:22,376] Extracting link metadata
+[2025-10-13 16:59:22,385] [fetch] https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391
+[2025-10-13 16:59:22,641] HTTP Request: GET https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391 "HTTP/1.1 403 Forbidden"
+[2025-10-13 17:01:08,387] [summarize] Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications
+[2025-10-13 17:01:08,751] [fetch] https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204
+[2025-10-13 17:01:09,812] HTTP Request: GET https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204 "HTTP/1.1 403 Forbidden"
+[2025-10-13 17:03:22,858] [summarize] Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC
+[2025-10-13 17:03:23,117] [fetch] https://ascopubs.org/doi/10.1200/OA-25-00051
+[2025-10-13 17:03:24,295] HTTP Request: GET https://ascopubs.org/doi/10.1200/OA-25-00051 "HTTP/1.1 403 Forbidden"

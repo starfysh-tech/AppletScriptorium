@@ -1,0 +1,10 @@
+{
+  "sequence_counter": 1,
+  "forefront_sequence_counter": 0,
+  "forefront_requests": {},
+  "regular_requests": {
+    "https://www.news10.com/business/press-releases/ein-presswire/856118342/outcomemd-launches-first-data-intelligence-network-for-healthcare-powered-by-patient-reported-outcomes": 0
+  },
+  "in_progress_requests": [],
+  "handled_requests": []
+}

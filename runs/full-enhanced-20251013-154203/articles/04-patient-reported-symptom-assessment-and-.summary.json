@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Symptom Assessment and Early Chemotherapy Discontinuation in ... - medRxiv",
+  "url": "https://www.medrxiv.org/content/10.1101/2025.10.07.25337194v1",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 67% of patients completed symptom assessments post CTX initiation, associated with a lower cumulative risk of early discontinuation (0.70 SHR [95% CI: 0.44–1.12])."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN**: [SHIP NOW] Implement routine ePRO tools to capture baseline and periodic patient-reported symptoms within the first 90 days of CTX."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL**: 🔴 URGENT - Time-sensitive regulatory pressure to adopt PROs in clinical trials; early adopters gain competitive advantage."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: The study's reliance on retrospective data may underreport adverse effects, challenging the perceived effectiveness of PRO interventions."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

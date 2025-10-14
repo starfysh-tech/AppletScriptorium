@@ -1,0 +1,19 @@
+{
+  "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+  "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "The study highlights the importance of capturing electronic patient-reported outcomes (ePRO) in oncology practice to improve patient-centered care and decision-making."
+    },
+    {
+      "type": "bullet",
+      "text": "Implementing ePRO tools can enhance communication between patients and healthcare providers by providing objective data on symptoms, functional status, and quality of life."
+    },
+    {
+      "type": "bullet",
+      "text": "Utilizing ePRO in clinical settings requires robust infrastructure, standardized measurement tools, and effective integration with electronic health records to ensure seamless data capture and analysis."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

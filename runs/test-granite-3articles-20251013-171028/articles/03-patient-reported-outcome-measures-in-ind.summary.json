@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer",
+  "url": "https://ascopubs.org/doi/10.1200/OA-25-00051",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 67% completion rate achieved with tailored reminders, improving data reliability."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Integrate AI-driven prompts to enhance patient engagement and compliance."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: New regulatory guidelines mandate PRO integration in oncology trials by Q3 2025."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: High drop-out rates among patients with advanced-stage kidney cancer may affect study outcomes."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}

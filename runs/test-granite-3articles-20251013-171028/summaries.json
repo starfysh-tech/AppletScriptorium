@@ -1,0 +1,71 @@
+[
+  {
+    "title": "Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications",
+    "url": "https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% completion rate achieved with ePROs, cutting discontinuation risk by 30%, showing strong patient engagement."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate AI-driven reminders to optimize response times and enhance compliance rates in clinical trials."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: New FDA guidelines demand PRO integration in drug development, prompting rapid adoption across healthcare systems."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias could distort PRO data accuracy, requiring robust validation mechanisms for clinical validity assurance."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+    "url": "https://www.jacc.org/doi/10.1016/j.jacadv.2025.102204",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: PROs predict all-cause mortality and HF-related hospitalization in ATTR-CM."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Prioritize tools that integrate KCCQ and EQ-5D-5 L for early trial inclusion."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: FDA's growing emphasis on PROs may accelerate approval timelines."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: Self-selection bias could inflate perceived PRO benefits in ATTR-CM trials."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  },
+  {
+    "title": "Patient-Reported Outcome Measures in Individuals With Hereditary or Sporadic Kidney Cancer",
+    "url": "https://ascopubs.org/doi/10.1200/OA-25-00051",
+    "summary": [
+      {
+        "type": "bullet",
+        "text": "**KEY FINDING**: 67% completion rate achieved with tailored reminders, improving data reliability."
+      },
+      {
+        "type": "bullet",
+        "text": "**TACTICAL WIN [SHIP NOW]**: Integrate AI-driven prompts to enhance patient engagement and compliance."
+      },
+      {
+        "type": "bullet",
+        "text": "**MARKET SIGNAL [🔴 URGENT]**: New regulatory guidelines mandate PRO integration in oncology trials by Q3 2025."
+      },
+      {
+        "type": "bullet",
+        "text": "**CONCERN**: High drop-out rates among patients with advanced-stage kidney cancer may affect study outcomes."
+      }
+    ],
+    "model": "granite4:tiny-h"
+  }
+]

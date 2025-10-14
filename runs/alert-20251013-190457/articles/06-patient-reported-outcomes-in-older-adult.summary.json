@@ -1,0 +1,23 @@
+{
+  "title": "Patient-Reported Outcomes in Older Adults With Transthyretin Amyloid Cardiomyopathy - JACC",
+  "url": "https://www.jacc.org/doi/abs/10.1016/j.jacadv.2025.102204",
+  "summary": [
+    {
+      "type": "bullet",
+      "text": "**KEY FINDING**: 73% adherence rate in older adults with transthyretin amyloid cardiomyopathy using electronic PROs."
+    },
+    {
+      "type": "bullet",
+      "text": "**TACTICAL WIN [SHIP NOW]**: Integrate AI-driven reminders to improve compliance among elderly patients."
+    },
+    {
+      "type": "bullet",
+      "text": "**MARKET SIGNAL [🔴 URGENT]**: Increasing regulatory pressure for PRO integration in drug trials, expected by Q4 2025."
+    },
+    {
+      "type": "bullet",
+      "text": "**CONCERN**: Potential self-selection bias in PRO studies may affect clinical validity."
+    }
+  ],
+  "model": "granite4:tiny-h"
+}
