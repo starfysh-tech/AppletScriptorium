@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
 # Google Alert Intelligence - Setup Validator
 # Checks that all prerequisites and components are working
