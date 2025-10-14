@@ -4,15 +4,6 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PYTHONPATH="${REPO_ROOT}/Summarizer:${PYTHONPATH:-}"
 
-# Check for deprecated PRO_ALERT_* variables and fail fast with helpful message
-for old_var in PRO_ALERT_OUTPUT_DIR PRO_ALERT_MODEL PRO_ALERT_MAX_ARTICLES PRO_ALERT_DIGEST_EMAIL PRO_ALERT_EMAIL_RECIPIENT PRO_ALERT_NOTIFY_ON_SUCCESS PRO_ALERT_EMAIL_SENDER; do
-  if [[ -n "${!old_var:-}" ]]; then
-    echo "ERROR: $old_var is deprecated. Update to ${old_var#PRO_} in your config." >&2
-    echo "Run: sed -i '' 's/PRO_ALERT_/ALERT_/g' ~/.alert-env" >&2
-    exit 1
-  fi
-done
-
 OUTPUT_DIR_VAR="${ALERT_OUTPUT_DIR:-}"
 MODEL_VAR="${ALERT_MODEL:-}"
 MAX_ARTICLES_VAR="${ALERT_MAX_ARTICLES:-}"

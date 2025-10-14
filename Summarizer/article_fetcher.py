@@ -123,13 +123,6 @@ def _requires_headed_mode(url: str) -> bool:
 
 
 def _env_headers_for(url: str) -> Dict[str, str]:
-    # Check for deprecated env var and fail fast
-    if "PRO_ALERT_HTTP_HEADERS_JSON" in os.environ:
-        raise RuntimeError(
-            "PRO_ALERT_HTTP_HEADERS_JSON is deprecated. Update to ALERT_HTTP_HEADERS_JSON in your config.\n"
-            "Run: sed -i '' 's/PRO_ALERT_/ALERT_/g' ~/.alert-env"
-        )
-
     raw = os.environ.get("ALERT_HTTP_HEADERS_JSON")
     if not raw:
         return {}
