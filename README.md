@@ -28,7 +28,7 @@ brew install python@3.11 uv ollama
 cd ~/Code
 git clone https://github.com/yourusername/AppletScriptorium.git
 cd AppletScriptorium
-uv pip install --python python3 -r Summarizer/requirements.txt
+uv pip install --system --python python3 -r Summarizer/requirements.txt
 python3 -m playwright install
 
 # 3. Install LLM model
@@ -74,8 +74,8 @@ For complete setup instructions including troubleshooting, see **[SETUP.md](./SE
 Future agents (Mailer, Orchestrator, etc.) will live alongside `Summarizer/`. Shared utilities will migrate into a top-level `shared/` package once more than one agent depends on them.
 
 ## Getting Started
-1. Install Python dependencies: `uv pip install --python python3 -r Summarizer/requirements.txt`
-   - **Note:** UV is ~10-100x faster than pip. Mail rule automation uses system Python at `/usr/local/bin/python3` (no virtual environment)
+1. Install Python dependencies: `uv pip install --system --python python3 -r Summarizer/requirements.txt`
+   - **Note:** UV is ~10-100x faster than pip. The `--system` flag installs into system Python at `/usr/local/bin/python3` (required for Mail rule automation)
    - For development/testing, you can optionally use a virtual environment: `uv venv && source .venv/bin/activate`
 2. Refresh the raw alert fixture (safe to overwrite the committed file):
    ```bash
@@ -131,10 +131,10 @@ python3 -m Summarizer.cli run \
 - Use `Summarizer/article_fetcher.py` in scripts or REPL sessions to retrieve article HTML.
 - Provide extra headers (cookies, auth tokens) by exporting `ALERT_HTTP_HEADERS_JSON`, e.g. `'{"example.com": {"Cookie": "session=abc"}}'`.
 - The fetcher caches responses in-memory for the life of the process; call `article_fetcher.clear_cache()` in tests to reset state.
-- Install the browser dependencies once per machine: `uv pip install --python python3 -r Summarizer/requirements.txt` followed by `python3 -m playwright install` (Crawlee drives Playwright behind the scenes).
+- Install the browser dependencies once per machine: `uv pip install --system --python python3 -r Summarizer/requirements.txt` followed by `python3 -m playwright install` (Crawlee drives Playwright behind the scenes).
 - For Cloudflare-guarded publishers (`dailynews.ascopubs.org`, `ashpublications.org`, `obgyn.onlinelibrary.wiley.com`, etc.) install Playwright so the headless fallback can render the page:
   ```bash
-  uv pip install --python python3 playwright
+  uv pip install --system --python python3 playwright
   playwright install
   ```
 
