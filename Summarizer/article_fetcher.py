@@ -123,7 +123,8 @@ def _requires_headed_mode(url: str) -> bool:
 
 
 def _env_headers_for(url: str) -> Dict[str, str]:
-    raw = os.environ.get("PRO_ALERT_HTTP_HEADERS_JSON")
+    # Backward compatibility: ALERT_HTTP_HEADERS_JSON takes precedence over PRO_ALERT_HTTP_HEADERS_JSON
+    raw = os.environ.get("ALERT_HTTP_HEADERS_JSON", os.environ.get("PRO_ALERT_HTTP_HEADERS_JSON"))
     if not raw:
         return {}
     try:

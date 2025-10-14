@@ -1,0 +1,28 @@
+# Google Alert Intelligence Configuration
+# Copy this file to ~/.alert-env and customize for your setup
+# Source in cron: 0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /path/to/run_alert.sh'
+
+# Output directory for pipeline runs (default: runs/<timestamp>)
+export ALERT_OUTPUT_DIR="$HOME/Code/AppletScriptorium/runs"
+
+# Ollama model name (default: granite4:tiny-h)
+export ALERT_MODEL="granite4:tiny-h"
+
+# Maximum number of articles to process (empty = process all)
+export ALERT_MAX_ARTICLES=""
+
+# Comma-separated email recipients for digest delivery
+export ALERT_DIGEST_EMAIL="your-email@example.com"
+
+# Email sender address (selects Mail.app account for sending)
+export ALERT_EMAIL_SENDER="your-email@example.com"
+
+# Email recipient for error notifications (requires 'mail' command)
+export ALERT_EMAIL_RECIPIENT="your-email@example.com"
+
+# Set to 1 to receive notifications on successful runs (default: 0)
+export ALERT_NOTIFY_ON_SUCCESS="0"
+
+# Custom HTTP headers for article fetching (JSON format)
+# Example: export ALERT_HTTP_HEADERS_JSON='{"example.com": {"Cookie": "session=abc"}}'
+export ALERT_HTTP_HEADERS_JSON=""

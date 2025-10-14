@@ -111,7 +111,7 @@ python3 Summarizer/clean-alert.py --format json Summarizer/Samples/google-alert-
 
 ### AppleScript Integration
 - **Manual CLI:** `fetch-alert-source.applescript` accepts optional subject filter as second argument; captures most recent matching inbox message
-- **Mail rule automation:** `process-pro-alert.scpt` runs when Mail rule triggers; saves the triggering message directly (bypasses fetch-alert-source.applescript)
+- **Mail rule automation:** `process-alert.scpt` runs when Mail rule triggers; saves the triggering message directly (bypasses fetch-alert-source.applescript)
 - Mail rule conditions (From/Subject) do all filtering; no hardcoded subject patterns in scripts
 - AppleScript files must be executable or run via `osascript`
 
@@ -120,12 +120,12 @@ python3 Summarizer/clean-alert.py --format json Summarizer/Samples/google-alert-
 - Fallback: Crawlee + Playwright for Cloudflare-protected domains (extended wait times: 13-18s for JS/challenges)
 - Parallel processing: ThreadPoolExecutor with max 5 workers (~70% faster than sequential)
 - In-memory caching for the life of the process
-- Custom headers via `PRO_ALERT_HTTP_HEADERS_JSON` env var: `'{"example.com": {"Cookie": "session=abc"}}'`
-- **Note:** Environment variable names use `PRO_ALERT_` prefix for historical reasons (original Patient Reported Outcomes use case), but they work with any Google Alert topic
+- Custom headers via `ALERT_HTTP_HEADERS_JSON` env var: `'{"example.com": {"Cookie": "session=abc"}}'`
+- **Backward compatibility:** Old `PRO_ALERT_*` variable names still work but new `ALERT_*` names are preferred
 
 ### Summarization
 - Requires local Ollama installation with `granite4:tiny-h` model pulled
-- Model can be overridden via `--model` CLI flag or `PRO_ALERT_MODEL` env var
+- Model can be overridden via `--model` CLI flag or `ALERT_MODEL` env var
 - Returns structured 4-bullet format: KEY FINDING, TACTICAL WIN [tag], MARKET SIGNAL [tag], CONCERN
 - Digest includes executive summary and cross-article insights
 - Works with any Google Alert topic—summaries adapt to content
@@ -133,22 +133,22 @@ python3 Summarizer/clean-alert.py --format json Summarizer/Samples/google-alert-
 ### Mail Rule Automation (Recommended)
 - Event-driven: processes alerts immediately when they arrive (any Google Alert topic)
 - Mail rule conditions filter by From/Subject (e.g., `From: googlealerts-noreply@google.com`, `Subject: Google Alert -`)
-- AppleScript (`process-pro-alert.scpt`) saves triggering message, runs Python pipeline, creates and sends HTML digest email
+- AppleScript (`process-alert.scpt`) saves triggering message, runs Python pipeline, creates and sends HTML digest email
 - Fully automated: alert arrival → digest generation → email delivery with no manual intervention
 - Code is topic-agnostic—Mail rule conditions do ALL filtering
 - See `Summarizer/MAIL_RULE_SETUP.md` for configuration details
 
 ### Cron Scheduling (Alternative)
-- Wrapper script: `Summarizer/bin/run_pro_alert.sh`
-- Configuration via `~/.pro-alert-env` (sourced by cron)
-- Example crontab entry: `0 7 * * 1-5 /bin/bash -lc 'source ~/.pro-alert-env; /Users/you/Code/AppletScriptorium/Summarizer/bin/run_pro_alert.sh'`
+- Wrapper script: `Summarizer/bin/run_alert.sh`
+- Configuration via `~/.alert-env` (sourced by cron)
+- Example crontab entry: `0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /Users/you/Code/AppletScriptorium/Summarizer/bin/run_alert.sh'`
 - Environment variables (work with any Google Alert topic):
-  - `PRO_ALERT_EMAIL_RECIPIENT` — failure notification address
-  - `PRO_ALERT_NOTIFY_ON_SUCCESS=1` — enable success notifications
-  - `PRO_ALERT_DIGEST_EMAIL` — comma-separated digest recipients
-  - `PRO_ALERT_EMAIL_SENDER` — Mail.app account for sending
-  - `PRO_ALERT_OUTPUT_DIR`, `PRO_ALERT_MODEL`, `PRO_ALERT_MAX_ARTICLES` — behavior tuning
-  - **Note:** Variable names use `PRO_ALERT_` prefix for historical reasons but work with any Google Alert topic
+  - `ALERT_EMAIL_RECIPIENT` — failure notification address
+  - `ALERT_NOTIFY_ON_SUCCESS=1` — enable success notifications
+  - `ALERT_DIGEST_EMAIL` — comma-separated digest recipients
+  - `ALERT_EMAIL_SENDER` — Mail.app account for sending
+  - `ALERT_OUTPUT_DIR`, `ALERT_MODEL`, `ALERT_MAX_ARTICLES` — behavior tuning
+  - **Backward compatibility:** Old `PRO_ALERT_*` variable names still work but new `ALERT_*` names are preferred
 
 ## Coding Conventions
 

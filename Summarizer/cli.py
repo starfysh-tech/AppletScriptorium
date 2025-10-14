@@ -1,4 +1,4 @@
-"""Automation CLI for the PRO Alert Summarizer pipeline."""
+"""Automation CLI for the Google Alert Intelligence pipeline."""
 from __future__ import annotations
 
 import argparse
@@ -190,7 +190,7 @@ def render_outputs(summaries: List[dict], failures: List[dict], output_dir: Path
 
 
 def parse_args(argv=None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run the PRO Alert Summarizer pipeline")
+    parser = argparse.ArgumentParser(description="Run the Google Alert Intelligence pipeline")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     run_parser = subparsers.add_parser("run", help="Fetch latest alert and generate digest")
@@ -208,7 +208,7 @@ def parse_args(argv=None) -> argparse.Namespace:
     )
     run_parser.add_argument(
         "--email-sender",
-        help="Optional sender address when emailing the digest (defaults to first recipient unless PRO_ALERT_EMAIL_SENDER is set)",
+        help="Optional sender address when emailing the digest (defaults to first recipient unless ALERT_EMAIL_SENDER is set)",
     )
 
     return parser.parse_args(argv)
@@ -254,7 +254,8 @@ def run_pipeline(args: argparse.Namespace) -> Path:
     recipients: List[str] = []
     if args.email_digest:
         recipients.extend(args.email_digest)
-    env_recipients = os.environ.get("PRO_ALERT_DIGEST_EMAIL")
+    # Backward compatibility: ALERT_DIGEST_EMAIL takes precedence over PRO_ALERT_DIGEST_EMAIL
+    env_recipients = os.environ.get("ALERT_DIGEST_EMAIL", os.environ.get("PRO_ALERT_DIGEST_EMAIL"))
     if env_recipients:
         for token in env_recipients.replace(";", ",").split(","):
             address = token.strip()
@@ -266,7 +267,8 @@ def run_pipeline(args: argparse.Namespace) -> Path:
         if args.email_sender:
             sender_address = args.email_sender.strip() or None
         if sender_address is None:
-            env_sender = os.environ.get("PRO_ALERT_EMAIL_SENDER")
+            # Backward compatibility: ALERT_EMAIL_SENDER takes precedence over PRO_ALERT_EMAIL_SENDER
+            env_sender = os.environ.get("ALERT_EMAIL_SENDER", os.environ.get("PRO_ALERT_EMAIL_SENDER"))
             if env_sender:
                 sender_address = env_sender.strip() or None
 

@@ -8,12 +8,24 @@ AppletScriptorium is a collection of macOS automation agents orchestrated throug
 **New to AppletScriptorium?** See the complete setup guide: **[SETUP.md](./SETUP.md)**
 
 ### Installation TL;DR
+
+**Automated (Recommended):**
+```bash
+cd ~/Code
+git clone https://github.com/yourusername/AppletScriptorium.git
+cd AppletScriptorium
+./install.sh           # Automated setup (checks prereqs, installs dependencies, pulls model)
+./setup-mail-rule.sh   # Configure Mail rule automation (interactive)
+./validate.sh          # Verify installation
+```
+
+**Manual:**
 ```bash
 # 1. Install prerequisites
 brew install python@3.11 ollama
 
 # 2. Clone and install dependencies
-cd ~/Code  # Or your preferred directory
+cd ~/Code
 git clone https://github.com/yourusername/AppletScriptorium.git
 cd AppletScriptorium
 python3 -m pip install --user -r Summarizer/requirements.txt
@@ -28,7 +40,7 @@ python3 Summarizer/clean-alert.py \
   Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06.eml
 ```
 
-For complete setup instructions including Mail rule automation and troubleshooting, see **[SETUP.md](./SETUP.md)**.
+For complete setup instructions including troubleshooting, see **[SETUP.md](./SETUP.md)**.
 
 ---
 
@@ -117,8 +129,8 @@ python3 -m Summarizer.cli run \
 
 ## Article Fetching
 - Use `Summarizer/article_fetcher.py` in scripts or REPL sessions to retrieve article HTML.
-- Provide extra headers (cookies, auth tokens) by exporting `PRO_ALERT_HTTP_HEADERS_JSON`, e.g. `'{"example.com": {"Cookie": "session=abc"}}'`.
-  - **Note:** Environment variable names use `PRO_ALERT_` prefix for historical reasons (original Patient Reported Outcomes use case), but they work with any Google Alert topic.
+- Provide extra headers (cookies, auth tokens) by exporting `ALERT_HTTP_HEADERS_JSON`, e.g. `'{"example.com": {"Cookie": "session=abc"}}'`.
+  - **Backward compatibility:** Old `PRO_ALERT_*` variable names still work but new `ALERT_*` names are preferred.
 - The fetcher caches responses in-memory for the life of the process; call `article_fetcher.clear_cache()` in tests to reset state.
 - Install the browser dependencies once per machine: `python3 -m pip install -r Summarizer/requirements.txt` followed by `python3 -m playwright install` (Crawlee drives Playwright behind the scenes).
 - For Cloudflare-guarded publishers (`dailynews.ascopubs.org`, `ashpublications.org`, `obgyn.onlinelibrary.wiley.com`, etc.) install Playwright so the headless fallback can render the page:
@@ -209,8 +221,8 @@ See the PRD for detailed acceptance criteria and future extensions (JS rendering
 - Optional flags:
   - `--model MODEL` overrides the Ollama model (default: granite4:tiny-h).
   - `--max-articles N` limits how many stories to process.
-  - `--email-digest ADDRESS` sends the plaintext digest via Mail.app to the given address (repeatable). You can also set `PRO_ALERT_DIGEST_EMAIL` with a comma-separated list to mirror this flag.
-  - `--email-sender ADDRESS` explicitly selects the Mail.app account/address used when sending the digest. You can also set `PRO_ALERT_EMAIL_SENDER` to define a default.
+  - `--email-digest ADDRESS` sends the plaintext digest via Mail.app to the given address (repeatable). You can also set `ALERT_DIGEST_EMAIL` with a comma-separated list to mirror this flag.
+  - `--email-sender ADDRESS` explicitly selects the Mail.app account/address used when sending the digest. You can also set `ALERT_EMAIL_SENDER` to define a default.
 - Outputs mirror `run_workflow.sh`: raw alert, TSV, article artifacts, HTML/plaintext digests, and `workflow.log`.
 - Digests include a "Missing articles" section summarizing any URLs that failed to fetch or clean.
 - When email delivery is enabled, the CLI drives Mail.app via AppleScript—messages appear in Outgoing/Sent like any manual mail. Provide a sender address (or rely on Mail's default) that matches a configured account.
@@ -250,21 +262,21 @@ No manual steps required—works with any Google Alert topic.
 
 **Note:** Cron scheduling is useful for generating digests on a fixed schedule. For real-time processing when alerts arrive, use Mail rules instead (see above).
 
-1. Set optional environment variables in `~/.pro-alert-env` (sourced by cron):
-   - `PRO_ALERT_EMAIL_RECIPIENT` — address to notify on failure (requires `mail`).
-   - `PRO_ALERT_NOTIFY_ON_SUCCESS=1` to also notify when runs succeed.
-   - `PRO_ALERT_OUTPUT_DIR`, `PRO_ALERT_MODEL`, `PRO_ALERT_MAX_ARTICLES` tune destination/behavior.
-   - `PRO_ALERT_DIGEST_EMAIL` — comma-separated recipients for the digest (equivalent to repeating `--email-digest`).
-   - `PRO_ALERT_EMAIL_SENDER` — sender address to select the Mail.app account used for digests.
-   - **Note:** Variable names use `PRO_ALERT_` prefix for historical reasons but work with any Google Alert topic.
+1. Set optional environment variables in `~/.alert-env` (sourced by cron):
+   - `ALERT_EMAIL_RECIPIENT` — address to notify on failure (requires `mail`)
+   - `ALERT_NOTIFY_ON_SUCCESS=1` to also notify when runs succeed
+   - `ALERT_OUTPUT_DIR`, `ALERT_MODEL`, `ALERT_MAX_ARTICLES` tune destination/behavior
+   - `ALERT_DIGEST_EMAIL` — comma-separated recipients for the digest (equivalent to repeating `--email-digest`)
+   - `ALERT_EMAIL_SENDER` — sender address to select the Mail.app account used for digests
+   - **Backward compatibility:** Old `PRO_ALERT_*` variable names still work but new `ALERT_*` names are preferred
 2. Add the job (edit with `crontab -e`):
    ```cron
-   0 7 * * 1-5 /bin/bash -lc 'source ~/.pro-alert-env; /Users/you/Code/AppletScriptorium/Summarizer/bin/run_pro_alert.sh'
+   0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /Users/you/Code/AppletScriptorium/Summarizer/bin/run_alert.sh'
    ```
 3. Logs/digests land under `runs/<timestamp>`, matching the CLI workflow.
 4. To email the digest automatically, add
    ```bash
-   PRO_ALERT_DIGEST_EMAIL="randall@mqol.com"
-   PRO_ALERT_EMAIL_SENDER="randall@mqol.com"
+   ALERT_DIGEST_EMAIL="randall@mqol.com"
+   ALERT_EMAIL_SENDER="randall@mqol.com"
    ```
-   to `~/.pro-alert-env`. The wrapper expands these to the CLI flags at runtime.
+   to `~/.alert-env`. The wrapper expands these to the CLI flags at runtime.

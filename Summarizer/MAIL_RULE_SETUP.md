@@ -15,7 +15,7 @@ This guide explains how to configure Mail.app to automatically process Google Al
 
 - Python 3 installed with required dependencies (see `Summarizer/requirements.txt`)
 - Ollama running with `granite4:tiny-h` model installed
-- AppleScript file exists: `~/Library/Application Scripts/com.apple.mail/process-pro-alert.scpt`
+- AppleScript file exists: `~/Library/Application Scripts/com.apple.mail/process-alert.scpt`
 
 **Note:** The script uses system Python (`/usr/local/bin/python3`). No virtual environment needed.
 
@@ -25,12 +25,12 @@ This guide explains how to configure Mail.app to automatically process Google Al
 
 The setup script should already be in place at:
 ```
-~/Library/Application Scripts/com.apple.mail/process-pro-alert.scpt
+~/Library/Application Scripts/com.apple.mail/process-alert.scpt
 ```
 
 If not, the file was created during setup. You can verify with:
 ```bash
-ls -la ~/Library/Application\ Scripts/com.apple.mail/process-pro-alert.scpt
+ls -la ~/Library/Application\ Scripts/com.apple.mail/process-alert.scpt
 ```
 
 ### 2. Create Mail Rule
@@ -53,7 +53,7 @@ ls -la ~/Library/Application\ Scripts/com.apple.mail/process-pro-alert.scpt
    **Important:** The Mail rule conditions do ALL filtering. The AppleScript has no hardcoded subject patterns—it processes whatever message triggered the rule. Using `Google Alert -` (with trailing space and dash) matches ANY Google Alert topic. For topic-specific processing, narrow the subject (e.g., `Google Alert - Medication reminder`).
 
    **Perform the following actions:**
-   - Action: **Run AppleScript** → Select `process-pro-alert.scpt`
+   - Action: **Run AppleScript** → Select `process-alert.scpt`
 
 6. Click **OK**
 
@@ -62,7 +62,7 @@ ls -la ~/Library/Application\ Scripts/com.apple.mail/process-pro-alert.scpt
 Edit the AppleScript to set your email recipient:
 
 1. Open Script Editor
-2. File → Open → Navigate to `~/Library/Application Scripts/com.apple.mail/process-pro-alert.scpt`
+2. File → Open → Navigate to `~/Library/Application Scripts/com.apple.mail/process-alert.scpt`
 3. Find line 21: `set digestRecipient to "user@example.com"`
 4. Change to your actual email address
 5. File → Save
@@ -135,7 +135,7 @@ The AppleScript automatically processes whatever alert email triggered the rule.
 If you need different settings per topic (different recipients, models, output directories), create separate rules and AppleScripts:
 
 ```bash
-cp ~/Library/Application\ Scripts/com.apple.mail/process-pro-alert.scpt \
+cp ~/Library/Application\ Scripts/com.apple.mail/process-alert.scpt \
    ~/Library/Application\ Scripts/com.apple.mail/process-ai-alerts.scpt
 ```
 
@@ -175,7 +175,7 @@ If the .eml viewer doesn't open automatically:
 If the digest generates but email doesn't send:
 
 1. **Check System Events permissions**: Go to System Settings → Privacy & Security → Accessibility, ensure Mail.app is enabled
-2. **Check notification**: Look for error message in notification (should say "PRO Alert digest sent" or "Message created but not sent")
+2. **Check notification**: Look for error message in notification (should say "Google Alert Intelligence digest sent" or "Message created but not sent")
 3. **Check Sent folder**: Verify email actually sent and has correct formatting
 4. **Check compose window**: If notification says "not sent", check if compose window is still open with content
 5. **Test manually**: Open `digest.eml`, copy content (Cmd+A, Cmd+C), paste into new email to verify formatting
@@ -205,15 +205,17 @@ The digest HTML files remain in `runs/` directory for manual processing.
 
 The AppleScript inherits environment from Mail.app, not your shell. To customize:
 
-Edit `process-pro-alert.scpt` and add environment setup:
+Edit `process-alert.scpt` and add environment setup:
 ```applescript
-set pythonCmd to "export PRO_ALERT_MODEL=qwen3:latest && cd " & quoted form of repoPath & " && /usr/local/bin/python3 -m Summarizer.cli run --output-dir " & quoted form of outputDir
+set pythonCmd to "export ALERT_MODEL=qwen3:latest && cd " & quoted form of repoPath & " && /usr/local/bin/python3 -m Summarizer.cli run --output-dir " & quoted form of outputDir
 ```
 
 Supported variables:
-- `PRO_ALERT_MODEL`: Ollama model name
-- `PRO_ALERT_MAX_ARTICLES`: Cap on articles processed
-- `PRO_ALERT_HTTP_HEADERS_JSON`: Custom HTTP headers for fetching
+- `ALERT_MODEL`: Ollama model name
+- `ALERT_MAX_ARTICLES`: Cap on articles processed
+- `ALERT_HTTP_HEADERS_JSON`: Custom HTTP headers for fetching
+
+**Backward compatibility:** Old `PRO_ALERT_*` variable names still work but new `ALERT_*` names are preferred.
 
 ## Manual CLI Usage
 

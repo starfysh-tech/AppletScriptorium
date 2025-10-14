@@ -1,6 +1,6 @@
-# Deployment Guide — PRO Alert Summarizer
+# Deployment Guide — Google Alert Intelligence
 
-This repository ships the tooling and scripts needed to capture the latest PRO alert, fetch the linked articles, summarize them with Ollama, and emit HTML/text digests.
+This repository ships the tooling and scripts needed to capture Google Alerts (any topic), fetch the linked articles, summarize them with Ollama, and emit HTML/text digests.
 
 ## Deployment Options
 
@@ -49,26 +49,28 @@ This creates:
 
 ## 3. Wrapper Script
 
-`Summarizer/bin/run_pro_alert.sh` wraps the CLI for cron/automation. It:
+`Summarizer/bin/run_alert.sh` wraps the CLI for cron/automation. It:
 - Sets `PYTHONPATH`
-- Chooses an output dir (default `runs/<timestamp>`, overridable via `PRO_ALERT_OUTPUT_DIR`)
+- Chooses an output dir (default `runs/<timestamp>`, overridable via `ALERT_OUTPUT_DIR`)
 - Executes the CLI
 - Sends macOS notifications (and optional email using `mail`)
 
-Optional environment variables (set in `~/.pro-alert-env`):
-- `PRO_ALERT_EMAIL_RECIPIENT` — notify on failures.
-- `PRO_ALERT_NOTIFY_ON_SUCCESS=1` — also notify when runs succeed.
-- `PRO_ALERT_OUTPUT_DIR` — override the default output directory.
-- `PRO_ALERT_MODEL`, `PRO_ALERT_STUB_MANIFEST`, `PRO_ALERT_MAX_ARTICLES` — tune behavior.
-- `PRO_ALERT_DIGEST_EMAIL` — comma-separated recipients for the generated digest.
-- `PRO_ALERT_EMAIL_SENDER` — address used to select the Mail.app account for digest delivery.
+Optional environment variables (set in `~/.alert-env`):
+- `ALERT_EMAIL_RECIPIENT` — notify on failures
+- `ALERT_NOTIFY_ON_SUCCESS=1` — also notify when runs succeed
+- `ALERT_OUTPUT_DIR` — override the default output directory
+- `ALERT_MODEL`, `ALERT_MAX_ARTICLES` — tune behavior
+- `ALERT_DIGEST_EMAIL` — comma-separated recipients for the generated digest
+- `ALERT_EMAIL_SENDER` — address used to select the Mail.app account for digest delivery
+
+**Backward compatibility:** Old `PRO_ALERT_*` variable names still work but new `ALERT_*` names are preferred.
 
 ## 4. Cron Setup
 
-1. Create `~/.pro-alert-env` and export any of the variables above.
+1. Create `~/.alert-env` and export any of the variables above (or copy from `Summarizer/templates/alert-env.template`).
 2. Add the cron entry:
    ```cron
-   0 7 * * 1-5 /bin/bash -lc 'source ~/.pro-alert-env; /Users/<you>/Code/AppletScriptorium/Summarizer/bin/run_pro_alert.sh'
+   0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /Users/<you>/Code/AppletScriptorium/Summarizer/bin/run_alert.sh'
    ```
 3. Confirm with `crontab -l`.
 
@@ -82,14 +84,14 @@ Optional environment variables (set in `~/.pro-alert-env`):
 
 To rerun for troubleshooting:
 ```bash
-Summarizer/bin/run_pro_alert.sh
+Summarizer/bin/run_alert.sh
 ```
 Or replay into a scratch directory (limit article count if needed):
 ```bash
 python3 -m Summarizer.cli run --output-dir runs/manual-replay --max-articles 3
 ```
 - For Cloudflare-guarded links, install Playwright (`python3 -m pip install playwright` then `playwright install`) so the automation can render the challenge pages headlessly.
-- To email the digest automatically, export `PRO_ALERT_DIGEST_EMAIL` (comma-separated) and optionally `PRO_ALERT_EMAIL_SENDER` before running the CLI or wrapper; the plaintext digest is handed to Mail.app via AppleScript.
+- To email the digest automatically, export `ALERT_DIGEST_EMAIL` (comma-separated) and optionally `ALERT_EMAIL_SENDER` before running the CLI or wrapper; the plaintext digest is handed to Mail.app via AppleScript.
 
 ## 7. Future Enhancements
 
