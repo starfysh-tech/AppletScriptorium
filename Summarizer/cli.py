@@ -240,64 +240,42 @@ def main(argv=None) -> int:
 
 
 def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[str]) -> None:
-    digest_path = output_dir / "digest.txt"
-    if not digest_path.exists():
-        logging.warning("Digest text not found; skipping email delivery")
+    """Create MIME .eml file with HTML digest for Mail rule automation.
+
+    The Mail rule AppleScript will open this .eml file, copy rendered HTML,
+    and paste into a compose window for sending.
+    """
+    import email
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    html_path = output_dir / "digest.html"
+    if not html_path.exists():
+        logging.warning("Digest HTML not found; skipping")
         return
 
-    subject = f"PRO Alert Digest — {datetime.now():%B %d, %Y}"
-    try:
-        body = digest_path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        logging.warning("Digest text not found; skipping email delivery")
-        return
+    html_content = html_path.read_text(encoding="utf-8")
 
-    for recipient in recipients:
-        target = recipient.strip()
-        if not target:
-            continue
-        sender_to_use = sender or recipients[0]
-        script = _build_mail_applescript(subject, body, target, sender_to_use)
-        result = subprocess.run(
-            ["osascript", "-"],
-            input=script,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        if result.returncode != 0:
-            logging.error("osascript mail send failed for %s: %s", target, result.stderr.strip())
-        else:
-            logging.info("[mail] sent digest to %s", target)
+    # Use first recipient for To: field (Mail rule will handle actual sending)
+    recipient = recipients[0] if recipients else "recipient@example.com"
+
+    # Create MIME multipart message with HTML
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = f"PRO Alert Digest — {datetime.now().strftime('%B %d, %Y')}"
+    msg['From'] = sender if sender else recipient
+    msg['To'] = recipient
+
+    # Attach HTML part
+    html_part = MIMEText(html_content, 'html')
+    msg.attach(html_part)
+
+    # Save as .eml file
+    eml_path = output_dir / "digest.eml"
+    eml_path.write_text(msg.as_string(), encoding="utf-8")
+
+    logging.info("[digest] Created MIME email: %s (%d bytes)", eml_path, eml_path.stat().st_size)
 
 
-def _build_mail_applescript(subject: str, body: str, recipient: str, sender: str) -> str:
-    def _esc(value: str) -> str:
-        return value.replace("\\", "\\\\").replace("\"", "\\\"")
-
-    subject_escaped = _esc(subject)
-    body_escaped = _esc(body)
-    recipient_escaped = _esc(recipient)
-    sender_escaped = _esc(sender)
-
-    return f"""
-set subjectText to "{subject_escaped}"
-set bodyText to "{body_escaped}"
-set recipientAddress to "{recipient_escaped}"
-set senderAddress to "{sender_escaped}"
-
-tell application "Mail"
-    set newMessage to make new outgoing message with properties {{subject:subjectText, content:bodyText & "\n", visible:false, sender:senderAddress}}
-    tell newMessage
-        make new to recipient at end of to recipients with properties {{address:recipientAddress}}
-    end tell
-    try
-        send newMessage
-    on error errMsg
-        return errMsg
-    end try
-end tell
-"""
 
 
 if __name__ == "__main__":

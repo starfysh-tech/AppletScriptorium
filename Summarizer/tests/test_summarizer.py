@@ -23,7 +23,7 @@ def sample_article() -> dict[str, Any]:
 
 def test_summarizer_uses_runner(sample_article):
     def fake_runner(prompt: str, cfg: SummarizerConfig) -> str:
-        assert cfg.model == "granite4:tiny-h"
+        assert cfg.model == "qwen3:latest"
         assert "Title:" in prompt
         assert "Machine-learning risk models" in prompt
         return "- Bullet one\n- Bullet two\n- Bullet three"
