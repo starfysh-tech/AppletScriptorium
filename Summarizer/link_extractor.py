@@ -1,4 +1,11 @@
-"""Utilities for extracting article links and metadata from Google Alert emails."""
+"""Utilities for extracting article links and metadata from Google Alert emails.
+
+IMPORTANT: This module is optimized for Google Alert email format, which uses
+www.google.com/url redirect links with target URLs in query parameters.
+
+For other email formats (newsletters, RSS digests, etc.), implement separate
+extractors following the same LinkRecord interface for composability.
+"""
 from __future__ import annotations
 
 import argparse
