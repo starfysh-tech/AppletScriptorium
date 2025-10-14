@@ -161,7 +161,8 @@ Quick steps:
 1. Create environment file:
    ```bash
    cat > ~/.pro-alert-env << 'ENVEOF'
-   # PRO Alert Summarizer Configuration
+   # Google Alert Intelligence Configuration
+   # Note: Variable names use PRO_ALERT_ prefix for historical reasons but work with any Google Alert topic
    export PRO_ALERT_OUTPUT_DIR="$HOME/Code/AppletScriptorium/runs"
    export PRO_ALERT_MODEL="granite4:tiny-h"
    export PRO_ALERT_MAX_ARTICLES=""  # Empty = process all
@@ -189,7 +190,8 @@ Quick steps:
 Add to `~/.zshrc` or `~/.bash_profile` for CLI usage:
 
 ```bash
-# PRO Alert Summarizer defaults
+# Google Alert Intelligence defaults (works with any alert topic)
+# Note: Variable names use PRO_ALERT_ prefix for historical reasons
 export PRO_ALERT_MODEL="granite4:tiny-h"
 export PRO_ALERT_DIGEST_EMAIL="your-email@example.com"
 export PRO_ALERT_EMAIL_SENDER="your-email@example.com"
@@ -239,8 +241,8 @@ brew services list | grep ollama
 ollama list
 # Should show: granite4:tiny-h
 
-# Test model (optional)
-echo "Summarize: Patient outcomes improve with new treatment" | ollama run granite4:tiny-h
+# Test model (optional - works with any content)
+echo "Summarize: AI assistants are transforming software development workflows" | ollama run granite4:tiny-h
 ```
 
 ### 4. Verify Playwright
@@ -465,7 +467,7 @@ After completing setup:
 
 1. **For Mail Rule Automation**: Follow `Summarizer/MAIL_RULE_SETUP.md`
 2. **For CLI Usage**: See `CLAUDE.md` for development commands
-3. **For Custom Topics**: Add new Google Alert topics and adjust Mail rules
+3. **For Multiple Topics**: Subscribe to Google Alerts on any topics you want—Mail rules automatically process all alerts
 4. **For Development**: Activate virtual environment and run tests
 
 ## Support
@@ -473,5 +475,5 @@ After completing setup:
 For issues not covered here:
 1. Check `README.md` for feature documentation
 2. Review `CLAUDE.md` for development guidance
-3. Inspect `Summarizer/PRO Alert Summarizer PRD.md` for architecture details
+3. Inspect `Summarizer/PRO Alert Summarizer PRD.md` for architecture details (note: documents original Patient Reported Outcomes use case, but framework now supports any Google Alert topic)
 4. Check `runs/*/workflow.log` for pipeline errors

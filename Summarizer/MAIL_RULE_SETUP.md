@@ -1,11 +1,13 @@
-# Mail Rule Setup for PRO Alert Summarizer
+# Mail Rule Setup for Google Alert Intelligence
 
 This guide explains how to configure Mail.app to automatically process Google Alerts using Mail rules instead of cron scheduling.
+
+**Framework scope:** This Summarizer works with ANY Google Alert topic. Mail rule conditions do the filtering—the code processes whatever alert triggers it.
 
 ## Benefits
 
 - **Event-driven**: Processes alerts immediately when they arrive
-- **Multi-topic support**: Create separate rules for different Google Alert topics
+- **Works with any topic**: One rule handles all Google Alerts, or create separate rules per topic
 - **Easy management**: Enable/disable processing per topic via Mail preferences
 - **No cron needed**: Mail.app handles all scheduling
 
@@ -41,14 +43,14 @@ ls -la ~/Library/Application\ Scripts/com.apple.mail/process-pro-alert.scpt
 
    **Description:**
    ```
-   Process PRO Alert
+   Process Google Alert
    ```
 
    **If all of the following conditions are met:**
    - Condition 1: **From** → **Contains** → `googlealerts-noreply@google.com`
    - Condition 2: **Subject** → **Contains** → `Google Alert -`
 
-   **Important:** The Mail rule conditions do ALL filtering. The AppleScript has no hardcoded subject patterns - it processes whatever message triggered the rule. Using `Google Alert -` (with trailing space and dash) matches ANY Google Alert topic from this sender.
+   **Important:** The Mail rule conditions do ALL filtering. The AppleScript has no hardcoded subject patterns—it processes whatever message triggered the rule. Using `Google Alert -` (with trailing space and dash) matches ANY Google Alert topic. For topic-specific processing, narrow the subject (e.g., `Google Alert - Medication reminder`).
 
    **Perform the following actions:**
    - Action: **Run AppleScript** → Select `process-pro-alert.scpt`
@@ -61,8 +63,8 @@ Edit the AppleScript to set your email recipient:
 
 1. Open Script Editor
 2. File → Open → Navigate to `~/Library/Application Scripts/com.apple.mail/process-pro-alert.scpt`
-3. Find line 21: `set digestRecipient to "randall@mqol.com"`
-4. Change to your email address
+3. Find line 21: `set digestRecipient to "user@example.com"`
+4. Change to your actual email address
 5. File → Save
 
 For multiple recipients, modify the script:
@@ -101,7 +103,7 @@ Wait for the next Google Alert to arrive - the rule will trigger automatically.
 
 ### Expected Behavior
 
-When a Google Alert arrives, the process is **fully automated**:
+When a Google Alert arrives (any topic), the process is **fully automated**:
 1. Mail rule detects the email
 2. AppleScript runs the Python pipeline (generates digest.html and digest.eml)
 3. .eml file opens briefly in Mail (to render HTML)
@@ -111,32 +113,33 @@ When a Google Alert arrives, the process is **fully automated**:
 7. Body field is focused programmatically
 8. Rendered HTML is pasted into body (preserving bold labels and formatting)
 9. Email is automatically sent via Cmd+Shift+D keyboard shortcut
-10. You receive notification: "PRO Alert digest sent to randall@mqol.com"
+10. You receive notification: "Google Alert digest sent to user@example.com"
 11. The trigger email is marked as read
 
-**No manual intervention required!** The entire workflow runs automatically from alert arrival to email delivery.
+**No manual intervention required!** The entire workflow runs automatically from alert arrival to email delivery—regardless of the alert topic.
 
 **Technical Note:** The workflow uses MIME .eml files to render HTML, then copies/pastes into a compose window. This preserves HTML formatting (bold labels, colors) while working around Mail.app's broken `html content` property. The body field is focused programmatically via `set focused of AXWebArea to true`, enabling automated paste.
 
 ## Adding Additional Topics
 
-**One rule handles all topics** - The rule configured above (matching `Google Alert -`) will trigger for ANY Google Alert topic:
-- Google Alert - Patient reported outcome
-- Google Alert - Clinical trials
-- Google Alert - EHR integration
-- Any other Google Alert topics
+**One rule handles all topics** — The rule configured above (matching `Google Alert -`) will trigger for ANY Google Alert topic:
+- Google Alert - Medication reminder
+- Google Alert - Artificial intelligence
+- Google Alert - Climate change
+- Google Alert - Tech industry news
+- Any other Google Alert topics you create
 
-The AppleScript automatically processes whatever alert email triggered the rule. No additional configuration needed.
+The AppleScript automatically processes whatever alert email triggered the rule. No additional configuration needed—just subscribe to new Google Alerts and they'll be processed automatically.
 
 **Optional: Topic-specific customization**
-If you need different settings per topic (different recipients, models, etc.), create separate rules and AppleScripts:
+If you need different settings per topic (different recipients, models, output directories), create separate rules and AppleScripts:
 
 ```bash
 cp ~/Library/Application\ Scripts/com.apple.mail/process-pro-alert.scpt \
-   ~/Library/Application\ Scripts/com.apple.mail/process-clinical-trials.scpt
+   ~/Library/Application\ Scripts/com.apple.mail/process-ai-alerts.scpt
 ```
 
-Then create a second Mail rule with subject `Google Alert - Clinical trials` and action pointing to the new script.
+Then create a second Mail rule with subject `Google Alert - Artificial intelligence` and action pointing to the new script.
 
 ## Troubleshooting
 
@@ -219,10 +222,11 @@ You can still run the pipeline manually without triggering the Mail rule:
 cd ~/Code/AppletScriptorium
 python3 -m Summarizer.cli run \
   --output-dir runs/manual-$(date +%Y%m%d-%H%M%S) \
-  --email-digest randall@mqol.com
+  --email-digest user@example.com \
+  --subject-filter "Medication reminder"
 ```
 
-This creates both `digest.html` and `digest.eml` files in the output directory.
+This creates both `digest.html` and `digest.eml` files in the output directory. Works with any Google Alert topic you specify in `--subject-filter`.
 
 **To send the digest manually:**
 1. Double-click `digest.eml` to open in Mail

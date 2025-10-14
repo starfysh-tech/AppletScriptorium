@@ -1,6 +1,6 @@
 # AppletScriptorium — Summarizer Module
 
-AppletScriptorium is a collection of macOS automation agents orchestrated through AppleScript, shell, and Python helpers. The first agent, **Summarizer**, watches Mail.app for Google Alerts about Patient Reported Outcomes, extracts article links, fetches the corresponding pages, summarizes them with an LLM, and prepares a digest email with clickable links.
+AppletScriptorium is a collection of macOS automation agents orchestrated through AppleScript, shell, and Python helpers. The first agent, **Summarizer**, watches Mail.app for Google Alerts on any topic you choose, extracts article links, fetches the corresponding pages, summarizes them with a local LLM, and prepares an intelligent digest email. Mail rule conditions handle all topic filtering—the code processes whatever alert triggers it.
 
 
 ## Quick Start
@@ -42,7 +42,7 @@ For complete setup instructions including Mail rule automation and troubleshooti
 ```
 .
 ├── AGENTS.md                     # Contributor guidelines & workflow expectations
-├── Summarizer/                   # PRO Alert Summarizer agent (fixtures + scripts)
+├── Summarizer/                   # Google Alert Intelligence agent (fixtures + scripts)
 │   ├── article_fetcher.py        # Minimal HTTP fetcher with retries
 │   ├── clean-alert.py            # Link extraction CLI wrapper
 │   ├── content_cleaner.py        # Converts article HTML into Markdown text
@@ -87,23 +87,28 @@ Future agents (Mailer, Orchestrator, etc.) will live alongside `Summarizer/`. Sh
    diff -u Summarizer/Samples/google-alert-sample-2025-10-06-links.tsv /tmp/alert-links.tsv
    diff -u Summarizer/Samples/google-alert-sample-2025-10-06-links.json /tmp/alert-links.json
    ```
-7. Refer to `Summarizer/PRO Alert Summarizer PRD.md` for the staged roadmap (fixtures → link extraction → fetcher → summarizer → digest).
+7. Refer to `Summarizer/PRO Alert Summarizer PRD.md` for the staged roadmap and development history (note: this documents the original Patient Reported Outcomes use case, but the framework now supports any Google Alert topic).
 
 **Note on alert capture:**
 - **Manual CLI runs:** Use `--subject-filter` to match specific inbox messages (e.g., `--subject-filter "Medication reminder"`). Without a filter, captures the most recent inbox message.
 - **Mail rule automation:** The rule's conditions handle all filtering (From/Subject matching). The triggering message is saved directly, bypassing `fetch-alert-source.applescript` entirely.
 
-**Examples:**
+**Examples (works with any Google Alert topic):**
 ```bash
-# Process most recent Google Alert about medication reminders
+# Process Google Alert about medication reminders
 python3 -m Summarizer.cli run \
   --output-dir runs/manual-$(date +%Y%m%d-%H%M%S) \
   --subject-filter "Medication reminder"
 
-# Process most recent PRO alert
+# Process Google Alert about AI research
 python3 -m Summarizer.cli run \
   --output-dir runs/manual-$(date +%Y%m%d-%H%M%S) \
-  --subject-filter "Patient reported outcome"
+  --subject-filter "Artificial intelligence"
+
+# Process Google Alert about climate policy
+python3 -m Summarizer.cli run \
+  --output-dir runs/manual-$(date +%Y%m%d-%H%M%S) \
+  --subject-filter "Climate change"
 
 # Process most recent inbox message (no filter)
 python3 -m Summarizer.cli run \
@@ -113,6 +118,7 @@ python3 -m Summarizer.cli run \
 ## Article Fetching
 - Use `Summarizer/article_fetcher.py` in scripts or REPL sessions to retrieve article HTML.
 - Provide extra headers (cookies, auth tokens) by exporting `PRO_ALERT_HTTP_HEADERS_JSON`, e.g. `'{"example.com": {"Cookie": "session=abc"}}'`.
+  - **Note:** Environment variable names use `PRO_ALERT_` prefix for historical reasons (original Patient Reported Outcomes use case), but they work with any Google Alert topic.
 - The fetcher caches responses in-memory for the life of the process; call `article_fetcher.clear_cache()` in tests to reset state.
 - Install the browser dependencies once per machine: `python3 -m pip install -r Summarizer/requirements.txt` followed by `python3 -m playwright install` (Crawlee drives Playwright behind the scenes).
 - For Cloudflare-guarded publishers (`dailynews.ascopubs.org`, `ashpublications.org`, `obgyn.onlinelibrary.wiley.com`, etc.) install Playwright so the headless fallback can render the page:
@@ -212,30 +218,33 @@ See the PRD for detailed acceptance criteria and future extensions (JS rendering
 
 ## Mail Rule Automation (Recommended)
 
-The preferred way to run the PRO Alert Summarizer is via **Mail.app rules**, which provide event-driven processing that triggers automatically when Google Alerts arrive.
+The preferred way to run the Summarizer is via **Mail.app rules**, which provide event-driven processing that triggers automatically when Google Alerts arrive.
 
 **Benefits:**
 - **Immediate processing**: No waiting for cron schedule
-- **Multi-topic support**: One rule handles all Google Alert subjects
+- **Works with any Google Alert topic**: One rule handles all subjects, or create separate rules per topic
 - **Fully automated**: From alert arrival to email delivery without manual intervention
 - **Easy management**: Enable/disable via Mail preferences
+
+**How it works:**
+Mail rule conditions (From/Subject) handle ALL filtering. The code is topic-agnostic—it processes whatever alert email triggers the rule. Use broad patterns like `Google Alert -` to match all topics, or narrow patterns like `Google Alert - Medication reminder` for specific topics.
 
 **Setup:**
 See `Summarizer/MAIL_RULE_SETUP.md` for complete configuration instructions, including:
 - AppleScript installation for Mail.app
-- Mail rule configuration (single rule matches all Google Alert topics)
+- Mail rule configuration (single rule matches all Google Alert topics, or topic-specific rules)
 - Accessibility permissions setup
 - Email recipient configuration
 - Troubleshooting guidance
 
 The Mail rule workflow:
-1. Google Alert arrives in inbox
-2. Mail rule triggers AppleScript
+1. Google Alert arrives in inbox (any topic you've subscribed to)
+2. Mail rule triggers AppleScript (rule conditions did the filtering)
 3. Python pipeline runs (fetch, summarize, generate digest)
 4. HTML digest email created and sent automatically
 5. Trigger email marked as read
 
-No manual steps required.
+No manual steps required—works with any Google Alert topic.
 
 ### Scheduling with cron (Alternative)
 
@@ -247,6 +256,7 @@ No manual steps required.
    - `PRO_ALERT_OUTPUT_DIR`, `PRO_ALERT_MODEL`, `PRO_ALERT_MAX_ARTICLES` tune destination/behavior.
    - `PRO_ALERT_DIGEST_EMAIL` — comma-separated recipients for the digest (equivalent to repeating `--email-digest`).
    - `PRO_ALERT_EMAIL_SENDER` — sender address to select the Mail.app account used for digests.
+   - **Note:** Variable names use `PRO_ALERT_` prefix for historical reasons but work with any Google Alert topic.
 2. Add the job (edit with `crontab -e`):
    ```cron
    0 7 * * 1-5 /bin/bash -lc 'source ~/.pro-alert-env; /Users/you/Code/AppletScriptorium/Summarizer/bin/run_pro_alert.sh'

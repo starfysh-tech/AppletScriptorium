@@ -1,7 +1,9 @@
 # Documentation Audit Report
-**Date**: October 14, 2025  
-**Repository**: AppletScriptorium  
+**Date**: October 14, 2025
+**Repository**: AppletScriptorium
 **Auditor**: Claude Code
+
+**Note**: This audit was conducted before the framework was rebranded from "PRO Alert Summarizer" to "Google Alert Intelligence". See [Post-Audit Changes](#post-audit-changes) section below for subsequent documentation overhaul that removed PRO-specific language and emphasized generic Google Alert processing.
 
 ## Executive Summary
 
@@ -292,9 +294,99 @@ All documentation has been validated against the actual codebase, system configu
 ### Updated
 - `/Users/randallnoval/Code/AppletScriptorium/README.md` (added Quick Start section)
 
-### Validated (No Changes Needed)
-- `/Users/randallnoval/Code/AppletScriptorium/CLAUDE.md`
+### Validated (No Changes Needed at time of audit)
+- `/Users/randallnoval/Code/AppletScriptorium/CLAUDE.md` (updated in post-audit rebrand)
 - `/Users/randallnoval/Code/AppletScriptorium/AGENTS.md`
-- `/Users/randallnoval/Code/AppletScriptorium/Summarizer/MAIL_RULE_SETUP.md`
+- `/Users/randallnoval/Code/AppletScriptorium/Summarizer/MAIL_RULE_SETUP.md` (updated in post-audit rebrand)
 - `/Users/randallnoval/Code/AppletScriptorium/Summarizer/PRO Alert Summarizer PRD.md`
 - `/Users/randallnoval/Code/AppletScriptorium/Summarizer/requirements.txt`
+
+---
+
+## Post-Audit Changes
+
+**Date**: October 14, 2025 (later same day)
+
+After the initial audit, the framework was rebranded from "PRO Alert Summarizer" (Patient Reported Outcomes specific) to **"Google Alert Intelligence"** (generic Google Alert processing on any topic).
+
+### Rationale
+
+The code was already generic—no hardcoded subject patterns or PRO-specific logic. Mail rule conditions handle ALL filtering. However, documentation incorrectly implied the framework was PRO-specific, which misled users about the framework's capabilities.
+
+### Changes Made
+
+#### PR1: Fixture Renaming
+- Renamed 4 fixture files from `google-alert-patient-reported-outcome-*` to `google-alert-sample-*`
+- Updated `link_extractor.py` DEFAULT_* constants
+- Updated all documentation references
+- Updated `refresh-fixtures.py`
+
+#### PR2: Branding Update
+- Changed `digest_renderer.py`: "PRO Alert Digest" → "Google Alert Intelligence" (HTML title, h1, plaintext)
+- Changed `cli.py`: Email subject line to "Google Alert Intelligence"
+- Updated `test_digest_renderer.py` assertions
+- All tests passing (21/21)
+
+#### PR3: Link Extractor Documentation
+- Added module-level docstring to `link_extractor.py` explaining Google Alert format specificity:
+  - Framework optimized for Google Alert email format (www.google.com/url redirect links)
+  - Other email formats (newsletters, RSS) would need separate extractors following LinkRecord interface
+  - Emphasizes composability and extensibility
+
+#### PR4: Documentation Overhaul (this update)
+Updated all documentation files to:
+- Remove PRO-specific language
+- Emphasize framework works with ANY Google Alert topic
+- Show variety in examples (medication reminders, AI research, climate change, etc.)
+- Clarify Mail rules do filtering, code is generic
+- Note environment variables use `PRO_ALERT_` prefix for historical reasons but work with any topic
+- Update example email addresses to use example.com
+- Add notes that PRD documents original use case but framework is now generic
+
+**Files updated in PR4:**
+- `README.md` - Emphasized generic Google Alert processing, updated examples with variety of topics
+- `MAIL_RULE_SETUP.md` - Changed title to "Google Alert Intelligence", updated examples
+- `CLAUDE.md` - Updated project overview, added notes about environment variables
+- `SETUP.md` - Updated configuration comments, test examples
+- `DOCUMENTATION_AUDIT.md` - Added this post-audit section
+
+### Framework Scope Clarification
+
+**What changed:**
+- Documentation language (PRO-specific → generic Google Alert)
+- Digest branding ("PRO Alert Digest" → "Google Alert Intelligence")
+- Fixture filenames (topic-specific → generic)
+- Example variety (only PRO → diverse topics)
+
+**What didn't change:**
+- Code logic (already generic—no hardcoded subjects)
+- Mail rule behavior (conditions always did filtering)
+- Environment variable names (kept `PRO_ALERT_` prefix for backward compatibility)
+- Google Alert format dependency (still specific to Google Alert email structure)
+
+### Technical Notes
+
+**Google Alert specificity:**
+- Framework is optimized for Google Alert email format specifically
+- Uses `link_extractor.py` which parses www.google.com/url redirect links
+- Not a general email processor—designed for Google Alert structure
+- Other email formats would need separate LinkRecord-compatible extractors
+
+**Mail rule filtering:**
+- Mail rule conditions: `From: googlealerts-noreply@google.com` AND `Subject: Google Alert -`
+- Broad pattern `Google Alert -` matches all topics
+- Narrow patterns like `Google Alert - Medication reminder` for topic-specific processing
+- AppleScript has NO hardcoded subjects—processes whatever triggers the rule
+
+**Environment variables:**
+- All use `PRO_ALERT_` prefix (e.g., `PRO_ALERT_MODEL`, `PRO_ALERT_DIGEST_EMAIL`)
+- Prefix retained for backward compatibility with existing configurations
+- Work with any Google Alert topic despite PRO-specific naming
+
+### Impact
+
+Documentation now accurately reflects:
+- Framework capabilities (any Google Alert topic, not just PRO)
+- Architecture decisions (Mail rules filter, code processes)
+- Google Alert format dependency (specific email structure required)
+- Historical naming (PRO_ALERT_* env vars, PRD documenting original use case)

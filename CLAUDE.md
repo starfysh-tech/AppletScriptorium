@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AppletScriptorium is a macOS automation framework that uses AppleScript, shell scripts, and Python to build agents that automate local workflows. The first agent, **PRO Alert Summarizer**, monitors Mail.app for Google Alerts about Patient Reported Outcomes, extracts article links, fetches pages, summarizes them with a local LLM (Ollama), and generates email digests.
+AppletScriptorium is a macOS automation framework that uses AppleScript, shell scripts, and Python to build agents that automate local workflows. The first agent, **Summarizer**, monitors Mail.app for Google Alerts on any topic you choose, extracts article links, fetches pages, summarizes them with a local LLM (Ollama), and generates intelligent email digests. Mail rule conditions handle all topic filtering—the code is generic and processes whatever alert triggers it.
 
 ## Architecture
 
@@ -51,9 +51,10 @@ python3 -m pytest -v
 ### Fixture Management
 ```bash
 # Refresh raw alert fixture (captures most recent message matching subject)
+# Works with any Google Alert topic
 osascript Summarizer/fetch-alert-source.applescript \
   Summarizer/Samples/google-alert-sample-2025-10-06.eml \
-  "Patient reported outcome"
+  "Medication reminder"
 
 # Rebuild decoded HTML and expected link list
 Summarizer/refresh-fixtures.py
@@ -68,6 +69,7 @@ diff -u Summarizer/Samples/google-alert-sample-2025-10-06-links.tsv /tmp/alert-l
 #### CLI (preferred)
 ```bash
 # Full pipeline with subject filter (captures most recent matching inbox message)
+# Works with any Google Alert topic
 python3 -m Summarizer.cli run \
   --output-dir runs/$(date +%Y%m%d-%H%M%S) \
   --subject-filter "Medication reminder"
@@ -75,18 +77,18 @@ python3 -m Summarizer.cli run \
 # Without filter (captures most recent inbox message)
 python3 -m Summarizer.cli run --output-dir runs/$(date +%Y%m%d-%H%M%S)
 
-# With article limit and custom model
+# With article limit and custom model (AI research example)
 python3 -m Summarizer.cli run \
   --output-dir runs/test \
   --max-articles 5 \
   --model granite4:tiny-h \
-  --subject-filter "Patient reported outcome"
+  --subject-filter "Artificial intelligence"
 
-# Email digest to recipients
+# Email digest to recipients (matches all Google Alert topics with broad pattern)
 python3 -m Summarizer.cli run \
   --output-dir runs/latest \
-  --email-digest randall@mqol.com \
-  --email-sender randall@mqol.com \
+  --email-digest user@example.com \
+  --email-sender user@example.com \
   --subject-filter "Google Alert -"
 ```
 
@@ -119,30 +121,34 @@ python3 Summarizer/clean-alert.py --format json Summarizer/Samples/google-alert-
 - Parallel processing: ThreadPoolExecutor with max 5 workers (~70% faster than sequential)
 - In-memory caching for the life of the process
 - Custom headers via `PRO_ALERT_HTTP_HEADERS_JSON` env var: `'{"example.com": {"Cookie": "session=abc"}}'`
+- **Note:** Environment variable names use `PRO_ALERT_` prefix for historical reasons (original Patient Reported Outcomes use case), but they work with any Google Alert topic
 
 ### Summarization
 - Requires local Ollama installation with `granite4:tiny-h` model pulled
 - Model can be overridden via `--model` CLI flag or `PRO_ALERT_MODEL` env var
 - Returns structured 4-bullet format: KEY FINDING, TACTICAL WIN [tag], MARKET SIGNAL [tag], CONCERN
 - Digest includes executive summary and cross-article insights
+- Works with any Google Alert topic—summaries adapt to content
 
 ### Mail Rule Automation (Recommended)
-- Event-driven: processes alerts immediately when they arrive
+- Event-driven: processes alerts immediately when they arrive (any Google Alert topic)
 - Mail rule conditions filter by From/Subject (e.g., `From: googlealerts-noreply@google.com`, `Subject: Google Alert -`)
 - AppleScript (`process-pro-alert.scpt`) saves triggering message, runs Python pipeline, creates and sends HTML digest email
 - Fully automated: alert arrival → digest generation → email delivery with no manual intervention
+- Code is topic-agnostic—Mail rule conditions do ALL filtering
 - See `Summarizer/MAIL_RULE_SETUP.md` for configuration details
 
 ### Cron Scheduling (Alternative)
 - Wrapper script: `Summarizer/bin/run_pro_alert.sh`
 - Configuration via `~/.pro-alert-env` (sourced by cron)
 - Example crontab entry: `0 7 * * 1-5 /bin/bash -lc 'source ~/.pro-alert-env; /Users/you/Code/AppletScriptorium/Summarizer/bin/run_pro_alert.sh'`
-- Environment variables:
+- Environment variables (work with any Google Alert topic):
   - `PRO_ALERT_EMAIL_RECIPIENT` — failure notification address
   - `PRO_ALERT_NOTIFY_ON_SUCCESS=1` — enable success notifications
   - `PRO_ALERT_DIGEST_EMAIL` — comma-separated digest recipients
   - `PRO_ALERT_EMAIL_SENDER` — Mail.app account for sending
   - `PRO_ALERT_OUTPUT_DIR`, `PRO_ALERT_MODEL`, `PRO_ALERT_MAX_ARTICLES` — behavior tuning
+  - **Note:** Variable names use `PRO_ALERT_` prefix for historical reasons but work with any Google Alert topic
 
 ## Coding Conventions
 
