@@ -2,6 +2,36 @@
 
 AppletScriptorium is a collection of macOS automation agents orchestrated through AppleScript, shell, and Python helpers. The first agent, **PRO Alert Summarizer**, watches Mail.app for Google Alerts about Patient Reported Outcomes, extracts article links, fetches the corresponding pages, summarizes them with an LLM, and prepares a digest email with clickable links.
 
+
+## Quick Start
+
+**New to AppletScriptorium?** See the complete setup guide: **[SETUP.md](./SETUP.md)**
+
+### Installation TL;DR
+```bash
+# 1. Install prerequisites
+brew install python@3.11 ollama
+
+# 2. Clone and install dependencies
+cd ~/Code  # Or your preferred directory
+git clone https://github.com/yourusername/AppletScriptorium.git
+cd AppletScriptorium
+python3 -m pip install --user -r Summarizer/requirements.txt
+python3 -m playwright install
+
+# 3. Install LLM model
+brew services start ollama
+ollama pull granite4:tiny-h
+
+# 4. Test with sample
+python3 Summarizer/clean-alert.py \
+  Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06.eml
+```
+
+For complete setup instructions including Mail rule automation and troubleshooting, see **[SETUP.md](./SETUP.md)**.
+
+---
+
 ## Working Agreement
 - Ship the simplest solution that works on the local Mac; postpone abstractions until they become necessary.
 - Treat every task as production-bound: add logging, thorough error handling, idempotency, and locking when parallel runs are possible.
