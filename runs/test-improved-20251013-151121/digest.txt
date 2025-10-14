@@ -1,7 +1,0 @@
-PRO Alert Digest — October 13, 2025
-
-Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications
-  https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391
-    - The study found that implementing electronic patient-reported outcome (ePRO) measures improved data collection efficiency by 40%, enabling more frequent assessments and timely interventions for patients.
-    - TACTICAL APPLICATION: Oncology practices should integrate ePRO platforms to monitor symptoms like fatigue, nausea, and pain more comprehensively. This could involve training staff on the new system and ensuring patient education materials clearly explain its benefits.
-    - MARKET/BUSINESS CONTEXT: The ability to capture real-time ePRO data positions healthcare providers to better align treatment plans with patients' quality of life metrics, potentially leading to a competitive advantage in attracting health systems looking for innovative patient care solutions.

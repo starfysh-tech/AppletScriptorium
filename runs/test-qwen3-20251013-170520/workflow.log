@@ -1,5 +1,0 @@
-[2025-10-13 17:05:30,521] Output directory: /Users/randallnoval/Code/AppletScriptorium/runs/test-qwen3-20251013-170520
-[2025-10-13 17:06:26,592] OK: wrote alert 68ecf9a7.050a0220.7e6d8.83f8googlealerts@google.com to /Users/randallnoval/Code/AppletScriptorium/runs/test-qwen3-20251013-170520/alert.eml
-[2025-10-13 17:06:26,619] Extracting link metadata
-[2025-10-13 17:06:27,109] [fetch] https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391
-[2025-10-13 17:06:27,395] HTTP Request: GET https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391 "HTTP/1.1 403 Forbidden"

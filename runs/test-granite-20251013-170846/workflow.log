@@ -1,7 +1,0 @@
-[2025-10-13 17:09:04,465] Output directory: /Users/randallnoval/Code/AppletScriptorium/runs/test-granite-20251013-170846
-[2025-10-13 17:09:13,127] OK: wrote alert 68ecf9a7.050a0220.7e6d8.83f8googlealerts@google.com to /Users/randallnoval/Code/AppletScriptorium/runs/test-granite-20251013-170846/alert.eml
-[2025-10-13 17:09:13,128] Extracting link metadata
-[2025-10-13 17:09:13,145] [fetch] https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391
-[2025-10-13 17:09:13,245] HTTP Request: GET https://ascopubs.org/doi/10.1200/OP.2025.21.10_suppl.391 "HTTP/1.1 403 Forbidden"
-[2025-10-13 17:10:07,904] [summarize] Capturing electronic patient reported outcomes in oncology practice. - ASCO Publications
-[2025-10-13 17:10:07,997] Run complete. Summaries generated: 1
