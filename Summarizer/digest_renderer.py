@@ -3,11 +3,8 @@ from __future__ import annotations
 
 import html
 import re
-from collections import Counter
 from datetime import datetime
 from typing import Iterable, Sequence
-
-SUMMARY_COUNT = 3
 
 
 def generate_executive_summary(articles: Iterable[dict]) -> list[str]:

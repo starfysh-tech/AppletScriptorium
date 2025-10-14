@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import subprocess
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple
@@ -22,7 +23,6 @@ PACKAGE_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGE_ROOT.parent
 APPLESCRIPT = PACKAGE_ROOT / "fetch-alert-source.applescript"
 DEFAULT_MODEL = "granite4:tiny-h"
-SUMMARY_LIMIT = 3
 
 
 def slugify(value: str) -> str:
@@ -30,11 +30,16 @@ def slugify(value: str) -> str:
     return slug or "article"
 
 
-def capture_alert(output_path: Path) -> None:
+def capture_alert(output_path: Path, subject_filter: Optional[str] = None) -> None:
     if not APPLESCRIPT.exists():
         raise FileNotFoundError(f"AppleScript not found at {APPLESCRIPT}")
+
+    args = ["osascript", str(APPLESCRIPT), str(output_path)]
+    if subject_filter:
+        args.append(subject_filter)
+
     result = subprocess.run(
-        ["osascript", str(APPLESCRIPT), str(output_path)],
+        args,
         capture_output=True,
         text=True,
         check=False,
@@ -69,6 +74,66 @@ def write_link_tsv(links: Iterable[dict], path: Path) -> None:
             ])
 
 
+def _process_single_article(
+    idx: int,
+    link: dict,
+    articles_dir: Path,
+    fetch_cfg: FetchConfig,
+    sum_cfg: SummarizerConfig,
+) -> Tuple[Optional[dict], Optional[dict]]:
+    """Process a single article (fetch, extract, summarize).
+
+    Returns: (summary_dict, failure_dict) - one will be None
+    """
+    title = link.get("title", "")
+    url = link.get("url", "")
+    slug = f"{idx:02d}-{slugify(title)[:40]}"
+    html_path = articles_dir / f"{slug}.html"
+    content_path = articles_dir / f"{slug}.content.md"
+    summary_path = articles_dir / f"{slug}.summary.json"
+
+    # Fetch article
+    logging.info("[fetch] %s", url)
+    try:
+        html = fetch_article(url, fetch_cfg)
+        html_path.write_text(html, encoding="utf-8")
+    except FetchError as exc:
+        logging.error("[fetch][ERROR] %s", exc)
+        reason = str(exc)
+        prefix = f"Failed to fetch {url}: "
+        if reason.startswith(prefix):
+            reason = reason[len(prefix):]
+        return None, {"url": url, "reason": reason}
+
+    # Extract content
+    try:
+        content_text = extract_content(html)
+        if not content_text.strip():
+            raise ValueError("no content extracted")
+        content_path.write_text(content_text, encoding="utf-8")
+    except Exception as exc:  # pragma: no cover - upstream failures
+        logging.error("[clean][ERROR] %s -> %s", url, exc)
+        return None, {"url": url, "reason": f"clean failed: {exc}"}
+
+    # Summarize
+    article_payload = {
+        "title": title,
+        "url": url,
+        "publisher": link.get("publisher", ""),
+        "snippet": link.get("snippet", ""),
+        "content": content_text,
+    }
+
+    try:
+        summary = summarize_article(article_payload, config=sum_cfg)
+        summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+        logging.info("[summarize] %s", title)
+        return summary, None
+    except SummarizerError as exc:
+        logging.error("[summarize][ERROR] %s", exc)
+        return None, {"url": url, "reason": f"summarize failed: {exc}"}
+
+
 def process_articles(
     links: List[dict],
     output_dir: Path,
@@ -76,62 +141,38 @@ def process_articles(
     sum_cfg: SummarizerConfig,
     max_articles: int | None = None,
 ) -> Tuple[List[dict], List[dict]]:
+    """Process articles in parallel using ThreadPoolExecutor."""
     articles_dir = output_dir / "articles"
     articles_dir.mkdir(exist_ok=True)
+
+    # Limit articles if requested
+    links_to_process = links[:max_articles] if max_articles else links
+
     summaries = []
-    failures: List[dict] = []
+    failures = []
 
-    count = 0
-    for idx, link in enumerate(links, start=1):
-        if max_articles is not None and count >= max_articles:
-            break
-        title = link.get("title", "")
-        url = link.get("url", "")
-        slug = f"{idx:02d}-{slugify(title)[:40]}"
-        html_path = articles_dir / f"{slug}.html"
-        content_path = articles_dir / f"{slug}.content.md"
-        summary_path = articles_dir / f"{slug}.summary.json"
-
-        logging.info("[fetch] %s", url)
-        try:
-            html = fetch_article(url, fetch_cfg)
-            html_path.write_text(html, encoding="utf-8")
-        except FetchError as exc:
-            logging.error("[fetch][ERROR] %s", exc)
-            reason = str(exc)
-            prefix = f"Failed to fetch {url}: "
-            if reason.startswith(prefix):
-                reason = reason[len(prefix):]
-            failures.append({"url": url, "reason": reason})
-            continue
-
-        try:
-            content_text = extract_content(html)
-            if not content_text.strip():
-                raise ValueError("no content extracted")
-            content_path.write_text(content_text, encoding="utf-8")
-        except Exception as exc:  # pragma: no cover - upstream failures
-            logging.error("[clean][ERROR] %s -> %s", url, exc)
-            failures.append({"url": url, "reason": f"clean failed: {exc}"})
-            continue
-
-        article_payload = {
-            "title": title,
-            "url": url,
-            "publisher": link.get("publisher", ""),
-            "snippet": link.get("snippet", ""),
-            "content": content_text,
+    # Process articles in parallel (max 5 workers to avoid overwhelming sites/LLM)
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        # Submit all tasks
+        future_to_idx = {
+            executor.submit(_process_single_article, idx, link, articles_dir, fetch_cfg, sum_cfg): idx
+            for idx, link in enumerate(links_to_process, start=1)
         }
 
-        try:
-            summary = summarize_article(article_payload, config=sum_cfg)
-            summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
-            summaries.append(summary)
-            logging.info("[summarize] %s", title)
-            count += 1
-        except SummarizerError as exc:
-            logging.error("[summarize][ERROR] %s", exc)
-            failures.append({"url": url, "reason": f"summarize failed: {exc}"})
+        # Collect results as they complete
+        for future in as_completed(future_to_idx):
+            try:
+                summary, failure = future.result()
+                if summary:
+                    summaries.append(summary)
+                if failure:
+                    failures.append(failure)
+            except Exception as exc:
+                # Shouldn't happen since we catch exceptions in _process_single_article
+                idx = future_to_idx[future]
+                link = links_to_process[idx - 1]
+                logging.error("[unexpected][ERROR] Article %d failed: %s", idx, exc)
+                failures.append({"url": link.get("url", "unknown"), "reason": f"unexpected error: {exc}"})
 
     return summaries, failures
 
@@ -156,6 +197,10 @@ def parse_args(argv=None) -> argparse.Namespace:
     run_parser.add_argument("--output-dir", required=True, help="Directory to write artifacts")
     run_parser.add_argument("--model", default=DEFAULT_MODEL, help="Ollama model name (default: granite4:tiny-h)")
     run_parser.add_argument("--max-articles", type=int, help="Optional cap on number of articles processed")
+    run_parser.add_argument(
+        "--subject-filter",
+        help="Optional subject filter to match inbox messages (e.g., 'Google Alert - Medication reminder')",
+    )
     run_parser.add_argument(
         "--email-digest",
         action="append",
@@ -189,7 +234,11 @@ def run_pipeline(args: argparse.Namespace) -> Path:
     clear_cache()
 
     alert_eml = output_dir / "alert.eml"
-    capture_alert(alert_eml)
+    # Skip capture if alert.eml already exists (e.g., from Mail rule)
+    if not alert_eml.exists():
+        capture_alert(alert_eml, subject_filter=args.subject_filter)
+    else:
+        logging.info("Using existing alert.eml from Mail rule")
 
     logging.info("Extracting link metadata")
     links = load_links(alert_eml)

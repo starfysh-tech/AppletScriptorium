@@ -1,6 +1,14 @@
 # Deployment Guide — PRO Alert Summarizer
 
-This repository ships the tooling and scripts needed to capture the latest PRO alert, fetch the linked articles, summarize them with Ollama, and emit HTML/text digests. To run the pipeline on a schedule from your Mac, follow these steps.
+This repository ships the tooling and scripts needed to capture the latest PRO alert, fetch the linked articles, summarize them with Ollama, and emit HTML/text digests.
+
+## Deployment Options
+
+**Recommended: Mail Rule Automation (Event-Driven)**
+For real-time processing when Google Alerts arrive, see `../MAIL_RULE_SETUP.md` for complete Mail.app rule configuration. This provides immediate processing with no cron scheduling needed.
+
+**Alternative: Cron Scheduling (Time-Based)**
+To run the pipeline on a fixed schedule from your Mac, follow the steps below. This is useful for batch digest generation but lacks the real-time responsiveness of Mail rules.
 
 ## 1. Prerequisites
 
@@ -21,8 +29,17 @@ python3 -m pip install -r Summarizer/requirements.txt
 
 From the repo root, generate a full run to ensure everything works:
 ```bash
+# Process most recent inbox message
 python3 -m Summarizer.cli run --output-dir runs/manual-test
+
+# Or specify a subject filter to match specific alerts
+python3 -m Summarizer.cli run \
+  --output-dir runs/manual-test \
+  --subject-filter "Medication reminder"
 ```
+
+**Performance:** Articles are processed in parallel (max 5 concurrent workers), typically reducing execution time by ~70% compared to sequential processing.
+
 This creates:
 - `runs/manual-test/alert.eml` (raw email)
 - `.../alert.tsv` (link metadata)

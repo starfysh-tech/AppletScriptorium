@@ -28,7 +28,7 @@ def test_summarizer_uses_runner(sample_article):
         assert "Machine-learning risk models" in prompt
         return "- Bullet one\n- Bullet two\n- Bullet three"
 
-    result = summarize_article(sample_article, runner=fake_runner)
+    result = summarize_article(sample_article, config=SummarizerConfig(model="qwen3:latest"), runner=fake_runner)
     assert result["summary"] == [
         {"type": "bullet", "text": "Bullet one"},
         {"type": "bullet", "text": "Bullet two"},

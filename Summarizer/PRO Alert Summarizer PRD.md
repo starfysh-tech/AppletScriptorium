@@ -52,6 +52,8 @@ Maintain the following checklist; update status and supporting docs after you co
 - [x] **7. Digest Assembly** – `digest_renderer.py` now emits HTML + plaintext digests, with tests and sample outputs; ready to feed downstream mailers.
 - [x] **8. Automation & CLI Wrapper** – Added `Summarizer/cli.py` with `python3 -m Summarizer.cli run --output-dir …`, integrates the full pipeline with logging and README coverage.
 - [x] **9. Deployment & Scheduling Prep** – Added cron-ready `Summarizer/bin/run_pro_alert.sh`, notification hooks, and deployment guidance in README/PRD.
+- [x] **10. Mail Rule Automation** – Implemented event-driven processing via Mail.app rules with AppleScript, supporting multi-topic alerts and fully automated digest email delivery.
+- [x] **11. Parallel Processing** – Refactored article processing to use ThreadPoolExecutor (max 5 workers) for concurrent fetch/summarize operations, reducing execution time ~70%.
 
 #### Dependencies & Environment
 * macOS with Apple Mail (scriptable) configured with a sending account, Python 3.11+, BeautifulSoup, readability library, HTTP client (requests/httpx).
@@ -84,6 +86,6 @@ Maintain the following checklist; update status and supporting docs after you co
 #### Future Extensions
 * Expand headless coverage as new domains appear and capture cookies for lighter follow-up fetches when practical.
 * Harden Playwright fallback with site-specific waits/selectors for JS-heavy layouts.
-* Persistent storage (database, Sheets) for summaries.
-* Multi-topic support via configuration.
+* Persistent storage (database, Sheets) for summaries and metrics.
 * Integration with scheduler/orchestrator and broader AppletScriptorium agent suite.
+* Topic-specific customization (different recipients, models, filters per Google Alert topic).

@@ -25,7 +25,7 @@ def sample_summary() -> dict:
 
 
 def test_cli_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sample_summary: dict):
-    def fake_capture(path: Path) -> None:
+    def fake_capture(path: Path, subject_filter=None) -> None:
         path.write_text("dummy", encoding="utf-8")
 
     def fake_load_links(path: Path):
@@ -54,6 +54,7 @@ def test_cli_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sampl
         output_dir=str(tmp_path),
         model="test-model",
         max_articles=None,
+        subject_filter=None,
         email_digest=["ops@example.com"],
         email_sender="alerts@example.com",
     )
@@ -76,7 +77,7 @@ def test_cli_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sampl
 
 
 def test_cli_run_pipeline_env_recipients(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sample_summary: dict):
-    def fake_capture(path: Path) -> None:
+    def fake_capture(path: Path, subject_filter=None) -> None:
         path.write_text("dummy", encoding="utf-8")
 
     def fake_load_links(path: Path):
@@ -103,6 +104,7 @@ def test_cli_run_pipeline_env_recipients(tmp_path: Path, monkeypatch: pytest.Mon
         output_dir=str(tmp_path),
         model="test-model",
         max_articles=None,
+        subject_filter=None,
         email_digest=None,
         email_sender=None,
     )

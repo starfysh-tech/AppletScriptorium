@@ -26,7 +26,7 @@ Keep shell wrappers executable (`chmod +x`) and provide example invocations in R
 Follow PEP 8 (4-space indents) and snake_case for Python; kebab-case script filenames (e.g., `fetch-alert.scpt`). AppleScript files should include header comments describing trigger conditions. Prefer pure functions and dependency injection to ease unit testing and future reuse.
 
 ## Testing & Validation Guidelines
-Until automated tests are wired, rely on fixture-driven diffs: rebuild `google-alert-patient-reported-outcome-2025-10-06-links.tsv` with `refresh-fixtures.py` and compare against the committed version (`diff -u`). When adding new modules, include pytest smoke tests, AppleScript usage notes, or shell dry-run flags. Capture expected JSON/HTML digests as golden files to guard regressions.
+Run `python3 -m pytest Summarizer/tests` to validate link extraction, metadata, fetcher behavior, and rendering against committed fixtures. When adding new modules, include pytest tests with mocked dependencies. For AppleScript changes, provide usage examples or manual test steps. Capture expected JSON/HTML digests as golden files to guard regressions.
 
 ## Commit & Pull Request Expectations
 Write imperative commit subjects under ~60 chars (e.g., `summarizer: add link parser`). Each PR should summarize the scenario, list validation steps, and attach relevant artifacts (diffs, HTML snippets, logs). Reference issues/roadmap bullets and note new dependencies or secret requirements for reviewers.

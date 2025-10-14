@@ -44,11 +44,11 @@ ls -la ~/Library/Application\ Scripts/com.apple.mail/process-pro-alert.scpt
    Process PRO Alert
    ```
 
-   **If any of the following conditions are met:**
+   **If all of the following conditions are met:**
    - Condition 1: **From** → **Contains** → `googlealerts-noreply@google.com`
-   - Condition 2: **Subject** → **Contains** → `Google Alert - Patient reported outcome`
+   - Condition 2: **Subject** → **Contains** → `Google Alert -`
 
-   (Both conditions must be met - use "all" not "any")
+   **Important:** The Mail rule conditions do ALL filtering. The AppleScript has no hardcoded subject patterns - it processes whatever message triggered the rule. Using `Google Alert -` (with trailing space and dash) matches ANY Google Alert topic from this sender.
 
    **Perform the following actions:**
    - Action: **Run AppleScript** → Select `process-pro-alert.scpt`
@@ -120,23 +120,23 @@ When a Google Alert arrives, the process is **fully automated**:
 
 ## Adding Additional Topics
 
-To process multiple Google Alert topics, create separate rules:
+**One rule handles all topics** - The rule configured above (matching `Google Alert -`) will trigger for ANY Google Alert topic:
+- Google Alert - Patient reported outcome
+- Google Alert - Clinical trials
+- Google Alert - EHR integration
+- Any other Google Alert topics
 
-### Rule 2: Clinical Trials
-- **Subject contains:** `Google Alert - Clinical trials`
-- **Run AppleScript:** `process-clinical-trials.scpt`
+The AppleScript automatically processes whatever alert email triggered the rule. No additional configuration needed.
 
-### Rule 3: EHR Integration
-- **Subject contains:** `Google Alert - EHR integration`
-- **Run AppleScript:** `process-ehr-integration.scpt`
+**Optional: Topic-specific customization**
+If you need different settings per topic (different recipients, models, etc.), create separate rules and AppleScripts:
 
-You can duplicate the base AppleScript and customize parameters:
 ```bash
 cp ~/Library/Application\ Scripts/com.apple.mail/process-pro-alert.scpt \
    ~/Library/Application\ Scripts/com.apple.mail/process-clinical-trials.scpt
 ```
 
-Then edit the new script to use different output directories or model parameters.
+Then create a second Mail rule with subject `Google Alert - Clinical trials` and action pointing to the new script.
 
 ## Troubleshooting
 

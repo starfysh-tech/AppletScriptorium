@@ -9,13 +9,13 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 ## Architecture
 
 ### Pipeline Flow
-1. **Alert Capture** (`fetch-alert-source.applescript`) — AppleScript queries Mail.app for latest Google Alert
+1. **Alert Capture** — Mail rule saves triggering message (automated) OR `fetch-alert-source.applescript` captures inbox message with optional subject filter (manual CLI)
 2. **Link Extraction** (`link_extractor.py`) — Parses email HTML, extracts article URLs with metadata
-3. **Article Fetching** (`article_fetcher.py` + `crawlee_fetcher.py`) — HTTP fetcher with Playwright fallback for Cloudflare-protected sites
+3. **Article Fetching** (`article_fetcher.py` + `crawlee_fetcher.py`) — HTTP fetcher with Playwright fallback for Cloudflare-protected sites; parallel processing (max 5 workers)
 4. **Content Cleaning** (`content_cleaner.py`) — Converts HTML to readable Markdown using readability-lxml
-5. **Summarization** (`summarizer.py`) — Calls local Ollama (granite4:tiny-h model) for structured bullet summaries
-6. **Digest Rendering** (`digest_renderer.py`) — Generates HTML and plaintext email digests
-7. **CLI Orchestration** (`cli.py`) — Ties all steps together with logging and error handling
+5. **Summarization** (`summarizer.py`) — Calls local Ollama (granite4:tiny-h model) for structured 4-bullet summaries
+6. **Digest Rendering** (`digest_renderer.py`) — Generates HTML and plaintext email digests with executive summary and cross-article insights
+7. **CLI Orchestration** (`cli.py`) — Ties all steps together with logging, error handling, and parallel execution
 
 ### Module Organization
 - Each agent lives in its own top-level directory (currently `Summarizer/`)
@@ -50,8 +50,10 @@ python3 -m pytest -v
 
 ### Fixture Management
 ```bash
-# Refresh raw alert fixture (overwrites committed .eml)
-osascript Summarizer/fetch-alert-source.applescript Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06.eml
+# Refresh raw alert fixture (captures most recent message matching subject)
+osascript Summarizer/fetch-alert-source.applescript \
+  Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06.eml \
+  "Patient reported outcome"
 
 # Rebuild decoded HTML and expected link list
 Summarizer/refresh-fixtures.py
@@ -65,14 +67,27 @@ diff -u Summarizer/Samples/google-alert-patient-reported-outcome-2025-10-06-link
 
 #### CLI (preferred)
 ```bash
-# Full pipeline with output to timestamped directory
+# Full pipeline with subject filter (captures most recent matching inbox message)
+python3 -m Summarizer.cli run \
+  --output-dir runs/$(date +%Y%m%d-%H%M%S) \
+  --subject-filter "Medication reminder"
+
+# Without filter (captures most recent inbox message)
 python3 -m Summarizer.cli run --output-dir runs/$(date +%Y%m%d-%H%M%S)
 
 # With article limit and custom model
-python3 -m Summarizer.cli run --output-dir runs/test --max-articles 5 --model granite4:tiny-h
+python3 -m Summarizer.cli run \
+  --output-dir runs/test \
+  --max-articles 5 \
+  --model granite4:tiny-h \
+  --subject-filter "Patient reported outcome"
 
 # Email digest to recipients
-python3 -m Summarizer.cli run --output-dir runs/latest --email-digest randall@mqol.com --email-sender randall@mqol.com
+python3 -m Summarizer.cli run \
+  --output-dir runs/latest \
+  --email-digest randall@mqol.com \
+  --email-sender randall@mqol.com \
+  --subject-filter "Google Alert -"
 ```
 
 #### Shell Wrapper (alternative)
@@ -93,22 +108,32 @@ python3 Summarizer/clean-alert.py --format json Summarizer/Samples/google-alert-
 ## Key Technical Details
 
 ### AppleScript Integration
-- `fetch-alert-source.applescript` searches Mail.app Inbox for subject starting with "Google Alert -" containing "Patient reported outcome"
-- Edit `subject_prefix` and `topic_keyword` variables in the script to match different alert formats
+- **Manual CLI:** `fetch-alert-source.applescript` accepts optional subject filter as second argument; captures most recent matching inbox message
+- **Mail rule automation:** `process-pro-alert.scpt` runs when Mail rule triggers; saves the triggering message directly (bypasses fetch-alert-source.applescript)
+- Mail rule conditions (From/Subject) do all filtering; no hardcoded subject patterns in scripts
 - AppleScript files must be executable or run via `osascript`
 
 ### Article Fetching Strategy
 - Primary: httpx with user-agent headers
-- Fallback: Crawlee + Playwright for Cloudflare-protected domains
+- Fallback: Crawlee + Playwright for Cloudflare-protected domains (extended wait times: 13-18s for JS/challenges)
+- Parallel processing: ThreadPoolExecutor with max 5 workers (~70% faster than sequential)
 - In-memory caching for the life of the process
 - Custom headers via `PRO_ALERT_HTTP_HEADERS_JSON` env var: `'{"example.com": {"Cookie": "session=abc"}}'`
 
 ### Summarization
 - Requires local Ollama installation with `granite4:tiny-h` model pulled
 - Model can be overridden via `--model` CLI flag or `PRO_ALERT_MODEL` env var
-- Returns structured JSON with title, key_points, and clinical_relevance fields
+- Returns structured 4-bullet format: KEY FINDING, TACTICAL WIN [tag], MARKET SIGNAL [tag], CONCERN
+- Digest includes executive summary and cross-article insights
 
-### Cron Scheduling
+### Mail Rule Automation (Recommended)
+- Event-driven: processes alerts immediately when they arrive
+- Mail rule conditions filter by From/Subject (e.g., `From: googlealerts-noreply@google.com`, `Subject: Google Alert -`)
+- AppleScript (`process-pro-alert.scpt`) saves triggering message, runs Python pipeline, creates and sends HTML digest email
+- Fully automated: alert arrival → digest generation → email delivery with no manual intervention
+- See `Summarizer/MAIL_RULE_SETUP.md` for configuration details
+
+### Cron Scheduling (Alternative)
 - Wrapper script: `Summarizer/bin/run_pro_alert.sh`
 - Configuration via `~/.pro-alert-env` (sourced by cron)
 - Example crontab entry: `0 7 * * 1-5 /bin/bash -lc 'source ~/.pro-alert-env; /Users/you/Code/AppletScriptorium/Summarizer/bin/run_pro_alert.sh'`

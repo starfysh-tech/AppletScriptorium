@@ -51,8 +51,14 @@ async def _fetch_html_async(url: str, config: CrawleeFetchConfig) -> str:
             # Check for Cloudflare challenge and wait for it to complete
             await _wait_for_cloudflare_challenge(context.page, config.timeout)
 
-            # Additional wait for dynamic content to stabilize
-            await asyncio.sleep(2)
+            # Extended wait for dynamic content to stabilize (increased from 2s)
+            await asyncio.sleep(5)
+
+            # Try to wait for network to be mostly idle (helps with JS-heavy sites)
+            try:
+                await context.page.wait_for_load_state("networkidle", timeout=10000)
+            except Exception:
+                pass  # Continue even if networkidle times out
 
             html = await context.page.content()
         except Exception as exc:
@@ -82,22 +88,24 @@ async def _fetch_html_async(url: str, config: CrawleeFetchConfig) -> str:
 async def _wait_for_cloudflare_challenge(page, timeout: float) -> None:
     """Wait for Cloudflare challenge to complete if detected."""
     try:
-        # Check for common Cloudflare challenge indicators
+        # Check for common Cloudflare and PerimeterX challenge indicators
         cloudflare_selectors = [
             "div.cf-browser-verification",
             "div#cf-wrapper",
             "div.cf-error-title",
             "#challenge-running",
+            "#px-captcha",  # PerimeterX
+            "iframe[src*='perimeterx']",  # PerimeterX iframe
         ]
 
         for selector in cloudflare_selectors:
             try:
                 element = await page.query_selector(selector)
                 if element:
-                    # Cloudflare challenge detected, wait for it to disappear
+                    # Challenge detected, wait for it to disappear
                     await page.wait_for_selector(selector, state="hidden", timeout=timeout * 1000)
-                    # Extra wait for redirect/reload after challenge
-                    await asyncio.sleep(3)
+                    # Extended wait for redirect/reload after challenge (increased from 3s to 8s)
+                    await asyncio.sleep(8)
                     break
             except Exception:
                 # Selector not found or timeout, continue
@@ -163,16 +171,22 @@ async def fetch():
                     if element:
                         challenge_detected = True
                         await context.page.wait_for_selector(selector, state="hidden", timeout={config.timeout * 1000})
-                        await asyncio.sleep(5)  # Longer wait for challenge completion
+                        await asyncio.sleep(8)  # Extended wait for challenge completion and redirect
                         break
                 except Exception:
                     pass
 
             # Additional wait for dynamic content/challenges
             if challenge_detected:
-                await asyncio.sleep(3)
+                await asyncio.sleep(5)  # More time after challenge for content to render
             else:
-                await asyncio.sleep(2)
+                await asyncio.sleep(5)  # Increased from 2s to allow JavaScript to execute
+
+            # Try to wait for network to be mostly idle (helps with JS-heavy sites)
+            try:
+                await context.page.wait_for_load_state("networkidle", timeout=10000)
+            except Exception:
+                pass  # Continue even if networkidle times out
             html = await context.page.content()
         except Exception as exc:
             error = str(exc)
