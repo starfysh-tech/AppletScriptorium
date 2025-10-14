@@ -121,11 +121,11 @@ else
 fi
 
 # Check 6: Ollama model
-if ollama list 2>/dev/null | grep -q "granite4:tiny-h"; then
-    log_pass "Ollama model: granite4:tiny-h"
+if ollama list 2>/dev/null | grep -q "qwen3:latest"; then
+    log_pass "Ollama model: qwen3:latest"
 else
-    log_fail "Ollama model not found: granite4:tiny-h"
-    log_info "Install with: ollama pull granite4:tiny-h"
+    log_fail "Ollama model not found: qwen3:latest"
+    log_info "Install with: ollama pull qwen3:latest"
 fi
 echo ""
 

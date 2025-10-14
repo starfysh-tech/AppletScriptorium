@@ -195,7 +195,7 @@ def parse_args(argv=None) -> argparse.Namespace:
 
     run_parser = subparsers.add_parser("run", help="Fetch latest alert and generate digest")
     run_parser.add_argument("--output-dir", required=True, help="Directory to write artifacts")
-    run_parser.add_argument("--model", default=DEFAULT_MODEL, help="Ollama model name (default: granite4:tiny-h)")
+    run_parser.add_argument("--model", default=DEFAULT_MODEL, help="Ollama model name (default: qwen3:latest)")
     run_parser.add_argument("--max-articles", type=int, help="Optional cap on number of articles processed")
     run_parser.add_argument(
         "--subject-filter",

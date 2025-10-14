@@ -16,7 +16,7 @@ Common reasons to modify:
 # LLM Configuration
 # =============================================================================
 
-DEFAULT_MODEL = "granite4:tiny-h"  # Ollama model for summarization
+DEFAULT_MODEL = "qwen3:latest"  # Ollama model for summarization
 TEMPERATURE = 0.1  # Lower = more focused, higher = more creative (0.0-1.0)
 MAX_TOKENS = 8192  # Maximum response length from LLM
 

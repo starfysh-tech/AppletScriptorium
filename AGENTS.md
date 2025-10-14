@@ -6,7 +6,7 @@ AppletScriptorium is a macOS automation framework using AppleScript, shell scrip
 
 ### Prerequisites
 - Python 3.11+ system Python (venv NOT supported—see Constraints below)
-- Ollama with `granite4:tiny-h` model
+- Ollama with `qwen3:latest` model
 - Mail.app configured
 
 ### Development Commands
@@ -148,10 +148,9 @@ diff -u Summarizer/Samples/google-alert-sample-2025-10-06-links.tsv /tmp/alert-l
 
 See `CLAUDE.md` for detailed development patterns, file reference map, and technical constraints.
 
-## Working Philosophy
+## Development Principles
 
-- Ship the simplest solution that works on local macOS
-- Avoid premature abstractions until multiple agents need them
-- Add logging, error handling, idempotency, and locking when relevant
-- Ask clarifying questions only when requirements are ambiguous
-- Document assumptions inline or in PRD so future work has full context
+- Simple solutions over premature abstractions
+- Production-ready code: logging, error handling, idempotency
+- Document assumptions inline or in PRD
+- Breaking changes documented in release notes only

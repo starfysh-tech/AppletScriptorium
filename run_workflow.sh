@@ -36,10 +36,10 @@ except Exception as exc:
     raise SystemExit(f"Missing dependency: {exc}")
 PY
 
-log "Ensuring Ollama model 'granite4:tiny-h' is available..."
-if ! ollama list | grep -q 'granite4:tiny-h'; then
-    log "Pulling model granite4:tiny-h ..."
-    ollama pull granite4:tiny-h >/dev/null
+log "Ensuring Ollama model 'qwen3:latest' is available..."
+if ! ollama list | grep -q 'qwen3:latest'; then
+    log "Pulling model qwen3:latest ..."
+    ollama pull qwen3:latest >/dev/null
 fi
 
 ALERT_EML="$RUN_DIR/alert.eml"
@@ -84,7 +84,7 @@ def slug(value: str) -> str:
     return value or "article"
 
 fetch_cfg = FetchConfig(allow_cache=False)
-sum_cfg = SummarizerConfig(model="granite4:tiny-h")
+sum_cfg = SummarizerConfig(model="qwen3:latest")
 
 results = []
 for idx, meta in enumerate(alert_rows, start=1):

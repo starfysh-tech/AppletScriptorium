@@ -5,8 +5,8 @@
 # Output directory for pipeline runs (default: runs/<timestamp>)
 export ALERT_OUTPUT_DIR="$HOME/Code/AppletScriptorium/runs"
 
-# Ollama model name (default: granite4:tiny-h)
-export ALERT_MODEL="granite4:tiny-h"
+# Ollama model name (default: qwen3:latest)
+export ALERT_MODEL="qwen3:latest"
 
 # Maximum number of articles to process (empty = process all)
 export ALERT_MAX_ARTICLES=""

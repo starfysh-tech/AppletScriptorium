@@ -119,15 +119,15 @@ if ! pgrep -x "ollama" >/dev/null; then
 fi
 
 # Check if model exists
-if ollama list | grep -q "granite4:tiny-h"; then
-    log_success "Ollama model 'granite4:tiny-h' already installed"
+if ollama list | grep -q "qwen3:latest"; then
+    log_success "Ollama model 'qwen3:latest' already installed"
 else
-    log_info "Pulling Ollama model 'granite4:tiny-h' (~1GB, this may take a few minutes)..."
-    if ollama pull granite4:tiny-h; then
+    log_info "Pulling Ollama model 'qwen3:latest' (this may take a few minutes)..."
+    if ollama pull qwen3:latest; then
         log_success "Ollama model installed"
     else
         log_error "Failed to pull Ollama model"
-        log_info "Try manually: ollama pull granite4:tiny-h"
+        log_info "Try manually: ollama pull qwen3:latest"
         exit 1
     fi
 fi

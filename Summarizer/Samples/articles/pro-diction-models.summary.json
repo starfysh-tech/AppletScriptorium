@@ -1,1 +1,1 @@
-{'title': 'From Prediction to PRO-Diction Models', 'url': 'https://example.com/article', 'summary': [{'type': 'bullet', 'text': 'bullet 1'}, {'type': 'bullet', 'text': 'bullet 2'}, {'type': 'bullet', 'text': 'bullet 3'}], 'model': 'granite4:tiny-h'}
+{'title': 'From Prediction to PRO-Diction Models', 'url': 'https://example.com/article', 'summary': [{'type': 'bullet', 'text': 'bullet 1'}, {'type': 'bullet', 'text': 'bullet 2'}, {'type': 'bullet', 'text': 'bullet 3'}], 'model': 'qwen3:latest'}

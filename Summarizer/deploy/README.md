@@ -17,7 +17,7 @@ To run the pipeline on a fixed schedule from your Mac, follow the steps below. T
 - **Ollama** installed and running (`brew install ollama` and `ollama serve`)
 - Pull the summarizer model:
   ```bash
-  ollama pull granite4:tiny-h
+  ollama pull qwen3:latest
   ```
 
 Install Python dependencies once:

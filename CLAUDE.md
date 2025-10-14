@@ -13,7 +13,7 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 2. **Link Extraction** (`link_extractor.py`) — Parses email HTML, extracts article URLs with metadata
 3. **Article Fetching** (`article_fetcher.py` + `crawlee_fetcher.py`) — HTTP fetcher with Playwright fallback for Cloudflare-protected sites; parallel processing (max 5 workers)
 4. **Content Cleaning** (`content_cleaner.py`) — Converts HTML to readable Markdown using readability-lxml
-5. **Summarization** (`summarizer.py`) — Calls local Ollama (granite4:tiny-h model) for structured 4-bullet summaries
+5. **Summarization** (`summarizer.py`) — Calls local Ollama for structured 4-bullet summaries
 6. **Digest Rendering** (`digest_renderer.py`) — Generates HTML and plaintext email digests with executive summary and cross-article insights
 7. **CLI Orchestration** (`cli.py`) — Ties all steps together with logging, error handling, and parallel execution
 
@@ -107,7 +107,7 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability|crawlee"
 - Custom headers via `ALERT_HTTP_HEADERS_JSON` env var: `'{"example.com": {"Cookie": "session=abc"}}'`
 
 ### Summarization
-- Requires local Ollama installation with `granite4:tiny-h` model pulled
+- Requires local Ollama installation with `qwen3:latest` model pulled
 - Model can be overridden via `--model` CLI flag or `ALERT_MODEL` env var
 - Returns structured 4-bullet format: KEY FINDING, TACTICAL WIN [tag], MARKET SIGNAL [tag], CONCERN
 - Digest includes executive summary and cross-article insights
@@ -144,10 +144,127 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability|crawlee"
   - **Manual CLI usage**: Automation (System Settings → Privacy & Security → Automation → enable Terminal → Mail)
   - **Both modes**: Need both permissions
 
+## Module Integration Examples
+
+### Article Fetching
+
+Use `Summarizer/article_fetcher.py` in scripts or REPL sessions:
+
+```python
+from Summarizer.article_fetcher import fetch_article, FetchConfig
+
+# Basic fetch
+html = fetch_article("https://example.com/article", FetchConfig())
+
+# With custom headers for authenticated sites
+import json
+import os
+os.environ['ALERT_HTTP_HEADERS_JSON'] = json.dumps({
+    "example.com": {"Cookie": "session=abc"}
+})
+html = fetch_article("https://example.com/article", FetchConfig())
+```
+
+**Key points:**
+- In-memory caching for process lifetime; call `article_fetcher.clear_cache()` in tests
+- Automatic Playwright fallback for Cloudflare domains (see `CRAWLEE_DOMAINS` in config.py)
+- Custom headers via `ALERT_HTTP_HEADERS_JSON` environment variable
+
+### Content Extraction
+
+Convert HTML to clean Markdown:
+
+```python
+from pathlib import Path
+from Summarizer.content_cleaner import extract_content
+
+html = Path('Summarizer/Samples/articles/pro-diction-models.html').read_text(encoding='utf-8')
+markdown = extract_content(html)
+print(markdown.splitlines()[0])  # First line
+```
+
+### Summary Generation
+
+Call local Ollama for structured summaries:
+
+```python
+from Summarizer.summarizer import summarize_article, SummarizerConfig
+from Summarizer.content_cleaner import extract_content
+
+article = {
+    "title": "Article Title",
+    "url": "https://example.com/article",
+    "content": extract_content(html),
+}
+summary = summarize_article(article, SummarizerConfig())
+```
+
+Requires Ollama running (`brew services start ollama`) with model pulled (`ollama pull qwen3:latest`).
+
+### Digest Assembly
+
+Generate HTML and plaintext digests:
+
+```python
+from Summarizer.digest_renderer import render_digest_html, render_digest_text
+
+summaries = [
+    {
+        "title": "Article Title",
+        "url": "https://example.com",
+        "summary": [
+            {"type": "bullet", "text": "**KEY FINDING**: Main insight"},
+        ],
+        "model": "qwen3:latest",
+    }
+]
+
+html = render_digest_html(summaries)
+text = render_digest_text(summaries)
+```
+
+## Fixture Management
+
+### Refreshing Test Fixtures
+
+When parser logic changes:
+
+```bash
+# Rebuild from committed .eml file
+Summarizer/refresh-fixtures.py
+
+# Or generate to temp files for diffing
+Summarizer/refresh-fixtures.py \
+  --links /tmp/alert-links.tsv \
+  --links-json /tmp/alert-links.json \
+  --html /tmp/alert.html
+
+# Diff against committed fixtures
+diff -u Summarizer/Samples/google-alert-sample-2025-10-06-links.tsv /tmp/alert-links.tsv
+```
+
+### Capturing New Fixtures
+
+Capture fresh alert email from Mail.app inbox:
+
+```bash
+# With subject filter
+osascript Summarizer/fetch-alert-source.applescript \
+  Summarizer/Samples/google-alert-sample-2025-10-06.eml \
+  "Medication reminder"
+
+# Without filter (most recent inbox message)
+osascript Summarizer/fetch-alert-source.applescript \
+  Summarizer/Samples/google-alert-sample-2025-10-06.eml
+```
+
+**Important**: Sanitize emails before committing (remove personal info, sensitive URLs).
+
 ## Documentation Location Guide
 
 - **Setup/Installation**: See `SETUP.md`
 - **Usage/CLI examples**: See `README.md`
-- **Mail rule configuration**: See `Summarizer/MAIL_RULE_SETUP.md`
+- **Troubleshooting**: See `TROUBLESHOOTING.md`
+- **Mail rule configuration**: See `SETUP.md` (Mail Rule Automation section)
 - **Architecture/PRD**: See `Summarizer/PRO Alert Summarizer PRD.md`
 - **This file**: Claude Code behavior guidance only

@@ -1,68 +1,51 @@
 # AppletScriptorium Setup Guide
 
-Complete instructions for setting up AppletScriptorium on a new macOS computer.
+Complete instructions for setting up AppletScriptorium on macOS.
 
 ## Table of Contents
 - [Prerequisites](#prerequisites)
-- [Installation Steps](#installation-steps)
+- [Installation](#installation)
 - [Configuration](#configuration)
 - [Verification](#verification)
 - [First Run](#first-run)
-- [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Prerequisites
 
 ### System Requirements
-- **macOS**: 12.0 (Monterey) or later (tested on macOS 15.6.1)
-- **Python**: 3.11 or later
-- **Mail.app**: Configured with at least one email account
-- **Disk Space**: ~2GB for dependencies and models
+- macOS 12.0 (Monterey) or later
+- Python 3.11 or later
+- Mail.app configured with at least one email account
+- ~2GB disk space for dependencies and models
 
 ### Required Tools
-1. **Homebrew** (package manager)
-   ```bash
-   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-   ```
 
-2. **Python 3.11+**
-   ```bash
-   brew install python@3.11
-   ```
+Install via Homebrew:
+```bash
+# Install Homebrew (if not already installed)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-3. **Ollama** (local LLM runtime)
-   ```bash
-   brew install ollama
-   ```
-
-5. **Git** (likely already installed)
-   ```bash
-   git --version  # Verify installation
-   ```
-
-### Optional Tools
-- **jq** (for JSON inspection): `brew install jq`
-- **pytest** (for running tests): Included in requirements.txt
+# Install required tools
+brew install python@3.11 ollama git
+```
 
 ---
 
-## Installation Steps
+## Installation
 
 ### Automated Setup (Recommended)
 
-The easiest way to set up Google Alert Intelligence is using the automated installation scripts:
-
 ```bash
 # 1. Clone repository
-cd ~/Code  # Or your preferred project directory
+cd ~/Code
 git clone https://github.com/yourusername/AppletScriptorium.git
 cd AppletScriptorium
 
 # 2. Run automated installer
 ./install.sh
 
-# 3. Set up Mail rule automation (interactive)
+# 3. Set up Mail rule automation
 ./setup-mail-rule.sh
 
 # 4. Validate installation
@@ -70,379 +53,250 @@ cd AppletScriptorium
 ```
 
 The `install.sh` script automates:
-- Checking prerequisites (Homebrew, Python 3.11+, Ollama, Git)
+- Checking prerequisites
 - Installing Python dependencies
 - Installing Playwright browsers
-- Starting Ollama and pulling granite4:tiny-h model
+- Starting Ollama and pulling qwen3:latest model
 - Making scripts executable
 - Running test suite
 
-For detailed manual installation steps, see the [Manual Installation](#manual-installation) section below.
-
----
-
 ### Manual Installation
 
-If you prefer manual setup or need to troubleshoot:
+If automated setup fails or you need manual control:
 
-#### 1. Clone Repository
 ```bash
+# 1. Clone repository
 cd ~/Code
 git clone https://github.com/yourusername/AppletScriptorium.git
 cd AppletScriptorium
-```
 
-#### 2. Install Python Dependencies
-```bash
-# System Python (for Mail rule automation)
+# 2. Install Python dependencies (system Python with --user flag)
 python3 -m pip install --user -r Summarizer/requirements.txt
-```
 
-**Required packages:** beautifulsoup4, pytest, httpx, readability-lxml, markdownify, crawlee, browserforge, apify_fingerprint_datapoints
-
-**Note:** The `--user` flag installs to user site-packages without requiring root, which is required for Mail rule automation.
-
-#### 3. Install Playwright
-```bash
+# 3. Install Playwright browsers
 python3 -m playwright install
-```
 
-Downloads Chromium browsers for headless fetching (~200MB).
-
-#### 4. Install Ollama Model
-```bash
+# 4. Install and start Ollama
 brew services start ollama
-ollama pull granite4:tiny-h
-ollama list | grep granite4  # Verify
-```
+ollama pull qwen3:latest
 
-#### 5. Make Scripts Executable
-```bash
-chmod +x install.sh setup-mail-rule.sh validate.sh
-chmod +x Summarizer/fetch-alert-source.applescript
-chmod +x run_workflow.sh Summarizer/bin/run_alert.sh
-```
+# 5. Make scripts executable
+chmod +x install.sh setup-mail-rule.sh validate.sh run_workflow.sh
+chmod +x Summarizer/fetch-alert-source.applescript Summarizer/bin/run_alert.sh
 
-#### 6. Create Directories
-```bash
+# 6. Create output directory
 mkdir -p runs
+
+# 7. Run tests
+python3 -m pytest Summarizer/tests
 ```
+
+**Note:** The `--user` flag installs packages to user site-packages, which is required for Mail rule automation (venv not supported).
 
 ---
 
 ## Configuration
 
-### System Permissions Required
+### System Permissions
 
-Different usage modes require different macOS permissions:
+macOS requires different permissions depending on how you run the pipeline:
 
 #### Mail Rule Automation (Recommended)
-**Required permission:**
-- **Accessibility**: System Settings → Privacy & Security → Accessibility
-  - Add **Mail.app** and enable
-  - Allows AppleScript to automate keyboard actions (copy/paste digest into compose window)
+**Required:** Accessibility permission
 
-**Setup timing:** Grant after running `./setup-mail-rule.sh` and creating the Mail rule
+1. Go to **System Settings** → **Privacy & Security** → **Accessibility**
+2. Look for **Mail** in the list
+3. If not present, click **+** and add `/Applications/Mail.app`
+4. Ensure the checkbox is enabled
+
+**When to grant:** After running `./setup-mail-rule.sh` and creating the Mail rule
+
+**What it enables:** AppleScript automation of keyboard actions (copy/paste digest into compose window)
 
 #### Manual CLI Usage
-**Required permission:**
-- **Automation**: System Settings → Privacy & Security → Automation
-  - Enable **Terminal → Mail**
-  - Allows AppleScript to capture inbox messages when running `python3 -m Summarizer.cli run`
+**Required:** Automation permission
 
-**Setup timing:** Grant when first running manual CLI commands that access Mail.app
+1. Go to **System Settings** → **Privacy & Security** → **Automation**
+2. Enable **Terminal → Mail**
+
+**When to grant:** When first running `python3 -m Summarizer.cli run`
+
+**What it enables:** AppleScript can capture inbox messages
 
 **Note:** If using both modes, you'll need both permissions.
 
-### Mail.app Setup (for automation)
+---
 
-#### For Mail Rule Automation (Recommended)
+### Mail Rule Automation (Recommended)
 
-The `setup-mail-rule.sh` script automates Mail rule configuration:
+Event-driven processing that triggers automatically when Google Alerts arrive.
+
+#### 1. Verify AppleScript Installation
+
+The `setup-mail-rule.sh` script should have installed the AppleScript:
 
 ```bash
-./setup-mail-rule.sh
+ls -la ~/Library/Application\ Scripts/com.apple.mail/process-alert.scpt
 ```
 
-This creates `~/Library/Application Scripts/com.apple.mail/process-alert.scpt` and provides step-by-step instructions.
+If missing, run `./setup-mail-rule.sh` again.
 
-**Manual steps after running setup-mail-rule.sh:**
-1. Open Mail.app → Mail → Settings → Rules → Add Rule
-2. Configure:
-   - **From**: `googlealerts-noreply@google.com`
-   - **Subject**: `Google Alert -`
-   - **Action**: Run AppleScript → `process-alert.scpt`
-3. Grant Accessibility permissions:
-   - System Settings → Privacy & Security → Accessibility
-   - Add Mail.app and enable
+#### 2. Create Mail Rule
 
-See detailed instructions in: `Summarizer/MAIL_RULE_SETUP.md`
+1. Open **Mail.app** → **Settings** → **Rules** tab
+2. Click **Add Rule**
+3. Configure:
 
-#### For Cron Automation (Alternative)
+   **Description:** `Process Google Alert`
 
-**The `~/.alert-env` file is ONLY needed for cron automation.** Skip this section if using Mail rule automation (recommended).
+   **If all of the following conditions are met:**
+   - Condition 1: **From** → **Contains** → `googlealerts-noreply@google.com`
+   - Condition 2: **Subject** → **Contains** → `Google Alert -`
 
-1. Copy template and customize:
-   ```bash
-   cp Summarizer/templates/alert-env.template ~/.alert-env
-   # Edit ~/.alert-env with your email address and preferences
-   ```
+   **Perform the following actions:**
+   - Action: **Run AppleScript** → Select `process-alert.scpt`
 
-2. Edit crontab:
-   ```bash
-   crontab -e
-   ```
+4. Click **OK**
 
-3. Add cron entry (weekdays at 7 AM):
-   ```cron
-   0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /Users/YOUR_USERNAME/Code/AppletScriptorium/Summarizer/bin/run_alert.sh'
-   ```
+**Note:** Mail rule conditions do ALL filtering. Using `Google Alert -` matches ANY Google Alert topic. For topic-specific processing, narrow the subject (e.g., `Google Alert - Medication reminder`).
 
-   **Replace `YOUR_USERNAME`** with your actual macOS username.
+#### 3. Configure Email Recipient
 
-### Environment Variables (Optional)
+Edit the AppleScript to set your email address:
 
-Add to `~/.zshrc` or `~/.bash_profile` for CLI usage:
+1. Open **Script Editor**
+2. **File** → **Open** → Navigate to `~/Library/Application Scripts/com.apple.mail/process-alert.scpt`
+3. Find line: `set digestRecipient to "user@example.com"`
+4. Change to your actual email address
+5. **File** → **Save**
+
+#### 4. Grant Accessibility Permission
+
+See [System Permissions](#system-permissions) above.
+
+#### 5. Test the Rule
+
+**Option A - Manual Test:**
+1. Find an existing Google Alert email in inbox
+2. Select it
+3. **Message** menu → **Apply Rules**
+
+**Option B - Live Test:**
+Wait for next Google Alert to arrive - rule triggers automatically
+
+**Expected Behavior:**
+Alert arrives → Mail rule triggers → Pipeline runs → Digest email sent automatically → Trigger email marked as read
+
+---
+
+### Cron Scheduling (Alternative)
+
+For fixed-schedule digests instead of event-driven processing.
+
+**Note:** The `~/.alert-env` file is ONLY needed for cron automation. Not required for Mail rule automation or direct CLI usage.
+
+#### 1. Create Configuration File
 
 ```bash
-# Google Alert Intelligence Configuration
-export ALERT_MODEL="granite4:tiny-h"
-export ALERT_DIGEST_EMAIL="your-email@example.com"
-export ALERT_EMAIL_SENDER="your-email@example.com"
-
-# Custom HTTP headers (for sites requiring authentication)
-export ALERT_HTTP_HEADERS_JSON='{"example.com": {"Cookie": "session=abc"}}'
+cp Summarizer/templates/alert-env.template ~/.alert-env
+# Edit ~/.alert-env with your preferences
 ```
 
-Reload shell:
+#### 2. Add Cron Job
+
 ```bash
-source ~/.zshrc  # or ~/.bash_profile
+crontab -e
+```
+
+Add entry (weekdays at 7 AM):
+```cron
+0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /Users/YOUR_USERNAME/Code/AppletScriptorium/Summarizer/bin/run_alert.sh'
+```
+
+**Replace `YOUR_USERNAME`** with your actual macOS username.
+
+#### 3. Environment Variables
+
+Edit `~/.alert-env`:
+```bash
+# Required for email notifications
+ALERT_EMAIL_RECIPIENT="your-email@example.com"
+
+# Optional settings
+ALERT_MODEL="qwen3:latest"
+ALERT_MAX_ARTICLES=10
+ALERT_DIGEST_EMAIL="recipient1@example.com,recipient2@example.com"
+ALERT_EMAIL_SENDER="sender@example.com"
 ```
 
 ---
 
 ## Verification
 
-### 1. Verify Python Installation
+Run the validation script:
+
 ```bash
-which python3
-# Should show: /usr/local/bin/python3 or /opt/homebrew/bin/python3
-
-python3 --version
-# Should show: Python 3.11.x or higher
+./validate.sh
 ```
 
-### 2. Verify Python Packages
-```bash
-python3 -m pip list | grep -E "beautifulsoup4|httpx|readability|crawlee"
-```
+This checks:
+- Python 3.11+ installed
+- Required packages installed
+- Ollama running with qwen3:latest model
+- Playwright browsers installed
+- All tests passing
 
-Expected output:
-```
-beautifulsoup4       4.13.4
-httpx                0.27.x
-readability-lxml     0.8.x
-crawlee              1.0.x
-```
-
-### 3. Verify Ollama
-```bash
-# Check if Ollama service is running
-brew services list | grep ollama
-# Should show: ollama started
-
-# List installed models
-ollama list
-# Should show: granite4:tiny-h
-
-# Test model (optional - works with any content)
-echo "Summarize: AI assistants are transforming software development workflows" | ollama run granite4:tiny-h
-```
-
-### 4. Verify Playwright
-```bash
-python3 -c "from playwright.sync_api import sync_playwright; print('Playwright OK')"
-# Should print: Playwright OK
-```
-
-### 5. Run Tests
-```bash
-# Run all tests
-python3 -m pytest Summarizer/tests -v
-
-# Expected: All tests pass (may show warnings)
-```
+**If validation fails:** See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
 
 ---
 
 ## First Run
 
-### Test with Sample Fixture
-```bash
-cd /Users/YOUR_USERNAME/Code/AppletScriptorium
+### Test with Sample
 
-# Parse sample alert (no network calls)
+```bash
+# Parse sample alert (no network calls required)
 python3 Summarizer/clean-alert.py \
   Summarizer/Samples/google-alert-sample-2025-10-06.eml | head
-
-# Should output TSV with article links
 ```
 
-### Manual CLI Run (requires Google Alert in Mail.app inbox)
+### Manual CLI Run
+
+Requires Google Alert in Mail.app inbox:
+
 ```bash
-# Process most recent inbox message
 python3 -m Summarizer.cli run \
   --output-dir runs/test-$(date +%Y%m%d-%H%M%S) \
   --max-articles 3 \
   --subject-filter "Google Alert -"
+```
 
-# Check outputs
+Check outputs:
+```bash
 ls -la runs/test-*/
 # Should contain: alert.eml, alert.tsv, articles/, digest.html, digest.txt, workflow.log
 ```
 
-### View Generated Digest
+View digest:
 ```bash
-# Open HTML digest in browser
 open runs/test-*/digest.html
-
-# View plaintext digest
-cat runs/test-*/digest.txt
 ```
-
-### Send Test Email
-```bash
-python3 -m Summarizer.cli run \
-  --output-dir runs/email-test-$(date +%Y%m%d-%H%M%S) \
-  --max-articles 2 \
-  --email-digest your-email@example.com \
-  --email-sender your-email@example.com \
-  --subject-filter "Google Alert -"
-
-# Check Mail.app Sent folder for digest email
-```
-
----
-
-## Troubleshooting
-
-### Ollama Model Not Found
-
-**Issue**: `ollama list` doesn't show granite4:tiny-h
-
-**Solutions**:
-```bash
-# Start Ollama service
-brew services start ollama
-
-# Wait 5 seconds, then pull model
-ollama pull granite4:tiny-h
-
-# If pull hangs, check network connection and retry
-```
-
-### AppleScript Fails to Capture Email
-
-**Issue**: "No messages found in inbox"
-
-**Solutions**:
-1. Verify Mail.app is running and has messages in Inbox
-2. Check subject filter matches actual email subjects:
-   ```bash
-   # Remove subject filter to capture any inbox message
-   python3 -m Summarizer.cli run --output-dir runs/test
-   ```
-3. Check Mail.app permissions:
-   - **System Settings** → **Privacy & Security** → **Automation**
-   - Enable Terminal → Mail
-
-### Playwright Browser Not Found
-
-**Issue**: "Executable doesn't exist at ..."
-
-**Solutions**:
-```bash
-# Reinstall browsers
-python3 -m playwright install --force
-
-# If using virtual environment, activate first:
-source .venv/bin/activate
-python3 -m playwright install
-```
-
-### Article Fetching Fails
-
-**Issue**: "Failed to fetch {url}"
-
-**Solutions**:
-1. Check network connection
-2. For sites requiring authentication, set custom headers:
-   ```bash
-   export ALERT_HTTP_HEADERS_JSON='{"example.com": {"Cookie": "session=abc"}}'
-   ```
-3. Verify Playwright is installed (for Cloudflare-protected sites)
-4. Increase timeout in `Summarizer/article_fetcher.py` (if needed)
-
-### Tests Fail
-
-**Issue**: `pytest` shows failures
-
-**Solutions**:
-```bash
-# Run with verbose output
-python3 -m pytest Summarizer/tests -v -s
-
-# Run specific test file
-python3 -m pytest Summarizer/tests/test_link_extractor.py -v
-
-# Check if fixtures are outdated (rebuild)
-Summarizer/refresh-fixtures.py
-```
-
-### Mail Rule Not Triggering
-
-**Issue**: Mail rule doesn't execute automatically
-
-**Solutions**:
-1. Verify Mail rule conditions match incoming emails exactly
-2. Check AppleScript exists:
-   ```bash
-   ls -la ~/Library/Application\ Scripts/com.apple.mail/process-alert.scpt
-   ```
-3. Test rule manually:
-   - Select a Google Alert email in Mail.app
-   - **Message** menu → **Apply Rules**
-4. Check Console.app for error messages:
-   - Open Console.app → Search for "Mail" → Look for script errors
-
-### Digest Email Not Sending
-
-**Issue**: digest.eml created but email not sent
-
-**Solutions**:
-1. Verify Accessibility permissions (see MAIL_RULE_SETUP.md)
-2. Increase delays in process-alert.scpt
-3. Test manually:
-   ```bash
-   open runs/*/digest.eml
-   # Verify HTML renders in Mail.app viewer
-   ```
 
 ---
 
 ## Next Steps
 
-After completing setup:
+1. **Subscribe to Google Alerts** on topics you want to track
+2. **Mail rule automation** processes alerts automatically when they arrive
+3. **Multiple topics** work out of the box - one rule handles all Google Alert subjects
+4. **Customize** configuration in `Summarizer/config.py` if needed
+5. **Troubleshooting** → See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
 
-1. **For Mail Rule Automation**: Follow `Summarizer/MAIL_RULE_SETUP.md`
-2. **For CLI Usage**: See `CLAUDE.md` for development commands
-3. **For Multiple Topics**: Subscribe to Google Alerts on any topics you want—Mail rules automatically process all alerts
-4. **For Development**: Activate virtual environment and run tests
+---
 
 ## Support
 
-For issues not covered here:
-1. Check `README.md` for feature documentation
-2. Review `CLAUDE.md` for development guidance
-3. Inspect `Summarizer/PRO Alert Summarizer PRD.md` for architecture details (note: documents original Patient Reported Outcomes use case, but framework now supports any Google Alert topic)
-4. Check `runs/*/workflow.log` for pipeline errors
+- **Issues during setup**: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
+- **Development**: [CLAUDE.md](./CLAUDE.md) or [AGENTS.md](./AGENTS.md)
+- **Usage examples**: [README.md](./README.md)
+- **Pipeline errors**: Check `runs/*/workflow.log`
