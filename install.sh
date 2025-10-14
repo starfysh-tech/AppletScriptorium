@@ -58,6 +58,7 @@ PREREQ_OK=true
 
 check_prereq "brew" "Homebrew" "/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"" || PREREQ_OK=false
 check_prereq "python3" "Python 3" "brew install python@3.11" || PREREQ_OK=false
+check_prereq "uv" "UV (Python package manager)" "brew install uv" || PREREQ_OK=false
 check_prereq "ollama" "Ollama" "brew install ollama" || PREREQ_OK=false
 check_prereq "git" "Git" "brew install git" || PREREQ_OK=false
 
@@ -86,12 +87,12 @@ fi
 echo ""
 
 # Step 3: Install Python dependencies
-log_info "Step 3/8: Installing Python dependencies..."
-if $PYTHON_CMD -m pip install --user -r "$REPO_ROOT/Summarizer/requirements.txt"; then
+log_info "Step 3/8: Installing Python dependencies with UV..."
+if uv pip install --python "$PYTHON_CMD" -r "$REPO_ROOT/Summarizer/requirements.txt"; then
     log_success "Python dependencies installed"
 else
     log_error "Failed to install Python dependencies"
-    log_info "Try manually: python3 -m pip install --user -r Summarizer/requirements.txt"
+    log_info "Try manually: uv pip install --python python3 -r Summarizer/requirements.txt"
     exit 1
 fi
 

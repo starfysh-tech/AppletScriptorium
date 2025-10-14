@@ -26,15 +26,18 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 
 ### Environment Setup
 ```bash
-# Create virtual environment
-python3 -m venv .venv && source .venv/bin/activate
+# Create virtual environment (UV is ~10x faster than venv)
+uv venv
+source .venv/bin/activate
 
-# Install Python dependencies
-python3 -m pip install -r Summarizer/requirements.txt
+# Install Python dependencies (UV is ~10-100x faster than pip)
+uv pip install -r Summarizer/requirements.txt
 
 # Install Playwright for Cloudflare-protected sites (one-time)
 python3 -m playwright install
 ```
+
+**Note:** UV is used for faster package management. Install with `brew install uv` if not already installed.
 
 ### Testing
 ```bash

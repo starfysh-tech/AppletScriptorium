@@ -31,12 +31,17 @@ Complete instructions for setting up AppletScriptorium on a new macOS computer.
    brew install python@3.11
    ```
 
-3. **Ollama** (local LLM runtime)
+3. **UV** (fast Python package manager)
+   ```bash
+   brew install uv
+   ```
+
+4. **Ollama** (local LLM runtime)
    ```bash
    brew install ollama
    ```
 
-4. **Git** (likely already installed)
+5. **Git** (likely already installed)
    ```bash
    git --version  # Verify installation
    ```
@@ -94,13 +99,13 @@ cd AppletScriptorium
 
 #### 2. Install Python Dependencies
 ```bash
-# System Python (for Mail rule automation)
-python3 -m pip install --user -r Summarizer/requirements.txt
+# System Python (for Mail rule automation) with UV
+uv pip install --python python3 -r Summarizer/requirements.txt
 ```
 
 **Required packages:** beautifulsoup4, pytest, httpx, readability-lxml, markdownify, crawlee, browserforge, apify_fingerprint_datapoints
 
-**Note:** Mail rule automation requires system Python. Virtual environments won't work with Mail rules.
+**Note:** UV is ~10-100x faster than pip. Mail rule automation requires system Python; virtual environments won't work with Mail rules.
 
 #### 3. Install Playwright
 ```bash
@@ -243,8 +248,6 @@ python3 -c "from playwright.sync_api import sync_playwright; print('Playwright O
 
 ### 5. Run Tests
 ```bash
-cd /Users/YOUR_USERNAME/Code/AppletScriptorium
-
 # Run all tests
 python3 -m pytest Summarizer/tests -v
 
@@ -306,18 +309,18 @@ python3 -m Summarizer.cli run \
 
 ### Python Dependencies Fail to Install
 
-**Issue**: `pip install` fails with compilation errors
+**Issue**: `uv pip install` fails with compilation errors
 
 **Solutions**:
 ```bash
-# Update pip and setuptools
-python3 -m pip install --upgrade pip setuptools wheel
+# Ensure UV is installed
+brew install uv
 
 # Install Xcode Command Line Tools (if missing)
 xcode-select --install
 
 # Retry installation
-python3 -m pip install -r Summarizer/requirements.txt
+uv pip install --python python3 -r Summarizer/requirements.txt
 ```
 
 ### Ollama Model Not Found
@@ -421,42 +424,6 @@ Summarizer/refresh-fixtures.py
    open runs/*/digest.eml
    # Verify HTML renders in Mail.app viewer
    ```
-
----
-
-## New Machine Checklist
-
-Use this checklist when setting up on a fresh macOS installation:
-
-### Quick Setup (3 commands)
-- [ ] Install Homebrew (if needed)
-- [ ] Clone AppletScriptorium repository
-- [ ] Run `./install.sh` (automated setup)
-- [ ] Run `./setup-mail-rule.sh` (if using Mail automation)
-- [ ] Run `./validate.sh` (verify installation)
-- [ ] Configure Mail rule in Mail.app
-- [ ] Grant Accessibility permissions (for Mail rules)
-- [ ] Test with sample fixture
-- [ ] Test manual CLI run with 2-3 articles
-- [ ] Verify automated workflow end-to-end
-
-### Manual Setup (if troubleshooting)
-- [ ] Install Homebrew
-- [ ] Install Python 3.11+ via Homebrew
-- [ ] Install Ollama via Homebrew
-- [ ] Clone AppletScriptorium repository
-- [ ] Install Python dependencies
-- [ ] Install Playwright browsers
-- [ ] Start Ollama service and pull granite4:tiny-h
-- [ ] Make scripts executable
-- [ ] Create runs/ directory
-- [ ] Create ~/.alert-env (if using cron)
-- [ ] Run test suite
-- [ ] Test with sample fixture
-- [ ] Test manual CLI run
-- [ ] Verify digest rendering
-- [ ] Set up Mail rule or cron
-- [ ] Verify automated workflow
 
 ---
 
