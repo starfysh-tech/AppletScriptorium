@@ -88,7 +88,7 @@ Or replay into a scratch directory (limit article count if needed):
 ```bash
 python3 -m Summarizer.cli run --output-dir runs/manual-replay --max-articles 3
 ```
-- For Cloudflare-guarded links, install Playwright (`python3 -m pip install --user playwright` then `playwright install`) so the automation can render the challenge pages headlessly.
+- For Cloudflare-guarded links, install the url-to-md CLI (`npm install -g url-to-markdown-cli-tool`) so the pipeline can extract Markdown when standard HTTP fails.
 - To email the digest automatically, export `ALERT_DIGEST_EMAIL` (comma-separated) and optionally `ALERT_EMAIL_SENDER` before running the CLI or wrapper; the plaintext digest is handed to Mail.app via AppleScript.
 
 ## 7. Future Enhancements

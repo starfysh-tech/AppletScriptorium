@@ -32,18 +32,17 @@ ollama pull qwen3:latest
 # If pull hangs, check network connection and retry
 ```
 
-### Playwright Browser Not Found
+### url-to-md CLI Not Found
 
-**Issue**: "Executable doesn't exist at ..."
+**Issue**: `url-to-md: command not found`
 
 **Solutions**:
 ```bash
-# Reinstall browsers
-python3 -m playwright install --force
+# Install via npm (recommended)
+npm install -g url-to-markdown-cli-tool
 
-# If using virtual environment, activate first:
-source .venv/bin/activate
-python3 -m playwright install
+# Confirm installation works
+url-to-md https://example.com --wait 2 | head
 ```
 
 ### Tests Fail
@@ -102,10 +101,10 @@ ollama list
 echo "Summarize: AI assistants are transforming software development" | ollama run qwen3:latest
 ```
 
-**4. Verify Playwright**
+**4. Verify url-to-md CLI**
 ```bash
-python3 -c "from playwright.sync_api import sync_playwright; print('Playwright OK')"
-# Should print: Playwright OK
+url-to-md https://example.com --wait 2 | head
+# Should print article text converted to Markdown
 ```
 
 ---

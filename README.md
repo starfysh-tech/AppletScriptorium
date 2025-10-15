@@ -58,6 +58,9 @@ cd AppletScriptorium
 │   ├── cli.py                    # Main orchestrator
 │   ├── link_extractor.py         # Extract links from alert emails
 │   ├── article_fetcher.py        # HTTP fetcher with Markdown fallbacks (url-to-md / Jina)
+│   ├── urltomd_fetcher.py        # url-to-md CLI wrapper for Markdown fallbacks
+│   ├── jina_fetcher.py           # Jina Reader API fallback
+│   ├── markdown_cleanup.py       # Markdown content cleaning and validation
 │   ├── content_cleaner.py        # HTML to Markdown conversion
 │   ├── summarizer.py             # LLM summarization
 │   ├── digest_renderer.py        # HTML/text digest generation
@@ -132,6 +135,24 @@ For fixed-schedule digests instead of event-driven processing:
 
 See **[SETUP.md](./docs/SETUP.md)** for cron configuration details.
 
+### Workflow Script (run_workflow.sh)
+
+Alternative workflow script for sequential processing:
+
+```bash
+./run_workflow.sh
+```
+
+**What it does:**
+- Captures latest Google Alert from Mail.app inbox
+- Extracts article links sequentially (no parallelism)
+- Fetches articles, cleans content, generates summaries
+- Uses PYTHONPATH and inline Python scripts
+
+**Outputs**: Creates timestamped run directory with `alert.eml`, `alert.tsv`, `articles/*.html`, `summaries/*.json`
+
+**When to use**: Useful for debugging individual pipeline stages or when parallel processing isn't needed.
+
 ---
 
 ## Testing
@@ -157,7 +178,7 @@ python3 -m pytest Summarizer/tests/test_link_extractor.py -v
 - Module invocation: `python3 -m Summarizer.cli` (NOT `python3 Summarizer/cli.py`)
 - Parallel processing: ThreadPoolExecutor with max 5 workers (~70% faster)
 - Fixture management: `Summarizer/refresh-fixtures.py`
-- Optional: `url-to-md` CLI for Cloudflare-protected sites (`npm install -g url-to-markdown-cli`)
+- Optional: `url-to-md` CLI for Cloudflare-protected sites (`npm install -g url-to-markdown-cli-tool`)
 - Optional: `JINA_API_KEY` env var for Jina Reader API fallback
 
 ---

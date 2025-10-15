@@ -62,7 +62,7 @@ Summarizer/                    # Each agent in own directory
 ├── cli.py                     # Main orchestrator (invoke with -m)
 ├── config.py                  # Configuration constants (model, timeouts, domains)
 ├── link_extractor.py          # extract_links(eml_path) → list of dicts
-├── article_fetcher.py         # fetch_article(url) → HTML, clear_cache()
+├── article_fetcher.py         # fetch_article(url) → str (HTML/Markdown) + get_last_fetch_outcome()
 ├── content_cleaner.py         # extract_content(html) → Markdown
 ├── summarizer.py              # summarize_article(dict) → summary
 ├── digest_renderer.py         # render_digest_html/text(summaries)

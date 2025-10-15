@@ -30,7 +30,7 @@ Install via Homebrew:
 brew install python@3.11 ollama git
 
 # Optional: Install url-to-md for Cloudflare fallback
-npm install -g url-to-markdown-cli
+npm install -g url-to-markdown-cli-tool
 ```
 
 **Optional Dependencies:**
@@ -87,7 +87,7 @@ brew services start ollama
 ollama pull qwen3:latest
 
 # 4. Optional: Install url-to-md for Cloudflare fallback
-npm install -g url-to-markdown-cli
+npm install -g url-to-markdown-cli-tool
 
 # 5. Make scripts executable
 chmod +x install.sh setup-mail-rule.sh validate.sh run_workflow.sh

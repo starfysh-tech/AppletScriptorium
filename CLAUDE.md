@@ -34,6 +34,7 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 - `Summarizer/article_fetcher.py` — `fetch_article(url)` → HTML string, `clear_cache()` for tests
 - `Summarizer/urltomd_fetcher.py` — url-to-md CLI wrapper for Markdown fallbacks
 - `Summarizer/jina_fetcher.py` — Jina Reader API wrapper as final fallback
+- `Summarizer/markdown_cleanup.py` — Clean/validate Markdown from fallbacks
 - `Summarizer/content_cleaner.py` — `extract_content(html)` → Markdown text
 - `Summarizer/summarizer.py` — `summarize_article(article_dict)` → structured summary
 - `Summarizer/digest_renderer.py` — `render_digest_html(summaries)`, `render_digest_text(summaries)`
@@ -89,6 +90,9 @@ osascript -s Summarizer/templates/process-alert.scpt
 
 # Validate system Python packages
 python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
+
+# Run sequential workflow (alternative to CLI)
+./run_workflow.sh
 ```
 
 ## Key Technical Details
@@ -271,5 +275,4 @@ osascript Summarizer/fetch-alert-source.applescript \
 - **Usage/CLI examples**: See `README.md`
 - **Troubleshooting**: See `docs/TROUBLESHOOTING.md`
 - **Mail rule configuration**: See `docs/SETUP.md` (Mail Rule Automation section)
-- **Architecture/PRD**: See `Summarizer/PRO Alert Summarizer PRD.md`
 - **This file**: Claude Code behavior guidance only
