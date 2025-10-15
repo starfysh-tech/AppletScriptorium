@@ -15,6 +15,15 @@ using terms from application "Mail"
 			set triggerMessage to item 1 of theMessages
 			set messageSource to source of triggerMessage
 			my write_text_to_file(messageSource, alertEmlPath)
+
+			-- Extract topic from alert subject (e.g., "Google Alert - Medication reminder" → "Medication reminder")
+			set alertSubject to subject of triggerMessage
+			set topicName to ""
+			if alertSubject contains "Google Alert - " then
+				set topicName to text ((offset of "Google Alert - " in alertSubject) + 15) thru -1 of alertSubject
+			else
+				set topicName to "Unknown"
+			end if
 		on error errMsg
 			display notification "Failed to save alert: " & errMsg with title "Google Alert Intelligence"
 			return
@@ -91,7 +100,7 @@ using terms from application "Mail"
 		-- Step 4: Create compose window with placeholder
 		tell application "Mail"
 			try
-				set emailSubject to "Google Alert Intelligence — " & (do shell script "date '+%B %d, %Y'")
+				set emailSubject to "Google Alert Summary - " & topicName & " - " & (do shell script "date '+%B %d, %Y'")
 				set newMessage to make new outgoing message with properties {subject:emailSubject, content:"[PLACEHOLDER]", visible:true}
 				tell newMessage
 					make new to recipient with properties {address:digestRecipient}
@@ -152,10 +161,12 @@ using terms from application "Mail"
 				set stillOpen to false
 
 				repeat with w in openWindows
-					if name of w contains emailSubject then
-						set stillOpen to true
-						exit repeat
-					end if
+					try
+						if name of w contains emailSubject then
+							set stillOpen to true
+							exit repeat
+						end if
+					end try
 				end repeat
 
 				if stillOpen then

@@ -170,11 +170,38 @@ Edit the AppleScript to set your email address:
 4. Change to your actual email address
 5. **File** → **Save**
 
-#### 4. Grant Accessibility Permission
+#### 4. Modifying the Script (Future Changes)
+
+**Understanding the two files:**
+- **Template:** `Summarizer/templates/process-alert.scpt` (source of truth in repository)
+- **Installed:** `~/Library/Application Scripts/com.apple.mail/process-alert.scpt` (what Mail.app uses)
+
+**When making changes to behavior, subject line, or logic:**
+
+**Option A - Update template and reinstall (Recommended):**
+```bash
+# 1. Edit the template
+open Summarizer/templates/process-alert.scpt
+
+# 2. Make your changes and save
+
+# 3. Re-run setup to install updated script
+./setup-mail-rule.sh
+```
+
+**Option B - Direct edit (Quick fix):**
+```bash
+# Edit installed script directly
+open ~/Library/Application\ Scripts/com.apple.mail/process-alert.scpt
+```
+
+**⚠️ Important:** Changes to installed script are overwritten by `setup-mail-rule.sh`. Always update the template if you want changes to persist across reinstalls.
+
+#### 5. Grant Accessibility Permission
 
 See [System Permissions](#system-permissions) above.
 
-#### 5. Test the Rule
+#### 6. Test the Rule
 
 **Option A - Manual Test:**
 1. Find an existing Google Alert email in inbox
