@@ -36,7 +36,8 @@ npm install -g url-to-markdown-cli
 **Optional Dependencies:**
 - `url-to-md` — CLI tool for fetching bot-protected sites as Markdown (Cloudflare bypass)
 - Jina Reader API — Final fallback for bot-protected sites (requires API key)
-  - Sign up at https://jina.ai/reader to get your API key
+  - Access https://jina.ai/reader using https://www.browserling.com/
+  - Click "API KEY & BILLING" button to sign up and get your key
   - Configure: `cp .env.template .env` and add your `JINA_API_KEY`
 
 ---
