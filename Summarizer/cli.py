@@ -8,16 +8,25 @@ import logging
 import os
 import re
 import subprocess
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
+from threading import Lock
 from typing import Iterable, List, Optional, Tuple
 
-from .article_fetcher import FetchConfig, FetchError, fetch_article, clear_cache
+from .article_fetcher import (
+    FetchConfig,
+    FetchError,
+    clear_cache,
+    fetch_article,
+    get_last_fetch_outcome,
+)
 from .config import DEFAULT_MODEL, MAX_WORKERS
 from .content_cleaner import extract_content
 from .digest_renderer import render_digest_html, render_digest_text
 from .link_extractor import extract_links_from_eml
+from .markdown_cleanup import validate_markdown_content
 from .summarizer import SummarizerConfig, SummarizerError, summarize_article
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
@@ -80,6 +89,8 @@ def _process_single_article(
     articles_dir: Path,
     fetch_cfg: FetchConfig,
     sum_cfg: SummarizerConfig,
+    strategy_counter: Counter,
+    counter_lock: Lock,
 ) -> Tuple[Optional[dict], Optional[dict]]:
     """Process a single article (fetch, extract, summarize).
 
@@ -89,14 +100,14 @@ def _process_single_article(
     url = link.get("url", "")
     slug = f"{idx:02d}-{slugify(title)[:40]}"
     html_path = articles_dir / f"{slug}.html"
+    fallback_md_path = articles_dir / f"{slug}.fallback.md"
     content_path = articles_dir / f"{slug}.content.md"
     summary_path = articles_dir / f"{slug}.summary.json"
 
     # Fetch article
     logging.info("[fetch] %s", url)
     try:
-        html = fetch_article(url, fetch_cfg)
-        html_path.write_text(html, encoding="utf-8")
+        content = fetch_article(url, fetch_cfg)
     except FetchError as exc:
         logging.error("[fetch][ERROR] %s", exc)
         reason = str(exc)
@@ -105,15 +116,46 @@ def _process_single_article(
             reason = reason[len(prefix):]
         return None, {"url": url, "reason": reason}
 
-    # Extract content
-    try:
-        content_text = extract_content(html)
+    outcome = get_last_fetch_outcome()
+    if outcome is None:
+        logging.error("[fetch][ERROR] %s", "missing fetch metadata")
+        return None, {"url": url, "reason": "internal error: missing fetch metadata"}
+
+    removed_count = len(outcome.removed_sections)
+    logging.info(
+        "[fetch][strategy=%s][format=%s][duration=%.2fs][removed=%d] %s",
+        outcome.strategy,
+        outcome.format,
+        outcome.duration,
+        removed_count,
+        url,
+    )
+
+    with counter_lock:
+        strategy_counter[outcome.strategy] += 1
+
+    if outcome.format == "html":
+        fallback_md_path.unlink(missing_ok=True)
+        html_path.write_text(content, encoding="utf-8")
+        try:
+            content_text = extract_content(content)
+            if not content_text.strip():
+                raise ValueError("no content extracted")
+        except Exception as exc:  # pragma: no cover - upstream failures
+            logging.error("[clean][ERROR] %s -> %s", url, exc)
+            return None, {"url": url, "reason": f"clean failed: {exc}"}
+    else:
+        html_path.unlink(missing_ok=True)
+        fallback_md_path.write_text(content, encoding="utf-8")
+        warnings = validate_markdown_content(content)
+        if warnings:
+            logging.warning("[validate] %s: %s", url, ", ".join(warnings))
+        content_text = content
         if not content_text.strip():
-            raise ValueError("no content extracted")
-        content_path.write_text(content_text, encoding="utf-8")
-    except Exception as exc:  # pragma: no cover - upstream failures
-        logging.error("[clean][ERROR] %s -> %s", url, exc)
-        return None, {"url": url, "reason": f"clean failed: {exc}"}
+            logging.error("[clean][ERROR] %s -> empty markdown content", url)
+            return None, {"url": url, "reason": "clean failed: empty markdown"}
+
+    content_path.write_text(content_text, encoding="utf-8")
 
     # Summarize
     article_payload = {
@@ -148,14 +190,25 @@ def process_articles(
     # Limit articles if requested
     links_to_process = links[:max_articles] if max_articles else links
 
-    summaries = []
-    failures = []
+    summaries: List[dict] = []
+    failures: List[dict] = []
+    strategy_counter: Counter = Counter()
+    counter_lock = Lock()
 
     # Process articles in parallel (see config.MAX_WORKERS for worker count)
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         # Submit all tasks
         future_to_idx = {
-            executor.submit(_process_single_article, idx, link, articles_dir, fetch_cfg, sum_cfg): idx
+            executor.submit(
+                _process_single_article,
+                idx,
+                link,
+                articles_dir,
+                fetch_cfg,
+                sum_cfg,
+                strategy_counter,
+                counter_lock,
+            ): idx
             for idx, link in enumerate(links_to_process, start=1)
         }
 
@@ -173,6 +226,10 @@ def process_articles(
                 link = links_to_process[idx - 1]
                 logging.error("[unexpected][ERROR] Article %d failed: %s", idx, exc)
                 failures.append({"url": link.get("url", "unknown"), "reason": f"unexpected error: {exc}"})
+
+    if strategy_counter:
+        summary_parts = ", ".join(f"{key}={count}" for key, count in sorted(strategy_counter.items()))
+        logging.info("Fetch summary: %s", summary_parts)
 
     return summaries, failures
 

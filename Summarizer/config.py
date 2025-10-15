@@ -42,37 +42,9 @@ DEFAULT_HEADERS = {
 }
 
 
-# =============================================================================
-# Crawlee/Playwright Configuration (for Cloudflare-protected sites)
-# =============================================================================
-
-CRAWLEE_TIMEOUT = 60.0  # Seconds for browser-based fetching (page load)
-CRAWLEE_MIN_TIMEOUT = 60.0  # Minimum timeout override for Playwright
-
-
-# =============================================================================
-# Domain Lists
-# =============================================================================
-
-# Sites requiring Playwright fallback due to Cloudflare/JavaScript protection
-# Add domains here when standard HTTP fetching fails
-CRAWLEE_DOMAINS = [
-    "dailynews.ascopubs.org",
-    "ascopubs.org",
-    "www.urotoday.com",
-    "ashpublications.org",
-    "www.jacc.org",
-    "www.medrxiv.org",
-    "pmc.ncbi.nlm.nih.gov",
-    "obgyn.onlinelibrary.wiley.com",
-    "www.sciencedirect.com",
-    "www.news10.com",
-]
-
-# Sites requiring non-headless browser (visible window) due to aggressive bot detection
-HEADED_DOMAINS = [
-    "www.news10.com",
-]
+# Fallback timeouts for Markdown fetchers
+URLTOMD_TIMEOUT = 10.0  # Seconds for url-to-md CLI
+JINA_TIMEOUT = 30.0  # Seconds for Jina Reader API
 
 
 # =============================================================================

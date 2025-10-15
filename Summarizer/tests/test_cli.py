@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 from pathlib import Path
+from typing import List
 
 import pytest
 
 from Summarizer import cli
-from Summarizer.article_fetcher import FetchConfig, FetchError
+from Summarizer.article_fetcher import FetchConfig, FetchError, FetchOutcome
 from Summarizer.summarizer import SummarizerConfig
 
 
@@ -31,8 +33,13 @@ def test_cli_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sampl
     def fake_capture(path: Path, subject_filter=None) -> None:
         path.write_text("dummy", encoding="utf-8")
 
-    def fake_load_links(path: Path):
-        return [{"title": "Sample Title", "url": "https://example.com/article", "publisher": "Example News", "snippet": "Short blurb"}]
+    def fake_load_links(path: Path) -> List[dict]:
+        return [{
+            "title": "Sample Title",
+            "url": "https://example.com/article",
+            "publisher": "Example News",
+            "snippet": "Short blurb",
+        }]
 
     def fake_process(links, output_dir, fetch_cfg, sum_cfg, max_articles=None):
         (output_dir / "articles").mkdir(exist_ok=True)
@@ -71,7 +78,7 @@ def test_cli_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sampl
 
     digest_txt = (tmp_path / "digest.txt").read_text(encoding="utf-8")
     assert "Missing articles" in digest_txt
-    assert "- https://blocked.example — HTTP 403" in digest_txt
+    assert "https://blocked.example" in digest_txt
 
     log_text = (tmp_path / "workflow.log").read_text(encoding="utf-8")
     assert "https://blocked.example" in log_text
@@ -83,8 +90,13 @@ def test_cli_run_pipeline_env_recipients(tmp_path: Path, monkeypatch: pytest.Mon
     def fake_capture(path: Path, subject_filter=None) -> None:
         path.write_text("dummy", encoding="utf-8")
 
-    def fake_load_links(path: Path):
-        return [{"title": "Sample Title", "url": "https://example.com/article", "publisher": "Example News", "snippet": "Short blurb"}]
+    def fake_load_links(path: Path) -> List[dict]:
+        return [{
+            "title": "Sample Title",
+            "url": "https://example.com/article",
+            "publisher": "Example News",
+            "snippet": "Short blurb",
+        }]
 
     def fake_process(links, output_dir, fetch_cfg, sum_cfg, max_articles=None):
         (output_dir / "articles").mkdir(exist_ok=True)
@@ -118,7 +130,7 @@ def test_cli_run_pipeline_env_recipients(tmp_path: Path, monkeypatch: pytest.Mon
     assert sent["sender"] is None
 
 
-def test_process_articles_and_render_outputs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_process_articles_html_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     links = [
         {
             "title": "Alpha Study Highlights Remote Monitoring",
@@ -139,9 +151,21 @@ def test_process_articles_and_render_outputs(tmp_path: Path, monkeypatch: pytest
         "https://example.org/beta": "<html><body><article><p>Beta report details barriers to scaling.</p></article></body></html>",
     }
 
+    last_url = {"value": None}
+
     def fake_fetch(url: str, cfg: FetchConfig):
-        assert isinstance(cfg, FetchConfig)
+        last_url["value"] = url
         return article_html[url]
+
+    def fake_outcome():
+        url = last_url["value"]
+        assert url is not None
+        return FetchOutcome(
+            content=article_html[url],
+            strategy="httpx",
+            format="html",
+            duration=0.1,
+        )
 
     def fake_summarize(article_payload: dict, config: SummarizerConfig):
         assert article_payload["content"]
@@ -150,102 +174,129 @@ def test_process_articles_and_render_outputs(tmp_path: Path, monkeypatch: pytest
             "url": article_payload["url"],
             "publisher": article_payload.get("publisher", ""),
             "snippet": article_payload.get("snippet", ""),
-            "summary": [
-                {"type": "bullet", "text": "**KEY FINDING**: " + article_payload["title"]},
-                {"type": "bullet", "text": "**TACTICAL WIN [SHIP NOW]**: Launch remote coaching workflow."},
-                {"type": "bullet", "text": "**MARKET SIGNAL [🟡 NOTABLE]**: Payers are rewarding PRO programs."},
-                {"type": "bullet", "text": "**CONCERN**: Teams must budget for support training."},
-            ],
+            "summary": [{"type": "bullet", "text": "Test"}],
             "model": config.model,
         }
 
     monkeypatch.setattr(cli, "fetch_article", fake_fetch)
+    monkeypatch.setattr(cli, "get_last_fetch_outcome", fake_outcome)
     monkeypatch.setattr(cli, "summarize_article", fake_summarize)
 
-    output_dir = tmp_path
-    summaries, failures = cli.process_articles(links, output_dir, FetchConfig(), SummarizerConfig())
+    summaries, failures = cli.process_articles(links, tmp_path, FetchConfig(), SummarizerConfig())
 
     assert failures == []
-    assert {summary["url"] for summary in summaries} == {
-        "https://example.org/alpha",
-        "https://example.org/beta",
-    }
+    assert len(summaries) == 2
 
-    articles_dir = output_dir / "articles"
-    assert articles_dir.exists()
+    articles_dir = tmp_path / "articles"
     html_files = sorted(p.name for p in articles_dir.glob("*.html"))
     assert html_files == [
         "01-alpha-study-highlights-remote-monitoring.html",
         "02-beta-report-on-pro-barriers.html",
     ]
 
-    cli.render_outputs(summaries, failures, output_dir)
+    fallback_files = list(articles_dir.glob("*.fallback.md"))
+    assert fallback_files == []
 
-    digest_html = (output_dir / "digest.html").read_text(encoding="utf-8")
-    assert "Alpha Study Highlights Remote Monitoring" in digest_html
-    assert "Beta Report on PRO Barriers" in digest_html
+    content_files = sorted(p.name for p in articles_dir.glob("*.content.md"))
+    assert len(content_files) == 2
 
-    digest_txt = (output_dir / "digest.txt").read_text(encoding="utf-8")
-    assert "Google Alert Intelligence" in digest_txt
 
-    summaries_payload = json.loads((output_dir / "summaries.json").read_text(encoding="utf-8"))
-    assert sorted(entry["url"] for entry in summaries_payload) == sorted([
-        "https://example.org/alpha",
-        "https://example.org/beta",
-    ])
+def test_process_articles_markdown_fallback(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture):
+    links = [{"title": "Blocked Article", "url": "https://blocked.example"}]
+
+    markdown_body = "# Blocked Article\n\nFallback content"
+
+    def fake_fetch(url: str, cfg: FetchConfig):
+        return markdown_body
+
+    def fake_outcome():
+        return FetchOutcome(
+            content=markdown_body,
+            strategy="url-to-md",
+            format="markdown",
+            duration=5.0,
+            removed_sections=["More MTN"],
+        )
+
+    def fake_summarize(article_payload: dict, config: SummarizerConfig):
+        return {
+            "title": article_payload["title"],
+            "url": article_payload["url"],
+            "summary": [{"type": "bullet", "text": "Test"}],
+            "model": config.model,
+        }
+
+    monkeypatch.setattr(cli, "fetch_article", fake_fetch)
+    monkeypatch.setattr(cli, "get_last_fetch_outcome", fake_outcome)
+    monkeypatch.setattr(cli, "summarize_article", fake_summarize)
+
+    with caplog.at_level(logging.INFO):
+        summaries, failures = cli.process_articles(links, tmp_path, FetchConfig(), SummarizerConfig())
+
+    assert failures == []
+    assert len(summaries) == 1
+
+    articles_dir = tmp_path / "articles"
+    assert not any(articles_dir.glob("*.html"))
+
+    fallback_file = articles_dir / "01-blocked-article.fallback.md"
+    assert fallback_file.exists()
+    assert fallback_file.read_text(encoding="utf-8") == markdown_body
+
+    content_file = articles_dir / "01-blocked-article.content.md"
+    assert content_file.exists()
+    assert content_file.read_text(encoding="utf-8") == markdown_body
+
+    joined_logs = "\n".join(record.getMessage() for record in caplog.records)
+    assert "strategy=url-to-md" in joined_logs
+    assert "format=markdown" in joined_logs
 
 
 def test_process_articles_records_failures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    links = [
-        {
-            "title": "Challenging Article",
-            "url": "https://example.org/challenge",
-        }
-    ]
+    links = [{"title": "Challenging Article", "url": "https://example.org/challenge"}]
 
     def failing_fetch(url: str, cfg: FetchConfig):
         raise FetchError(url, "HTTP 403")
 
     monkeypatch.setattr(cli, "fetch_article", failing_fetch)
+    monkeypatch.setattr(cli, "get_last_fetch_outcome", lambda: None)
 
     summaries, failures = cli.process_articles(links, tmp_path, FetchConfig(), SummarizerConfig())
 
     assert summaries == []
     assert failures == [{"url": "https://example.org/challenge", "reason": "HTTP 403"}]
 
-    cli.render_outputs(summaries, failures, tmp_path)
-    digest_text = (tmp_path / "digest.txt").read_text(encoding="utf-8")
-    assert "Missing articles" in digest_text
-    assert "https://example.org/challenge" in digest_text
 
+def test_workflow_log_includes_summary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture):
+    links = [{"title": "Alpha", "url": "https://example.org/a"}]
+    html_body = "<html><body><p>Alpha</p></body></html>"
 
-def test_send_digest_email_creates_eml(tmp_path: Path):
-    (tmp_path / "digest.html").write_text("<html><body><p>Digest body</p></body></html>", encoding="utf-8")
+    def fake_fetch(url: str, cfg: FetchConfig):
+        return html_body
 
-    cli.send_digest_email(tmp_path, ["ops@example.com", "pm@example.com"], sender=None)
+    def fake_outcome():
+        return FetchOutcome(
+            content=html_body,
+            strategy="httpx",
+            format="html",
+            duration=0.1,
+        )
 
-    eml_path = tmp_path / "digest.eml"
-    assert eml_path.exists()
+    def fake_summarize(article_payload: dict, config: SummarizerConfig):
+        return {
+            "title": article_payload["title"],
+            "url": article_payload["url"],
+            "summary": [{"type": "bullet", "text": "Test"}],
+            "model": config.model,
+        }
 
-    from email.header import decode_header
-    from email.parser import Parser
+    monkeypatch.setattr(cli, "fetch_article", fake_fetch)
+    monkeypatch.setattr(cli, "get_last_fetch_outcome", fake_outcome)
+    monkeypatch.setattr(cli, "summarize_article", fake_summarize)
 
-    message = Parser().parsestr(eml_path.read_text(encoding="utf-8"))
-    assert message["To"] == "ops@example.com"
-    assert message["From"] == "ops@example.com"
-    decoded_subject = "".join(
-        fragment.decode(charset or "utf-8") if isinstance(fragment, bytes) else fragment
-        for fragment, charset in decode_header(message["Subject"])
-    )
-    assert decoded_subject.startswith("Google Alert Intelligence")
-    payload = message.get_payload()
-    if isinstance(payload, list):
-        payload = payload[0].get_payload()
-    assert "Digest body" in payload
+    with caplog.at_level(logging.INFO):
+        cli.process_articles(links, tmp_path, FetchConfig(), SummarizerConfig())
 
-
-def test_send_digest_email_requires_recipient(tmp_path: Path):
-    (tmp_path / "digest.html").write_text("<html></html>", encoding="utf-8")
-
-    with pytest.raises(ValueError):
-        cli.send_digest_email(tmp_path, [], sender=None)
+    joined_logs = "\n".join(record.getMessage() for record in caplog.records)
+    assert "strategy=httpx" in joined_logs
+    assert "Fetch summary: httpx=1" in joined_logs

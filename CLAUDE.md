@@ -11,7 +11,7 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 ### Pipeline Flow
 1. **Alert Capture** — Mail rule saves triggering message (automated) OR `fetch-alert-source.applescript` captures inbox message with optional subject filter (manual CLI)
 2. **Link Extraction** (`link_extractor.py`) — Parses email HTML, extracts article URLs with metadata
-3. **Article Fetching** (`article_fetcher.py` + `crawlee_fetcher.py`) — HTTP fetcher with Playwright fallback for Cloudflare-protected sites; parallel processing (max 5 workers)
+3. **Article Fetching** (`article_fetcher.py` + `urltomd_fetcher.py`) — HTTP fetcher with Markdown fallbacks (url-to-md / Jina) for protection bypass; parallel processing (max 5 workers)
 4. **Content Cleaning** (`content_cleaner.py`) — Converts HTML to readable Markdown using readability-lxml
 5. **Summarization** (`summarizer.py`) — Calls local Ollama for structured 4-bullet summaries
 6. **Digest Rendering** (`digest_renderer.py`) — Generates HTML and plaintext email digests with executive summary and cross-article insights
@@ -32,7 +32,8 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 ### Pipeline Modules
 - `Summarizer/link_extractor.py` — `extract_links(eml_path)` → list of article dicts
 - `Summarizer/article_fetcher.py` — `fetch_article(url)` → HTML string, `clear_cache()` for tests
-- `Summarizer/crawlee_fetcher.py` — Playwright fallback (subprocess isolation)
+- `Summarizer/urltomd_fetcher.py` — url-to-md CLI wrapper for Markdown fallbacks
+- `Summarizer/jina_fetcher.py` — Jina Reader API wrapper as final fallback
 - `Summarizer/content_cleaner.py` — `extract_content(html)` → Markdown text
 - `Summarizer/summarizer.py` — `summarize_article(article_dict)` → structured summary
 - `Summarizer/digest_renderer.py` — `render_digest_html(summaries)`, `render_digest_text(summaries)`
@@ -87,7 +88,7 @@ python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10
 osascript -s Summarizer/templates/process-alert.scpt
 
 # Validate system Python packages
-python3 -m pip list | grep -E "beautifulsoup4|httpx|readability|crawlee"
+python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 ```
 
 ## Key Technical Details
@@ -101,9 +102,11 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability|crawlee"
 
 ### Article Fetching Strategy
 - Primary: httpx with user-agent headers
-- Fallback: Crawlee + Playwright for Cloudflare-protected domains (extended wait times: 13-18s for JS/challenges)
+- Fallback chain for bot-protected sites (403/429/503 errors):
+  1. `url-to-md` CLI (Markdown output with Cloudflare bypass)
+  2. Jina Reader API (final fallback, requires `JINA_API_KEY` env var)
+- Dual caching: HTML cache for httpx, Markdown cache for fallbacks
 - Parallel processing: ThreadPoolExecutor with max 5 workers (~70% faster than sequential)
-- In-memory caching for the life of the process
 - Custom headers via `ALERT_HTTP_HEADERS_JSON` env var: `'{"example.com": {"Cookie": "session=abc"}}'`
 
 ### Summarization
@@ -136,7 +139,7 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability|crawlee"
 
 - **AppleScript Mail rules**: Cannot use venv, must use system Python with `--user` packages
 - **Python imports**: Must use `-m Summarizer.cli` for relative imports to work
-- **Crawlee subprocess**: `crawlee_fetcher.py` spawns subprocess to avoid event loop conflicts
+- **Markdown fallback cache**: `article_fetcher._CACHE_MARKDOWN` stores cleaned Markdown per URL
 - **Fixture regeneration**: Run `refresh-fixtures.py` after modifying parsers, diff before committing
 - **PYTHONPATH**: Only set in shell wrappers for inline scripts; NOT needed for `-m` invocation
 - **System permissions**: Different modes require different permissions:
@@ -166,8 +169,10 @@ html = fetch_article("https://example.com/article", FetchConfig())
 ```
 
 **Key points:**
-- In-memory caching for process lifetime; call `article_fetcher.clear_cache()` in tests
-- Automatic Playwright fallback for Cloudflare domains (see `CRAWLEE_DOMAINS` in config.py)
+- Dual caching: `_CACHE_HTML` for httpx, `_CACHE_MARKDOWN` for fallbacks
+- Call `article_fetcher.clear_cache()` in tests to reset both caches
+- Automatic Markdown fallback (url-to-md → Jina) on 403/429/503 errors
+- `get_last_fetch_outcome()` returns `FetchOutcome` with strategy/format/duration metadata
 - Custom headers via `ALERT_HTTP_HEADERS_JSON` environment variable
 
 ### Content Extraction

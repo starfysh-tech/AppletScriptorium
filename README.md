@@ -45,6 +45,7 @@ cd AppletScriptorium
 
 ```
 .
+├── .env.template                 # Environment variable template (copy to .env)
 ├── AGENTS.md                     # AI assistant guidelines (Codex, Gemini, etc.)
 ├── CLAUDE.md                     # Claude Code development guide
 ├── docs/                         # Documentation
@@ -56,7 +57,7 @@ cd AppletScriptorium
 │   ├── config.py                 # Configuration constants
 │   ├── cli.py                    # Main orchestrator
 │   ├── link_extractor.py         # Extract links from alert emails
-│   ├── article_fetcher.py        # HTTP fetcher with Playwright fallback
+│   ├── article_fetcher.py        # HTTP fetcher with Markdown fallbacks (url-to-md / Jina)
 │   ├── content_cleaner.py        # HTML to Markdown conversion
 │   ├── summarizer.py             # LLM summarization
 │   ├── digest_renderer.py        # HTML/text digest generation
@@ -156,6 +157,8 @@ python3 -m pytest Summarizer/tests/test_link_extractor.py -v
 - Module invocation: `python3 -m Summarizer.cli` (NOT `python3 Summarizer/cli.py`)
 - Parallel processing: ThreadPoolExecutor with max 5 workers (~70% faster)
 - Fixture management: `Summarizer/refresh-fixtures.py`
+- Optional: `url-to-md` CLI for Cloudflare-protected sites (`npm install -g url-to-markdown-cli`)
+- Optional: `JINA_API_KEY` env var for Jina Reader API fallback
 
 ---
 

@@ -90,8 +90,8 @@ fi
 echo ""
 
 # Check 3: Python packages
-log_info "[3/10] Checking Python packages (beautifulsoup4, httpx, readability-lxml, crawlee, pytest)..."
-PACKAGES=("beautifulsoup4" "httpx" "readability-lxml" "crawlee" "pytest")
+log_info "[3/10] Checking Python packages (beautifulsoup4, httpx, readability-lxml, pytest)..."
+PACKAGES=("beautifulsoup4" "httpx" "readability-lxml" "pytest")
 for pkg in "${PACKAGES[@]}"; do
     if $PYTHON_CMD -m pip show "$pkg" >/dev/null 2>&1; then
         log_pass "Python package: $pkg"

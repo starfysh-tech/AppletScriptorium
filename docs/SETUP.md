@@ -28,7 +28,16 @@ Install via Homebrew:
 
 # Install required tools
 brew install python@3.11 ollama git
+
+# Optional: Install url-to-md for Cloudflare fallback
+npm install -g url-to-markdown-cli
 ```
+
+**Optional Dependencies:**
+- `url-to-md` — CLI tool for fetching bot-protected sites as Markdown (Cloudflare bypass)
+- Jina Reader API — Final fallback for bot-protected sites (requires API key)
+  - Sign up at https://jina.ai/reader to get your API key
+  - Configure: `cp .env.template .env` and add your `JINA_API_KEY`
 
 ---
 
@@ -55,7 +64,6 @@ cd AppletScriptorium
 The `install.sh` script automates:
 - Checking prerequisites
 - Installing Python dependencies
-- Installing Playwright browsers
 - Starting Ollama and pulling qwen3:latest model
 - Making scripts executable
 - Running test suite
@@ -73,12 +81,12 @@ cd AppletScriptorium
 # 2. Install Python dependencies (system Python with --user flag)
 python3 -m pip install --user -r Summarizer/requirements.txt
 
-# 3. Install Playwright browsers
-python3 -m playwright install
-
-# 4. Install and start Ollama
+# 3. Install and start Ollama
 brew services start ollama
 ollama pull qwen3:latest
+
+# 4. Optional: Install url-to-md for Cloudflare fallback
+npm install -g url-to-markdown-cli
 
 # 5. Make scripts executable
 chmod +x install.sh setup-mail-rule.sh validate.sh run_workflow.sh
@@ -87,7 +95,11 @@ chmod +x Summarizer/fetch-alert-source.applescript Summarizer/bin/run_alert.sh
 # 6. Create output directory
 mkdir -p runs
 
-# 7. Run tests
+# 7. Optional: Configure environment variables
+cp .env.template .env
+# Edit .env to add your JINA_API_KEY (for Cloudflare fallback)
+
+# 8. Run tests
 python3 -m pytest Summarizer/tests
 ```
 
@@ -256,6 +268,8 @@ ALERT_DIGEST_EMAIL="recipient1@example.com,recipient2@example.com"
 ALERT_EMAIL_SENDER="sender@example.com"
 ```
 
+**Note:** For Jina Reader API configuration, use `.env` file instead (see Prerequisites section).
+
 ---
 
 ## Verification
@@ -270,7 +284,6 @@ This checks:
 - Python 3.11+ installed
 - Required packages installed
 - Ollama running with qwen3:latest model
-- Playwright browsers installed
 - All tests passing
 
 **If validation fails:** See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)

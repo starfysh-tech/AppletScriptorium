@@ -3,23 +3,38 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
-from typing import Dict
+import threading
+from dataclasses import dataclass, field
+from time import perf_counter
+from typing import Dict, Literal
 from urllib.parse import urlparse
 
 import httpx
 
 from .config import (
-    CRAWLEE_DOMAINS,
-    CRAWLEE_MIN_TIMEOUT,
     DEFAULT_HEADERS,
-    HEADED_DOMAINS,
     HTTP_TIMEOUT,
+    JINA_TIMEOUT,
     MAX_RETRIES,
+    URLTOMD_TIMEOUT,
 )
-from .crawlee_fetcher import CrawleeFetchConfig, CrawleeFetchError, fetch_with_crawlee_sync
+from .jina_fetcher import JinaConfig, JinaFetchError, fetch_with_jina
+from .markdown_cleanup import clean_markdown_content
+from .urltomd_fetcher import UrlToMdConfig, UrlToMdError, fetch_with_urltomd
 
-_CACHE: Dict[str, str] = {}
+
+@dataclass(slots=True)
+class FetchOutcome:
+    content: str
+    strategy: Literal["httpx", "httpx-cache", "url-to-md", "url-to-md-cache", "jina"]
+    format: Literal["html", "markdown"]
+    duration: float
+    removed_sections: list[str] = field(default_factory=list)
+
+
+_FETCH_CONTEXT = threading.local()
+_CACHE_HTML: Dict[str, str] = {}
+_CACHE_MARKDOWN: Dict[str, str] = {}
 
 
 class FetchError(RuntimeError):
@@ -32,8 +47,14 @@ class FetchError(RuntimeError):
 
 
 def clear_cache() -> None:
-    """Clear the in-memory cache (mainly for tests)."""
-    _CACHE.clear()
+    """Clear both HTML and Markdown caches (mainly for tests)."""
+    _CACHE_HTML.clear()
+    _CACHE_MARKDOWN.clear()
+
+
+def clear_markdown_cache() -> None:
+    """Clear only the Markdown fallback cache."""
+    _CACHE_MARKDOWN.clear()
 
 
 @dataclass(frozen=True)
@@ -43,67 +64,114 @@ class FetchConfig:
     allow_cache: bool = True
 
 
+def get_last_fetch_outcome() -> FetchOutcome | None:
+    """Return metadata describing the most recent fetch on this thread."""
+    return getattr(_FETCH_CONTEXT, "outcome", None)
+
+
 def fetch_article(url: str, config: FetchConfig | None = None) -> str:
-    """Return HTML for *url*, honoring the in-memory cache."""
+    """Return HTML or Markdown for *url*, honoring the in-memory caches."""
     cfg = config or FetchConfig()
 
-    if cfg.allow_cache and url in _CACHE:
-        return _CACHE[url]
+    if cfg.allow_cache:
+        cached_html = _CACHE_HTML.get(url)
+        if cached_html is not None:
+            _FETCH_CONTEXT.outcome = FetchOutcome(
+                content=cached_html,
+                strategy="httpx-cache",
+                format="html",
+                duration=0.0,
+            )
+            return cached_html
+
+        cached_markdown = _CACHE_MARKDOWN.get(url)
+        if cached_markdown is not None:
+            _FETCH_CONTEXT.outcome = FetchOutcome(
+                content=cached_markdown,
+                strategy="url-to-md-cache",
+                format="markdown",
+                duration=0.0,
+            )
+            return cached_markdown
 
     headers = dict(DEFAULT_HEADERS)
     headers.update(_env_headers_for(url))
     last_error: Exception | None = None
-    attempted_crawlee = False
 
     for _ in range(cfg.max_retries + 1):
+        start = perf_counter()
         try:
             response = httpx.get(url, timeout=cfg.timeout, follow_redirects=True, headers=headers)
             response.raise_for_status()
             content = response.text
+            elapsed = perf_counter() - start
             if cfg.allow_cache:
-                _CACHE[url] = content
+                _CACHE_HTML[url] = content
+            _FETCH_CONTEXT.outcome = FetchOutcome(
+                content=content,
+                strategy="httpx",
+                format="html",
+                duration=elapsed,
+            )
             return content
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             body = exc.response.text[:200].replace("\n", " ")
             last_error = FetchError(url, f"HTTP {status}: {body}")
 
-            if (
-                not attempted_crawlee
-                and status in {403, 429, 503}
-                and _should_use_crawlee(url)
-            ):
-                attempted_crawlee = True
+            if status in {403, 429, 503}:
                 try:
-                    crawlee_timeout = max(cfg.timeout, CRAWLEE_MIN_TIMEOUT)
-                    # Use headed mode for domains with aggressive bot detection
-                    headless = not _requires_headed_mode(url)
-                    content = fetch_with_crawlee_sync(
-                        url,
-                        CrawleeFetchConfig(timeout=crawlee_timeout, headless=headless, browser_type="chromium"),
-                    )
-                except CrawleeFetchError as crawlee_exc:
-                    last_error = FetchError(url, f"crawlee fallback failed: {crawlee_exc}")
-                    break
+                    outcome = _fetch_markdown_fallback(url, cfg.allow_cache)
+                except FetchError as fallback_error:
+                    last_error = fallback_error
                 else:
-                    if cfg.allow_cache:
-                        _CACHE[url] = content
-                    return content
+                    _FETCH_CONTEXT.outcome = outcome
+                    return outcome.content
         except httpx.HTTPError as exc:
             last_error = exc
 
     raise FetchError(url, f"exhausted retries (last error: {last_error})", cause=last_error)
 
 
-def _should_use_crawlee(url: str) -> bool:
-    domain = urlparse(url).netloc
-    return any(domain.endswith(candidate) for candidate in CRAWLEE_DOMAINS)
+def _fetch_markdown_fallback(url: str, allow_cache: bool) -> FetchOutcome:
+    """Fetch Markdown using url-to-md or Jina and return outcome metadata."""
+    if allow_cache and url in _CACHE_MARKDOWN:
+        cleaned = _CACHE_MARKDOWN[url]
+        return FetchOutcome(
+            content=cleaned,
+            strategy="url-to-md-cache",
+            format="markdown",
+            duration=0.0,
+        )
 
+    start = perf_counter()
+    try:
+        markdown = fetch_with_urltomd(url, UrlToMdConfig(timeout=URLTOMD_TIMEOUT))
+        strategy: Literal["url-to-md", "jina"] = "url-to-md"
+    except UrlToMdError as exc:
+        try:
+            markdown = fetch_with_jina(url, JinaConfig(timeout=JINA_TIMEOUT))
+            strategy = "jina"
+        except JinaFetchError as jina_exc:
+            raise FetchError(
+                url,
+                f"fallback failed (url-to-md: {exc}; jina: {jina_exc})",
+                cause=jina_exc,
+            ) from jina_exc
 
-def _requires_headed_mode(url: str) -> bool:
-    """Check if URL requires headed (non-headless) browser mode."""
-    domain = urlparse(url).netloc
-    return any(domain.endswith(candidate) for candidate in HEADED_DOMAINS)
+    cleaned, removed = clean_markdown_content(markdown)
+    elapsed = perf_counter() - start
+
+    if allow_cache:
+        _CACHE_MARKDOWN[url] = cleaned
+
+    return FetchOutcome(
+        content=cleaned,
+        strategy=strategy,
+        format="markdown",
+        duration=elapsed,
+        removed_sections=list(removed),
+    )
 
 
 def _env_headers_for(url: str) -> Dict[str, str]:
@@ -133,6 +201,9 @@ def _env_headers_for(url: str) -> Dict[str, str]:
 __all__ = [
     "FetchConfig",
     "FetchError",
+    "FetchOutcome",
     "clear_cache",
+    "clear_markdown_cache",
     "fetch_article",
+    "get_last_fetch_outcome",
 ]

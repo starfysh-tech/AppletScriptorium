@@ -77,7 +77,7 @@ python3 --version
 
 **2. Verify Python Packages**
 ```bash
-python3 -m pip list | grep -E "beautifulsoup4|httpx|readability|crawlee"
+python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 ```
 
 Expected output:
@@ -85,7 +85,7 @@ Expected output:
 beautifulsoup4       4.13.4
 httpx                0.27.x
 readability-lxml     0.8.x
-crawlee              1.0.x
+markdownify          0.12.x
 ```
 
 **3. Verify Ollama**
@@ -241,11 +241,11 @@ If the email sends but is blank or has formatting issues, increase delays:
    ```bash
    export ALERT_HTTP_HEADERS_JSON='{"example.com": {"Cookie": "session=abc"}}'
    ```
-3. Verify Playwright is installed (for Cloudflare-protected sites):
+3. Verify `url-to-md` CLI works for the URL:
    ```bash
-   python3 -m playwright install
+   url-to-md "https://example.com" --wait 5 | head
    ```
-4. Check if domain is in Crawlee list (Summarizer/config.py)
+4. Ensure `JINA_API_KEY` is set for Jina fallback (export in shell or launchd plist)
 5. Increase timeout in config if needed
 
 ### Custom HTTP Headers

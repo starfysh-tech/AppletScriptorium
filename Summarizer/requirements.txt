@@ -3,6 +3,3 @@ pytest>=7,<9
 httpx>=0.27,<0.28
 readability-lxml>=0.8,<0.9
 markdownify>=0.12,<0.13
-crawlee>=1.0.2,<2
-browserforge>=1.2.3,<2
-apify_fingerprint_datapoints>=0.6,<1

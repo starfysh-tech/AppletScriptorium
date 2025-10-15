@@ -137,7 +137,7 @@ diff -u Summarizer/Samples/google-alert-sample-2025-10-06-links.tsv /tmp/alert-l
 ## Common Gotchas
 
 - **PYTHONPATH**: Only set in shell wrappers for inline scripts; NOT needed for `-m` invocation
-- **Crawlee subprocess**: `crawlee_fetcher.py` spawns subprocess to avoid event loop conflicts
+- **Markdown fallbacks**: `urltomd_fetcher.py` + `jina_fetcher.py` provide Markdown when httpx is blocked
 - **Fixture regeneration**: Must diff against committed fixtures before merging parser changes
 - **System permissions**: Different modes require different permissions:
   - **Mail rule automation**: Accessibility (System Settings → Privacy & Security → Accessibility → enable Mail.app)

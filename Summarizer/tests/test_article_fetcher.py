@@ -3,7 +3,13 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from Summarizer.article_fetcher import FetchConfig, FetchError, clear_cache, fetch_article
+from Summarizer.article_fetcher import (
+    FetchConfig,
+    FetchError,
+    clear_cache,
+    fetch_article,
+    get_last_fetch_outcome,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -32,9 +38,14 @@ def test_fetch_caches_network_response(monkeypatch: pytest.MonkeyPatch):
 
     cfg = FetchConfig()
     first = fetch_article("https://cache.example", cfg)
+    outcome_first = get_last_fetch_outcome()
     second = fetch_article("https://cache.example", cfg)
+    outcome_second = get_last_fetch_outcome()
+
     assert first == second == "<html>ok</html>"
     assert calls["count"] == 1
+    assert outcome_first is not None and outcome_first.strategy == "httpx"
+    assert outcome_second is not None and outcome_second.strategy == "httpx-cache"
 
 
 def test_fetch_retries_then_succeeds(monkeypatch: pytest.MonkeyPatch):
@@ -58,8 +69,11 @@ def test_fetch_retries_then_succeeds(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(httpx, "get", fake_get)
 
     content = fetch_article("https://retry.example", FetchConfig(max_retries=5))
+    outcome = get_last_fetch_outcome()
+
     assert content == "<html>recovered</html>"
     assert attempts["count"] == 3
+    assert outcome is not None and outcome.strategy == "httpx"
 
 
 def test_fetch_raises_after_exhausting_retries(monkeypatch: pytest.MonkeyPatch):
@@ -74,25 +88,6 @@ def test_fetch_raises_after_exhausting_retries(monkeypatch: pytest.MonkeyPatch):
         fetch_article("https://fail.example", FetchConfig(max_retries=1))
 
     assert "exhausted retries" in str(exc.value)
-
-
-def test_fetch_logs_status(monkeypatch: pytest.MonkeyPatch):
-    class FakeResponse:
-        status_code = 403
-        text = "Forbidden"
-
-        def raise_for_status(self):
-            raise httpx.HTTPStatusError("status", request=httpx.Request("GET", "https://blocked"), response=self)
-
-    def fake_get(url: str, timeout: float, follow_redirects: bool, headers):
-        return FakeResponse()
-
-    monkeypatch.setattr(httpx, "get", fake_get)
-
-    with pytest.raises(FetchError) as exc:
-        fetch_article("https://blocked", FetchConfig(max_retries=0))
-
-    assert "HTTP 403" in str(exc.value)
 
 
 def test_fetch_includes_env_headers(monkeypatch: pytest.MonkeyPatch):
@@ -114,54 +109,119 @@ def test_fetch_includes_env_headers(monkeypatch: pytest.MonkeyPatch):
     fetch_article("https://example.com/path", FetchConfig(allow_cache=False))
 
 
-def test_fetch_crawlee_fallback(monkeypatch: pytest.MonkeyPatch):
-    url = "https://dailynews.ascopubs.org/foo"
-
+def test_markdown_fallback_returns_markdown(monkeypatch: pytest.MonkeyPatch):
+    url = "https://blocked.example"
     request = httpx.Request("GET", url)
-    response = httpx.Response(403, request=request, text="challenge")
+    response = httpx.Response(403, request=request, text="Forbidden")
 
     def fake_get(url: str, timeout: float, follow_redirects: bool, headers):
         raise httpx.HTTPStatusError("blocked", request=request, response=response)
 
+    def fake_urltomd(target_url: str, config):
+        return "# Article\n\nMarkdown content"
+
+    def fake_cleanup(md: str):
+        return md, []
+
     monkeypatch.setattr(httpx, "get", fake_get)
-
-    called = {}
-
-    def fake_crawlee(target_url: str, config):
-        called["url"] = target_url
-        called["timeout"] = config.timeout
-        return "<html>rendered</html>"
-
-    # Inject fake Crawlee helper and domain mapping (to be provided by implementation)
-    monkeypatch.setattr("Summarizer.article_fetcher.fetch_with_crawlee_sync", fake_crawlee, raising=False)
-    monkeypatch.setattr("Summarizer.article_fetcher._CRAWLEE_DOMAINS", {"dailynews.ascopubs.org"}, raising=False)
+    monkeypatch.setattr("Summarizer.article_fetcher.fetch_with_urltomd", fake_urltomd)
+    monkeypatch.setattr("Summarizer.article_fetcher.clean_markdown_content", fake_cleanup)
 
     content = fetch_article(url, FetchConfig(allow_cache=False, max_retries=0))
-    assert content == "<html>rendered</html>"
-    assert called["url"] == url
-    assert called["timeout"] >= 60.0
+    outcome = get_last_fetch_outcome()
+
+    assert content.startswith("# Article")
+    assert outcome is not None
+    assert outcome.format == "markdown"
+    assert outcome.strategy == "url-to-md"
 
 
-def test_fetch_headless_failure_raises(monkeypatch: pytest.MonkeyPatch):
-    url = "https://dailynews.ascopubs.org/foo"
-
+def test_markdown_fallback_uses_cache(monkeypatch: pytest.MonkeyPatch):
+    url = "https://blocked.example"
     request = httpx.Request("GET", url)
-    response = httpx.Response(403, request=request, text="challenge")
+    response = httpx.Response(403, request=request, text="Forbidden")
+    call_count = {"urltomd": 0}
 
     def fake_get(url: str, timeout: float, follow_redirects: bool, headers):
         raise httpx.HTTPStatusError("blocked", request=request, response=response)
 
+    def fake_urltomd(target_url: str, config):
+        call_count["urltomd"] += 1
+        return "# Cached\n\nContent"
+
+    def fake_cleanup(md: str):
+        return md, []
+
     monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr("Summarizer.article_fetcher.fetch_with_urltomd", fake_urltomd)
+    monkeypatch.setattr("Summarizer.article_fetcher.clean_markdown_content", fake_cleanup)
 
-    from Summarizer.crawlee_fetcher import CrawleeFetchError
+    fetch_article(url, FetchConfig(max_retries=0))
+    outcome_first = get_last_fetch_outcome()
+    fetch_article(url, FetchConfig(max_retries=0))
+    outcome_second = get_last_fetch_outcome()
 
-    def fake_crawlee(target_url: str, config):
-        raise CrawleeFetchError("crawlee unavailable")
+    assert call_count["urltomd"] == 1
+    assert outcome_first is not None and outcome_first.strategy == "url-to-md"
+    assert outcome_second is not None and outcome_second.strategy == "url-to-md-cache"
 
-    monkeypatch.setattr("Summarizer.article_fetcher.fetch_with_crawlee_sync", fake_crawlee, raising=False)
-    monkeypatch.setattr("Summarizer.article_fetcher._CRAWLEE_DOMAINS", {"dailynews.ascopubs.org"}, raising=False)
+
+def test_jina_fallback_invoked(monkeypatch: pytest.MonkeyPatch):
+    url = "https://blocked.example"
+    request = httpx.Request("GET", url)
+    response = httpx.Response(503, request=request, text="Retry later")
+
+    def fake_get(url: str, timeout: float, follow_redirects: bool, headers):
+        raise httpx.HTTPStatusError("blocked", request=request, response=response)
+
+    def fake_urltomd(target_url: str, config):
+        from Summarizer.urltomd_fetcher import UrlToMdError
+
+        raise UrlToMdError(target_url, "blocked")
+
+    def fake_jina(target_url: str, config):
+        return "# Jina Result\n\nContent"
+
+    def fake_cleanup(md: str):
+        return md, ["More MTN"]
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr("Summarizer.article_fetcher.fetch_with_urltomd", fake_urltomd)
+    monkeypatch.setattr("Summarizer.article_fetcher.fetch_with_jina", fake_jina)
+    monkeypatch.setattr("Summarizer.article_fetcher.clean_markdown_content", fake_cleanup)
+
+    content = fetch_article(url, FetchConfig(max_retries=0))
+    outcome = get_last_fetch_outcome()
+
+    assert content.startswith("# Jina Result")
+    assert outcome is not None
+    assert outcome.strategy == "jina"
+    assert outcome.removed_sections == ["More MTN"]
+
+
+def test_fallback_chain_errors(monkeypatch: pytest.MonkeyPatch):
+    url = "https://blocked.example"
+    request = httpx.Request("GET", url)
+    response = httpx.Response(403, request=request, text="Forbidden")
+
+    def fake_get(url: str, timeout: float, follow_redirects: bool, headers):
+        raise httpx.HTTPStatusError("blocked", request=request, response=response)
+
+    def fake_urltomd(target_url: str, config):
+        from Summarizer.urltomd_fetcher import UrlToMdError
+
+        raise UrlToMdError(target_url, "blocked")
+
+    def fake_jina(target_url: str, config):
+        from Summarizer.jina_fetcher import JinaFetchError
+
+        raise JinaFetchError(target_url, "down")
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr("Summarizer.article_fetcher.fetch_with_urltomd", fake_urltomd)
+    monkeypatch.setattr("Summarizer.article_fetcher.fetch_with_jina", fake_jina)
 
     with pytest.raises(FetchError) as exc:
-        fetch_article(url, FetchConfig(allow_cache=False, max_retries=0))
+        fetch_article(url, FetchConfig(max_retries=0, allow_cache=False))
 
-    assert "crawlee unavailable" in str(exc.value)
+    assert "fallback failed" in str(exc.value)
