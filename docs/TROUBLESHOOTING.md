@@ -210,22 +210,37 @@ If the .eml viewer doesn't open automatically:
 **Issue**: Mail rule doesn't execute automatically
 
 **Solutions**:
-1. Verify Mail rule conditions match incoming emails exactly:
-   - **From**: `googlealerts-noreply@google.com`
-   - **Subject**: `Google Alert -`
-2. Check AppleScript exists:
+1. **Verify Mail rule condition** (most common issue):
+   - Open Mail.app → Settings → Rules
+   - Ensure rule has: **Subject** → **contains** → `Google Alert -`
+   - **Important:** Do NOT add a From condition - this prevents test emails and forwarded alerts from triggering
+   - If rule has a From condition, remove it and keep only the Subject condition
+
+2. **Test with actual Google Alert** (not test emails from personal accounts):
+   - Test emails from non-Google accounts won't match if you have a From filter
+   - Either remove From condition or wait for real Google Alert to arrive
+
+3. Check AppleScript exists:
    ```bash
    ls -la ~/Library/Application\ Scripts/com.apple.mail/process-alert.scpt
    ```
-3. Verify script is readable:
+
+4. Verify script is readable:
    ```bash
    chmod +r ~/Library/Application\ Scripts/com.apple.mail/process-alert.scpt
    ```
-4. Test rule manually:
-   - Select a Google Alert email in Mail.app
+
+5. Test rule manually:
+   - Select a message with "Google Alert -" in subject
    - **Message** menu → **Apply Rules**
-5. Check Console.app for error messages:
+   - Check for new directory: `ls -lt ~/Code/AppletScriptorium/runs | head -3`
+   - If directory created, rule triggered successfully
+
+6. Check Console.app for error messages:
    - Open Console.app → Search for "Mail" → Look for script errors
+
+**Common Mistake:**
+Adding a `From equals googlealerts-noreply@google.com` condition prevents testing with emails from other accounts. The subject filter alone is sufficient and safer.
 
 ### Digest Email Not Sending
 

@@ -57,7 +57,12 @@ def read_html_from_eml(eml_path: Path) -> str:
 
 
 def extract_links_from_html(html: str) -> List[LinkRecord]:
-    """Extract article titles, URLs, and metadata from the alert HTML body."""
+    """Extract article titles, URLs, and metadata from the alert HTML body.
+
+    Handles both direct Google Alerts and forwarded alert emails by searching
+    for Google redirect links throughout the entire HTML, including within
+    forwarded message sections (gmail_quote divs, etc.).
+    """
     soup = BeautifulSoup(html, "html.parser")
     records: List[LinkRecord] = []
     seen_urls: set[str] = set()
@@ -69,7 +74,7 @@ def extract_links_from_html(html: str) -> List[LinkRecord]:
 
         parsed = urlparse(href)
         if parsed.netloc != "www.google.com" or parsed.path != "/url":
-            # Skip feedback links and other chrome.
+            # Skip feedback links, unsubscribe links, and other non-article chrome.
             continue
 
         params = parse_qs(parsed.query)
@@ -80,6 +85,7 @@ def extract_links_from_html(html: str) -> List[LinkRecord]:
         if canonical_url in seen_urls:
             continue
 
+        # For metadata, search up the tree for structured data containers
         metadata_container = anchor.find_parent('td') or anchor.find_parent('div') or anchor
         publisher = _extract_publisher(metadata_container)
         snippet = _extract_snippet(metadata_container)

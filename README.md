@@ -84,9 +84,9 @@ Event-driven processing triggered when Google Alerts arrive:
 
 1. Run `./setup-mail-rule.sh` to install AppleScript
 2. Create Mail rule:
-   - **From**: `googlealerts-noreply@google.com`
-   - **Subject**: `Google Alert -`
+   - **Subject** contains `Google Alert -`
    - **Action**: Run AppleScript → `process-alert.scpt`
+   - **Note**: No From filter needed (supports test emails and forwards)
 3. Grant Accessibility permissions (System Settings → Privacy & Security → Accessibility → Mail.app)
 
 **Workflow:**

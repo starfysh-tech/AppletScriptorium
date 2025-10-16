@@ -99,7 +99,7 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 
 ### Mail Rule Automation
 - Event-driven: processes alerts immediately when they arrive (any Google Alert topic)
-- Mail rule conditions filter by From/Subject (e.g., `From: googlealerts-noreply@google.com`, `Subject: Google Alert -`)
+- Mail rule condition: Subject contains `Google Alert -` (no From filter to support test emails and forwards)
 - AppleScript (`process-alert.scpt`) saves triggering message, runs Python pipeline, creates and sends HTML digest email
 - Code is topic-agnostic—Mail rule conditions do ALL filtering
 - See `docs/SETUP.md` (Mail Rule Automation section) for configuration details

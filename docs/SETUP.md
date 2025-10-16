@@ -162,16 +162,18 @@ If missing, run `./setup-mail-rule.sh` again.
 
    **Description:** `Process Google Alert`
 
-   **If all of the following conditions are met:**
-   - Condition 1: **From** → **Contains** → `googlealerts-noreply@google.com`
-   - Condition 2: **Subject** → **Contains** → `Google Alert -`
+   **If any of the following conditions are met:**
+   - **Subject** → **contains** → `Google Alert -`
 
    **Perform the following actions:**
    - Action: **Run AppleScript** → Select `process-alert.scpt`
 
 4. Click **OK**
 
-**Note:** Mail rule conditions do ALL filtering. Using `Google Alert -` matches ANY Google Alert topic. For topic-specific processing, narrow the subject (e.g., `Google Alert - Medication reminder`).
+**Important Notes:**
+- **Subject-only filtering:** We intentionally use only the Subject condition (not From address) to ensure the rule works with test emails and forwarded alerts
+- **Topic filtering:** Mail rule conditions do ALL filtering. Using `Google Alert -` matches ANY Google Alert topic. For topic-specific processing, narrow the subject (e.g., `Google Alert - Medication reminder`)
+- **False positives:** Risk is minimal since few legitimate emails contain "Google Alert -" in the subject
 
 #### 3. Configure Email Recipient
 
