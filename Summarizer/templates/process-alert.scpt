@@ -4,13 +4,46 @@ using terms from application "Mail"
 		set timestamp to do shell script "date +%Y%m%d-%H%M%S"
 		set repoPath to "{{REPO_PATH}}"
 		set outputDir to repoPath & "/runs/alert-" & timestamp
+		set debugLog to outputDir & "/mail-rule-debug.log"
 
 		-- Get recipient (customize this as needed)
 		set digestRecipient to "{{EMAIL}}"
 
+		-- Log rule trigger details
+		set isoTimestamp to do shell script "date -u +'%Y-%m-%dT%H:%M:%SZ'"
+		set logLines to {}
+		set end of logLines to "[" & isoTimestamp & "] Mail rule triggered"
+		set end of logLines to "  Number of messages: " & (count of theMessages)
+		set end of logLines to "  Rule name: " & theRule
+
 		-- Create output directory and save the triggering message
 		try
 			do shell script "mkdir -p " & quoted form of outputDir
+
+			-- Log details of each message passed (usually just 1)
+			tell application "Mail"
+				repeat with i from 1 to (count of theMessages)
+					set msg to item i of theMessages
+					set msgSender to (sender of msg)
+					set msgSubject to (subject of msg)
+					set msgDateReceived to (date received of msg)
+					set msgID to (message id of msg)
+
+					set end of logLines to "  [Message " & i & "]"
+					set end of logLines to "    From: " & msgSender
+					set end of logLines to "    Subject: " & msgSubject
+					set end of logLines to "    Date received: " & msgDateReceived
+					set end of logLines to "    Message ID: " & msgID
+				end repeat
+			end tell
+
+			-- Write debug log
+			set logContent to ""
+			repeat with logLine in logLines
+				set logContent to logContent & logLine & linefeed
+			end repeat
+			my write_text_to_file(logContent, debugLog)
+
 			set alertEmlPath to outputDir & "/alert.eml"
 			set triggerMessage to item 1 of theMessages
 			set messageSource to source of triggerMessage
