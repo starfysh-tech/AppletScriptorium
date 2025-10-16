@@ -155,6 +155,45 @@ Common issues:
 - Ollama not running (`brew services start ollama`)
 - Model not installed (`ollama pull qwen3:latest`)
 
+### Ollama Unresponsive (Timeout)
+
+**Issue**: Pipeline hangs or times out with `"Ollama unresponsive (timeout after 120s)"`
+
+This occurs when Ollama daemon becomes unresponsive—typically after extended uptime or stuck processes.
+
+**Automatic Recovery**:
+The pipeline now detects Ollama hangs and auto-recovers:
+1. **Detection**: Timeout after 120 seconds waiting for Ollama
+2. **Logged**: `"Ollama unresponsive (timeout after 120s); attempting restart"`
+3. **Auto-restart**: Kills unresponsive process; launchd relaunches it automatically
+4. **Retry**: Retries summarization once after restart
+5. **Clear error**: If recovery fails, error message indicates the issue
+
+**Manual Fix** (if auto-recovery doesn't work):
+```bash
+# Kill the unresponsive process (launchd will auto-restart it)
+pkill -f "ollama serve"
+
+# Wait for restart and verify
+sleep 3
+ps aux | grep "ollama serve" | grep -v grep
+
+# Or restart via Homebrew
+brew services restart ollama
+
+# Verify it responds
+echo "test" | ollama run qwen3:latest
+```
+
+**Prevention**:
+- Restart Ollama periodically: `brew services restart ollama`
+- Monitor uptime: `ps aux | grep ollama` (check ETIME column)
+- Set up cron job for daily restarts:
+  ```bash
+  # Add to crontab (crontab -e)
+  0 2 * * * brew services restart ollama
+  ```
+
 ### Digest Not Rendering
 
 If the .eml viewer doesn't open automatically:

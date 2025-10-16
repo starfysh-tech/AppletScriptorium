@@ -178,6 +178,7 @@ python3 -m pytest Summarizer/tests/test_link_extractor.py -v
 - Module invocation: `python3 -m Summarizer.cli` (NOT `python3 Summarizer/cli.py`)
 - Parallel processing: ThreadPoolExecutor with max 5 workers (~70% faster)
 - Fixture management: `Summarizer/refresh-fixtures.py`
+- **Ollama auto-recovery**: Pipeline detects unresponsive Ollama (120s timeout), auto-kills/restarts it, and retries—see [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md#ollama-unresponsive-timeout) for details
 - Optional: `url-to-md` CLI for Cloudflare-protected sites (`npm install -g url-to-markdown-cli-tool`)
 - Optional: `JINA_API_KEY` env var for Jina Reader API fallback
 

@@ -120,6 +120,15 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 - Digest includes executive summary and cross-article insights
 - Works with any Google Alert topic—summaries adapt to content
 
+**Ollama Health Detection & Auto-Recovery** (`Summarizer/summarizer.py:_run_with_ollama`):
+- **Timeout**: `OLLAMA_TIMEOUT = 120.0` (seconds) — detects unresponsive daemon
+- **Detection**: Logs `"Ollama unresponsive (timeout after 120s); attempting restart"`
+- **Auto-restart**: Kills stuck process via `pkill -f "ollama serve"`; launchd auto-relaunches
+- **Fallback**: If pkill fails, attempts `brew services restart ollama`
+- **Retry**: Retries summarization once after restart attempt
+- **Failure**: If still unresponsive, raises `SummarizerError` with clear diagnostic message
+- **Tuning**: Adjust `OLLAMA_TIMEOUT` in `config.py` if needed (e.g., slow hardware)
+
 ## Coding Conventions
 
 - **Python**: PEP 8, 4-space indents, snake_case for functions/variables
@@ -150,6 +159,7 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
   - **Mail rule automation**: Accessibility (System Settings → Privacy & Security → Accessibility → enable Mail.app)
   - **Manual CLI usage**: Automation (System Settings → Privacy & Security → Automation → enable Terminal → Mail)
   - **Both modes**: Need both permissions
+- **Ollama unresponsiveness**: After extended uptime, Ollama may become stuck. Pipeline auto-detects (120s timeout) and kills/restarts it. If this fails, manually run `pkill -f "ollama serve"` (launchd will auto-restart)
 
 ## Module Integration Examples
 
