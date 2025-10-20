@@ -34,8 +34,8 @@ using terms from application "Mail"
 
 		-- Run Python pipeline with SMTP sending (no UI automation needed)
 		try
-			-- Resolve python3 path dynamically
-			set pythonPath to do shell script "which python3 2>/dev/null || echo '/usr/local/bin/python3'"
+			-- Use Homebrew python3 explicitly (Mail.app's 'which' may find Xcode's python)
+			set pythonPath to "/usr/local/bin/python3"
 
 			-- Verify Python 3.11+ is available
 			try
@@ -50,7 +50,7 @@ using terms from application "Mail"
 			end try
 
 			-- Run pipeline with --smtp-send flag to send digest via SMTP
-			set pythonCmd to "cd " & quoted form of repoPath & " && " & pythonPath & " -m Summarizer.cli run --output-dir " & quoted form of outputDir & " --email-digest " & quoted form of digestRecipient & " --smtp-send"
+			set pythonCmd to "cd " & quoted form of repoPath & " && " & pythonPath & " -m Summarizer.cli run --output-dir " & quoted form of outputDir & " --topic " & quoted form of topicName & " --email-digest " & quoted form of digestRecipient & " --smtp-send 2>&1"
 			do shell script pythonCmd
 
 			-- Notify success

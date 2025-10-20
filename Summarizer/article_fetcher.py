@@ -103,6 +103,52 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
         try:
             response = httpx.get(url, timeout=cfg.timeout, follow_redirects=True, headers=headers)
             response.raise_for_status()
+
+            # Check for binary content that requires alternative fetch strategy
+            content_type = response.headers.get('content-type', '').lower()
+            binary_types = ['pdf', 'epub', 'zip', 'octet-stream']
+            if any(binary_type in content_type for binary_type in binary_types):
+                # Try URL transformations to find HTML versions (common patterns for academic journals)
+                html_url = None
+
+                # PDF: strip .pdf extension
+                if url.lower().endswith('.pdf') or '.pdf?' in url.lower():
+                    html_url = url.replace('.pdf?', '?').replace('.pdf', '')
+                # EPUB: strip /epub path component
+                elif url.endswith('/epub'):
+                    html_url = url[:-5]  # Remove '/epub'
+
+                if html_url:
+                    try:
+                        html_response = httpx.get(html_url, timeout=cfg.timeout, follow_redirects=True, headers=headers)
+                        html_response.raise_for_status()
+                        html_content_type = html_response.headers.get('content-type', '').lower()
+                        if 'html' in html_content_type:
+                            # Found HTML version, use it
+                            content = html_response.text
+                            elapsed = perf_counter() - start
+                            if cfg.allow_cache:
+                                _CACHE_HTML[url] = content  # Cache under original URL
+                            _FETCH_CONTEXT.outcome = FetchOutcome(
+                                content=content,
+                                strategy="httpx",
+                                format="html",
+                                duration=elapsed,
+                            )
+                            return content
+                    except (httpx.HTTPError, httpx.TimeoutException):
+                        pass  # HTML version not available, continue to Markdown fallback
+
+                # Trigger Markdown fallback for binary formats
+                try:
+                    outcome = _fetch_markdown_fallback(url, cfg.allow_cache)
+                except FetchError as fallback_error:
+                    last_error = fallback_error
+                    break  # Exit retry loop and raise error
+                else:
+                    _FETCH_CONTEXT.outcome = outcome
+                    return outcome.content
+
             content = response.text
             elapsed = perf_counter() - start
             if cfg.allow_cache:

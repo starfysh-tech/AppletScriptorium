@@ -119,7 +119,7 @@ python3 -m Summarizer.cli run \
 **Outputs**: `alert.eml`, `alert.tsv`, `articles/`, `digest.html`, `digest.txt`, `workflow.log`
 
 **CLI Flags:**
-- `--model MODEL` — Override Ollama model (default: qwen3:latest)
+- `--model MODEL` — Override LLM model (default: configured in `.env`)
 - `--max-articles N` — Limit articles processed
 - `--email-digest ADDRESS` — Specify digest recipient email (repeatable)
 - `--smtp-send` — Send digest via SMTP (requires `.env` configuration)
@@ -173,14 +173,16 @@ python3 -m pytest Summarizer/tests/test_link_extractor.py -v
 
 - **For Claude Code**: See **[CLAUDE.md](./CLAUDE.md)** for development commands, code style, and module patterns
 - **For other AI assistants**: See **[AGENTS.md](./AGENTS.md)** for build commands and project conventions
-- **Configuration**: Edit `Summarizer/config.py` for model, timeouts, parallelism, domain lists
+- **Configuration**: Edit `.env` file for LLM backend, timeouts, email settings (see [.env.template](./.env.template) for options)
 
 **Key technical details:**
 - System Python required (no venv support for Mail rules)
 - Module invocation: `python3 -m Summarizer.cli` (NOT `python3 Summarizer/cli.py`)
-- Parallel processing: ThreadPoolExecutor with max 5 workers (~70% faster)
+- **LLM Backend**: LM Studio (primary) with optional Ollama fallback (configure in `.env`)
+  - **LM Studio**: Fast, stable, OpenAI-compatible API
+  - **Ollama fallback**: Optional (WARNING: may slow down computer) — only used if `OLLAMA_ENABLED=true` in `.env`
+- Parallel processing: ThreadPoolExecutor with max 5 workers for article fetching; sequential summarization to prevent LLM overload
 - Fixture management: `Summarizer/refresh-fixtures.py`
-- **Ollama auto-recovery**: Pipeline detects unresponsive Ollama (120s timeout), auto-kills/restarts it, and retries—see [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md#ollama-unresponsive-timeout) for details
 - Optional: `url-to-md` CLI for Cloudflare-protected sites (`npm install -g url-to-markdown-cli-tool`)
 - Optional: `JINA_API_KEY` env var for Jina Reader API fallback
 

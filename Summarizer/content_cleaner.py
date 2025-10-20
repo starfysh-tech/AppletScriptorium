@@ -1,6 +1,7 @@
 """Convert article HTML into Markdown-friendly plaintext."""
 from __future__ import annotations
 
+import re
 from typing import Iterable
 
 from bs4 import BeautifulSoup
@@ -15,8 +16,27 @@ except ImportError:  # pragma: no cover - readability optional
 _STRIP_TAGS: Iterable[str] = ("script", "style", "nav", "footer", "header")
 
 
+def _sanitize_html(html: str) -> str:
+    """Remove NULL bytes and control characters that break lxml parsing.
+
+    lxml requires XML-compatible strings: Unicode or ASCII with no NULL bytes
+    or control characters (except tab, newline, carriage return).
+    """
+    # Remove NULL bytes
+    html = html.replace('\x00', '')
+
+    # Remove control characters except \t (0x09), \n (0x0A), \r (0x0D)
+    # Pattern matches \x01-\x08, \x0B-\x0C, \x0E-\x1F
+    html = re.sub(r'[\x01-\x08\x0B-\x0C\x0E-\x1F]', '', html)
+
+    return html
+
+
 def extract_content(html: str) -> str:
     """Return a cleaned Markdown string for the article body."""
+    # Sanitize HTML before passing to readability to prevent lxml errors
+    html = _sanitize_html(html)
+
     main_html = html
     if Document is not None:
         try:

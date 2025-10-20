@@ -16,17 +16,35 @@ Common reasons to modify:
 # LLM Configuration
 # =============================================================================
 
-DEFAULT_MODEL = "qwen3:latest"  # Ollama model for summarization
+import os
+
+# LM Studio API Configuration (Primary Backend)
+# If LMSTUDIO_BASE_URL is set, LM Studio is used as primary backend
+LMSTUDIO_BASE_URL = os.environ.get("LMSTUDIO_BASE_URL")  # e.g., "http://192.168.1.11:1234"
+LMSTUDIO_MODEL = os.environ.get("LMSTUDIO_MODEL")  # e.g., "llama-chat-summary-3.2-3b"
+LMSTUDIO_TIMEOUT = float(os.environ.get("LMSTUDIO_TIMEOUT", "30.0"))
+LMSTUDIO_HEALTH_TIMEOUT = 2.0  # Fast health check timeout before requests
+
+# Ollama Configuration (Optional Fallback Backend)
+# WARNING: Ollama may significantly slow down your computer during processing
+# Only enabled if OLLAMA_ENABLED=true is set in .env
+OLLAMA_ENABLED = os.environ.get("OLLAMA_ENABLED", "").lower() == "true"
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:latest")
+OLLAMA_TIMEOUT = float(os.environ.get("OLLAMA_TIMEOUT", "120.0"))
+
+# Legacy settings (kept for backward compatibility with tests)
+DEFAULT_MODEL = OLLAMA_MODEL
 TEMPERATURE = 0.1  # Lower = more focused, higher = more creative (0.0-1.0)
 MAX_TOKENS = 8192  # Maximum response length from LLM
-OLLAMA_TIMEOUT = 120.0  # Seconds for Ollama summarization (detects unresponsive daemon)
 
 
 # =============================================================================
 # Performance & Parallelism
 # =============================================================================
 
-MAX_WORKERS = 5  # Concurrent article processing (balance speed vs. site load)
+# Concurrent workers for parallel article fetching and content extraction.
+# Summarization runs sequentially to prevent Ollama daemon deadlock.
+MAX_WORKERS = 5  # Balance speed vs. site load (fetch/extract only)
 
 
 # =============================================================================
@@ -75,9 +93,9 @@ Format (tags go INSIDE bold markers before colon):
 - **CONCERN**: [Limitation, contradiction, or assumption to question]
 
 Action tags for TACTICAL WIN (inside bold):
-[SHIP NOW] = Quick win available immediately
-[ROADMAP] = Requires planning/multi-step effort
-[WATCH] = Early signal, no action yet
+[🚀 SHIP NOW] = Quick win available immediately
+[🗺️ ROADMAP] = Requires planning/multi-step effort
+[👀 WATCH] = Early signal, no action yet
 
 Urgency tags for MARKET SIGNAL (inside bold):
 [🔴 URGENT] = Competitive threat or pressing deadline
@@ -86,7 +104,7 @@ Urgency tags for MARKET SIGNAL (inside bold):
 
 Example correct format:
 - **KEY FINDING**: 67% of participants reported improved outcomes, reducing discontinuation by 30%.
-- **TACTICAL WIN [SHIP NOW]**: Implement automated reminders at day 3 to boost completion rates.
+- **TACTICAL WIN [🚀 SHIP NOW]**: Implement automated reminders at day 3 to boost completion rates.
 - **MARKET SIGNAL [🔴 URGENT]**: Competitor launched similar feature with 12-month advantage.
 - **CONCERN**: Self-selection bias may skew results toward more engaged users.
 

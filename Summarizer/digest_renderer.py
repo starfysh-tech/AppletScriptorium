@@ -118,10 +118,11 @@ def generate_cross_article_insights(articles: list[dict]) -> list[str]:
     return insights[:5]
 
 
-def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None) -> str:
+def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None, topic: str | None = None) -> str:
     generated_at = generated_at or datetime.now()
     missing = missing or []
     article_list = list(articles)
+    topic_text = f": {topic}" if topic else ""
 
     # Generate executive summary section
     exec_summaries = generate_executive_summary(article_list)
@@ -202,7 +203,7 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
         "<html lang=\"en\">\n"
         "<head>\n"
         "  <meta charset=\"utf-8\" />\n"
-        "  <title>Google Alert Intelligence</title>\n"
+        f"  <title>Google Alert Intelligence{topic_text}</title>\n"
         "  <style>\n"
         "    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 2rem; color: #222; }\n"
         "    header { margin-bottom: 2rem; }\n"
@@ -217,7 +218,7 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
         "  </style>\n"
         "</head>\n"
         "<body>\n"
-        f"<header><h1>Google Alert Intelligence</h1><p>{generated_at:%B %d, %Y}</p></header>\n"
+        f"<header><h1>Google Alert Intelligence{topic_text}</h1><p>{generated_at:%B %d, %Y}</p></header>\n"
         f"{exec_block}\n"
         f"{insights_block}\n"
         f"{inner}\n"
@@ -227,12 +228,13 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
     )
 
 
-def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None) -> str:
+def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None, topic: str | None = None) -> str:
     generated_at = generated_at or datetime.now()
     missing = missing or []
     article_list = list(articles)
+    topic_text = f": {topic}" if topic else ""
 
-    lines = [f"Google Alert Intelligence — {generated_at:%B %d, %Y}", ""]
+    lines = [f"Google Alert Intelligence{topic_text} — {generated_at:%B %d, %Y}", ""]
 
     # Add executive summary
     exec_summaries = generate_executive_summary(article_list)

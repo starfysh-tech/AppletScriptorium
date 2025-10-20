@@ -19,6 +19,12 @@ from typing import Iterable, List, Optional, Tuple
 
 from dotenv import load_dotenv
 
+# CRITICAL: Load .env BEFORE importing config module
+# config.py reads environment variables during import, so .env must be loaded first
+PACKAGE_ROOT = Path(__file__).resolve().parent
+REPO_ROOT = PACKAGE_ROOT.parent
+load_dotenv(REPO_ROOT / '.env', override=True)
+
 from .article_fetcher import (
     FetchConfig,
     FetchError,
@@ -32,12 +38,6 @@ from .digest_renderer import render_digest_html, render_digest_text
 from .link_extractor import extract_links_from_eml
 from .markdown_cleanup import validate_markdown_content
 from .summarizer import SummarizerConfig, SummarizerError, summarize_article
-
-PACKAGE_ROOT = Path(__file__).resolve().parent
-REPO_ROOT = PACKAGE_ROOT.parent
-
-# Load .env file from repository root (for SMTP credentials)
-load_dotenv(REPO_ROOT / '.env', override=True)
 
 APPLESCRIPT = PACKAGE_ROOT / "fetch-alert-source.applescript"
 
@@ -91,18 +91,20 @@ def write_link_tsv(links: Iterable[dict], path: Path) -> None:
             ])
 
 
-def _process_single_article(
+def _fetch_and_extract_article(
     idx: int,
     link: dict,
     articles_dir: Path,
     fetch_cfg: FetchConfig,
-    sum_cfg: SummarizerConfig,
     strategy_counter: Counter,
     counter_lock: Lock,
 ) -> Tuple[Optional[dict], Optional[dict]]:
-    """Process a single article (fetch, extract, summarize).
+    """Fetch and extract content from a single article.
 
-    Returns: (summary_dict, failure_dict) - one will be None
+    This function runs in parallel across multiple workers.
+
+    Returns: (article_data, failure_dict) - one will be None
+    article_data contains: title, url, publisher, snippet, content, summary_path
     """
     title = link.get("title", "")
     url = link.get("url", "")
@@ -165,13 +167,39 @@ def _process_single_article(
 
     content_path.write_text(content_text, encoding="utf-8")
 
-    # Summarize
-    article_payload = {
+    # Return article data for Phase 2 summarization
+    article_data = {
         "title": title,
         "url": url,
         "publisher": link.get("publisher", ""),
         "snippet": link.get("snippet", ""),
         "content": content_text,
+        "summary_path": summary_path,
+    }
+
+    return article_data, None
+
+
+def _summarize_article(
+    article_data: dict,
+    sum_cfg: SummarizerConfig,
+) -> Tuple[Optional[dict], Optional[dict]]:
+    """Summarize a single article using Ollama.
+
+    This function runs sequentially to prevent Ollama daemon overload.
+
+    Returns: (summary_dict, failure_dict) - one will be None
+    """
+    title = article_data["title"]
+    url = article_data["url"]
+    summary_path = article_data["summary_path"]
+
+    article_payload = {
+        "title": title,
+        "url": url,
+        "publisher": article_data["publisher"],
+        "snippet": article_data["snippet"],
+        "content": article_data["content"],
     }
 
     try:
@@ -191,7 +219,11 @@ def process_articles(
     sum_cfg: SummarizerConfig,
     max_articles: int | None = None,
 ) -> Tuple[List[dict], List[dict]]:
-    """Process articles in parallel using ThreadPoolExecutor."""
+    """Process articles in two phases to prevent Ollama daemon overload.
+
+    Phase 1: Parallel fetch and content extraction (I/O-bound, uses MAX_WORKERS)
+    Phase 2: Sequential summarization (CPU-bound, prevents Ollama deadlock)
+    """
     articles_dir = output_dir / "articles"
     articles_dir.mkdir(exist_ok=True)
 
@@ -203,33 +235,33 @@ def process_articles(
     strategy_counter: Counter = Counter()
     counter_lock = Lock()
 
-    # Process articles in parallel (see config.MAX_WORKERS for worker count)
+    # PHASE 1: Parallel fetch and content extraction
+    article_data_list: List[dict] = []
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        # Submit all tasks
+        # Submit all fetch tasks
         future_to_idx = {
             executor.submit(
-                _process_single_article,
+                _fetch_and_extract_article,
                 idx,
                 link,
                 articles_dir,
                 fetch_cfg,
-                sum_cfg,
                 strategy_counter,
                 counter_lock,
             ): idx
             for idx, link in enumerate(links_to_process, start=1)
         }
 
-        # Collect results as they complete
+        # Collect fetch results as they complete
         for future in as_completed(future_to_idx):
             try:
-                summary, failure = future.result()
-                if summary:
-                    summaries.append(summary)
+                article_data, failure = future.result()
+                if article_data:
+                    article_data_list.append(article_data)
                 if failure:
                     failures.append(failure)
             except Exception as exc:
-                # Shouldn't happen since we catch exceptions in _process_single_article
+                # Shouldn't happen since we catch exceptions in _fetch_and_extract_article
                 idx = future_to_idx[future]
                 link = links_to_process[idx - 1]
                 logging.error("[unexpected][ERROR] Article %d failed: %s", idx, exc)
@@ -239,16 +271,30 @@ def process_articles(
         summary_parts = ", ".join(f"{key}={count}" for key, count in sorted(strategy_counter.items()))
         logging.info("Fetch summary: %s", summary_parts)
 
+    # PHASE 2: Sequential summarization (prevent Ollama daemon overload)
+    for article_data in article_data_list:
+        try:
+            summary, failure = _summarize_article(article_data, sum_cfg)
+            if summary:
+                summaries.append(summary)
+            if failure:
+                failures.append(failure)
+        except Exception as exc:
+            # Shouldn't happen since we catch exceptions in _summarize_article
+            url = article_data.get("url", "unknown")
+            logging.error("[unexpected][ERROR] Summarization failed: %s", exc)
+            failures.append({"url": url, "reason": f"unexpected error: {exc}"})
+
     return summaries, failures
 
 
-def render_outputs(summaries: List[dict], failures: List[dict], output_dir: Path) -> None:
+def render_outputs(summaries: List[dict], failures: List[dict], output_dir: Path, topic: Optional[str] = None) -> None:
     if not summaries and not failures:
         logging.warning("No summaries generated; skipping digest rendering")
         return
     generated_at = datetime.now()
-    html_output = render_digest_html(summaries, missing=failures, generated_at=generated_at)
-    text_output = render_digest_text(summaries, missing=failures, generated_at=generated_at)
+    html_output = render_digest_html(summaries, missing=failures, generated_at=generated_at, topic=topic)
+    text_output = render_digest_text(summaries, missing=failures, generated_at=generated_at, topic=topic)
     (output_dir / "digest.html").write_text(html_output, encoding="utf-8")
     (output_dir / "digest.txt").write_text(text_output, encoding="utf-8")
     (output_dir / "summaries.json").write_text(json.dumps(summaries, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -279,6 +325,10 @@ def parse_args(argv=None) -> argparse.Namespace:
         "--smtp-send",
         action="store_true",
         help="Send digest via SMTP instead of creating .eml file for UI automation (requires GMAIL_SMTP_USER and GMAIL_APP_PASSWORD environment variables)",
+    )
+    run_parser.add_argument(
+        "--topic",
+        help="Alert topic to include in email subject (e.g., 'Patient reported outcomes')",
     )
 
     return parser.parse_args(argv)
@@ -319,7 +369,7 @@ def run_pipeline(args: argparse.Namespace) -> Path:
     sum_cfg = SummarizerConfig(model=args.model)
 
     summaries, failures = process_articles(links, output_dir, fetch_cfg, sum_cfg, max_articles=args.max_articles)
-    render_outputs(summaries, failures, output_dir)
+    render_outputs(summaries, failures, output_dir, topic=args.topic)
 
     recipients: List[str] = []
     if args.email_digest:
@@ -341,19 +391,22 @@ def run_pipeline(args: argparse.Namespace) -> Path:
             if env_sender:
                 sender_address = env_sender.strip() or None
 
-        # Create .eml file
-        send_digest_email(output_dir, recipients, sender_address)
+        # Create .eml file (may not be created if no summaries generated)
+        send_digest_email(output_dir, recipients, sender_address, topic=args.topic)
 
         # If --smtp-send flag is set, send via SMTP instead of UI automation
         if args.smtp_send:
             eml_path = output_dir / "digest.eml"
-            recipient = recipients[0]
-            try:
-                send_digest_via_smtp(eml_path, recipient)
-                logging.info("[smtp] Digest sent to %s", recipient)
-            except (ValueError, FileNotFoundError, smtplib.SMTPException, ConnectionError) as exc:
-                logging.error("[smtp][ERROR] Failed to send digest: %s", exc)
-                raise
+            if eml_path.exists():
+                recipient = recipients[0]
+                try:
+                    send_digest_via_smtp(eml_path, recipient)
+                    logging.info("[smtp] Digest sent to %s", recipient)
+                except (ValueError, FileNotFoundError, smtplib.SMTPException, ConnectionError) as exc:
+                    logging.error("[smtp][ERROR] Failed to send digest: %s", exc)
+                    raise
+            else:
+                logging.warning("[smtp] No digest generated; skipping SMTP send")
 
     if failures:
         for failure in failures:
@@ -459,7 +512,7 @@ def send_digest_via_smtp(eml_path: Path, recipient: str) -> None:
         raise smtplib.SMTPException(f"SMTP error: {exc}")
 
 
-def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[str]) -> None:
+def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[str], topic: Optional[str] = None) -> None:
     """Create MIME .eml file with HTML digest for Mail rule automation.
 
     The Mail rule AppleScript will open this .eml file, copy rendered HTML,
@@ -469,6 +522,7 @@ def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[
         output_dir: Directory containing digest.html
         recipients: Non-empty list of email addresses (at least one required)
         sender: Optional sender address
+        topic: Optional alert topic to include in subject line
 
     Raises:
         ValueError: If recipients list is empty
@@ -491,7 +545,8 @@ def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[
 
     # Create MIME multipart message with HTML
     msg = MIMEMultipart('alternative')
-    msg['Subject'] = f"Google Alert Intelligence — {datetime.now().strftime('%B %d, %Y')}"
+    topic_text = f": {topic}" if topic else ""
+    msg['Subject'] = f"Google Alert Intelligence{topic_text} — {datetime.now().strftime('%B %d, %Y')}"
     msg['From'] = sender if sender else recipient
     msg['To'] = recipient
 

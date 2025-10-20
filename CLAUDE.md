@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AppletScriptorium is a macOS automation framework that uses AppleScript, shell scripts, and Python to build agents that automate local workflows. The first agent, **Summarizer**, monitors Mail.app for Google Alerts on any topic you choose, extracts article links, fetches pages, summarizes them with a local LLM (Ollama), and generates intelligent email digests. Mail rule conditions handle all topic filtering—the code is generic and processes whatever alert triggers it.
+AppletScriptorium is a macOS automation framework that uses AppleScript, shell scripts, and Python to build agents that automate local workflows. The first agent, **Summarizer**, monitors Mail.app for Google Alerts on any topic you choose, extracts article links, fetches pages, summarizes them with a local LLM (LM Studio or Ollama), and generates intelligent email digests. Mail rule conditions handle all topic filtering—the code is generic and processes whatever alert triggers it.
 
 ## Architecture
 
