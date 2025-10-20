@@ -25,3 +25,8 @@ storage/
 # Claude Code configuration
 .claude/
 .env
+.env.example
+
+# Debug scripts and logs
+debug-*.scpt
+*-debug.log
