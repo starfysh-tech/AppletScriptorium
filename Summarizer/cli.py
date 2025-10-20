@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import argparse
 import csv
+import email
 import json
 import logging
 import os
 import re
+import smtplib
 import subprocess
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -14,6 +16,8 @@ from datetime import datetime
 from pathlib import Path
 from threading import Lock
 from typing import Iterable, List, Optional, Tuple
+
+from dotenv import load_dotenv
 
 from .article_fetcher import (
     FetchConfig,
@@ -31,6 +35,10 @@ from .summarizer import SummarizerConfig, SummarizerError, summarize_article
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGE_ROOT.parent
+
+# Load .env file from repository root (for SMTP credentials)
+load_dotenv(REPO_ROOT / '.env', override=True)
+
 APPLESCRIPT = PACKAGE_ROOT / "fetch-alert-source.applescript"
 
 
@@ -267,6 +275,11 @@ def parse_args(argv=None) -> argparse.Namespace:
         "--email-sender",
         help="Optional sender address when emailing the digest (defaults to first recipient unless ALERT_EMAIL_SENDER is set)",
     )
+    run_parser.add_argument(
+        "--smtp-send",
+        action="store_true",
+        help="Send digest via SMTP instead of creating .eml file for UI automation (requires GMAIL_SMTP_USER and GMAIL_APP_PASSWORD environment variables)",
+    )
 
     return parser.parse_args(argv)
 
@@ -328,7 +341,19 @@ def run_pipeline(args: argparse.Namespace) -> Path:
             if env_sender:
                 sender_address = env_sender.strip() or None
 
+        # Create .eml file
         send_digest_email(output_dir, recipients, sender_address)
+
+        # If --smtp-send flag is set, send via SMTP instead of UI automation
+        if args.smtp_send:
+            eml_path = output_dir / "digest.eml"
+            recipient = recipients[0]
+            try:
+                send_digest_via_smtp(eml_path, recipient)
+                logging.info("[smtp] Digest sent to %s", recipient)
+            except (ValueError, FileNotFoundError, smtplib.SMTPException, ConnectionError) as exc:
+                logging.error("[smtp][ERROR] Failed to send digest: %s", exc)
+                raise
 
     if failures:
         for failure in failures:
@@ -344,6 +369,94 @@ def main(argv=None) -> int:
         run_pipeline(args)
         return 0
     return 1
+
+
+def send_digest_via_smtp(eml_path: Path, recipient: str) -> None:
+    """Send digest email via SMTP instead of UI automation.
+
+    Loads SMTP credentials from environment variables and sends the
+    existing digest.eml file directly via SMTP protocol.
+
+    Args:
+        eml_path: Path to digest.eml file
+        recipient: Email recipient address
+
+    Environment Variables:
+        GMAIL_SMTP_USER: SMTP username (e.g., user@gmail.com)
+        GMAIL_APP_PASSWORD: Gmail app password (16-char)
+        GMAIL_SMTP_HOST: SMTP server (default: smtp.gmail.com)
+        GMAIL_SMTP_PORT: SMTP port (default: 587)
+
+    Raises:
+        FileNotFoundError: If .eml file doesn't exist
+        ValueError: If required environment variables are missing
+        smtplib.SMTPException: On SMTP errors (connection, auth, send)
+        ConnectionError: On network connection failures
+    """
+    # Load SMTP configuration from environment
+    smtp_user = os.environ.get("GMAIL_SMTP_USER")
+    smtp_password = os.environ.get("GMAIL_APP_PASSWORD")
+    smtp_host = os.environ.get("GMAIL_SMTP_HOST", "smtp.gmail.com")
+    smtp_port = os.environ.get("GMAIL_SMTP_PORT", "587")
+
+    if not smtp_user or not smtp_password:
+        raise ValueError(
+            "SMTP credentials missing. Set GMAIL_SMTP_USER and GMAIL_APP_PASSWORD environment variables.\n"
+            "Generate app password at: https://myaccount.google.com/apppasswords"
+        )
+
+    # Validate port is numeric
+    try:
+        smtp_port = str(int(smtp_port))
+    except ValueError:
+        raise ValueError(f"GMAIL_SMTP_PORT must be numeric, got: {smtp_port}")
+
+    # Load .eml file
+    if not eml_path.exists():
+        raise FileNotFoundError(f"EML file not found: {eml_path}")
+
+    logging.info("[smtp] Reading .eml file: %s", eml_path)
+
+    with open(eml_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    try:
+        msg = email.message_from_string(content)
+    except Exception as exc:
+        raise ValueError(f"Failed to parse .eml file: {exc}")
+
+    from_addr = msg.get("From", smtp_user)
+    to_addr = recipient
+
+    logging.info("[smtp] Connecting to %s:%s", smtp_host, smtp_port)
+
+    try:
+        with smtplib.SMTP(smtp_host, int(smtp_port), timeout=30) as server:
+            server.set_debuglevel(0)
+
+            logging.info("[smtp] Starting TLS encryption")
+            server.starttls()
+
+            logging.info("[smtp] Authenticating as: %s", smtp_user)
+            try:
+                server.login(smtp_user, smtp_password)
+            except smtplib.SMTPAuthenticationError as exc:
+                error_msg = f"Authentication failed. Check GMAIL_APP_PASSWORD (use app password, not account password)"
+                if exc.smtp_error:
+                    error_msg += f": {exc.smtp_error.decode()}"
+                raise smtplib.SMTPAuthenticationError(exc.smtp_code, error_msg)
+
+            logging.info("[smtp] Sending email to: %s", to_addr)
+            server.sendmail(from_addr, [to_addr], msg.as_string())
+
+            logging.info("[smtp] Email sent successfully!")
+
+    except smtplib.SMTPConnectError as exc:
+        raise ConnectionError(f"Failed to connect to SMTP server: {exc}")
+    except smtplib.SMTPServerDisconnected as exc:
+        raise ConnectionError(f"SMTP server disconnected unexpectedly: {exc}")
+    except smtplib.SMTPException as exc:
+        raise smtplib.SMTPException(f"SMTP error: {exc}")
 
 
 def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[str]) -> None:
@@ -363,7 +476,6 @@ def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[
     if not recipients:
         raise ValueError("Email digest requires at least one recipient via --email-digest or ALERT_DIGEST_EMAIL")
 
-    import email
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
 

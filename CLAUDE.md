@@ -15,7 +15,8 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 4. **Content Cleaning** (`content_cleaner.py`) — Converts HTML to readable Markdown using readability-lxml
 5. **Summarization** (`summarizer.py`) — Calls local Ollama for structured 4-bullet summaries
 6. **Digest Rendering** (`digest_renderer.py`) — Generates HTML and plaintext email digests with executive summary and cross-article insights
-7. **CLI Orchestration** (`cli.py`) — Ties all steps together with logging, error handling, and parallel execution
+7. **SMTP Email Delivery** (`cli.py:send_digest_via_smtp`) — Sends digest via SMTP (replaces UI automation approach)
+8. **CLI Orchestration** (`cli.py`) — Ties all steps together with logging, error handling, and parallel execution
 
 ### Module Organization
 - Each agent lives in its own top-level directory (currently `Summarizer/`)
@@ -38,6 +39,7 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 - `Summarizer/content_cleaner.py` — `extract_content(html)` → Markdown text
 - `Summarizer/summarizer.py` — `summarize_article(article_dict)` → structured summary
 - `Summarizer/digest_renderer.py` — `render_digest_html(summaries)`, `render_digest_text(summaries)`
+- `Summarizer/cli.py` — `send_digest_via_smtp(eml_path, recipient)` → sends digest.eml via SMTP
 
 ### Test Fixtures
 - `Summarizer/Samples/google-alert-sample-2025-10-06.eml` — Raw email source
@@ -69,7 +71,7 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 - **Cannot activate venv** — Mail.app scripts run in restricted sandbox, must use system Python
 - **Tab indentation** — AppleScript uses tabs, not spaces
 - **Validation** — Run `osascript -s` to check syntax before committing
-- **Python path** — Now uses `which python3` for Intel/Apple Silicon portability (process-alert.scpt:29)
+- **Python path** — Now uses `which python3` for Intel/Apple Silicon portability (process-alert.scpt:38)
 
 ### Common Bash Commands
 ```bash
@@ -100,9 +102,11 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 ### Mail Rule Automation
 - Event-driven: processes alerts immediately when they arrive (any Google Alert topic)
 - Mail rule condition: Subject contains `Google Alert -` (no From filter to support test emails and forwards)
-- AppleScript (`process-alert.scpt`) saves triggering message, runs Python pipeline, creates and sends HTML digest email
+- AppleScript (`process-alert.scpt`) saves triggering message, runs Python pipeline with `--smtp-send` flag
+- SMTP email delivery: Uses credentials from `.env` file (SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL)
+- No UI automation or special permissions required—direct SMTP sending via Python
 - Code is topic-agnostic—Mail rule conditions do ALL filtering
-- See `docs/SETUP.md` (Mail Rule Automation section) for configuration details
+- See `docs/SETUP.md` (Mail Rule Automation section) for SMTP setup and configuration details
 
 ### Article Fetching Strategy
 - Primary: httpx with user-agent headers
@@ -155,10 +159,8 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 - **Markdown fallback cache**: `article_fetcher._CACHE_MARKDOWN` stores cleaned Markdown per URL
 - **Fixture regeneration**: Run `refresh-fixtures.py` after modifying parsers, diff before committing
 - **PYTHONPATH**: Only set in shell wrappers for inline scripts; NOT needed for `-m` invocation
-- **System permissions**: Different modes require different permissions:
-  - **Mail rule automation**: Accessibility (System Settings → Privacy & Security → Accessibility → enable Mail.app)
-  - **Manual CLI usage**: Automation (System Settings → Privacy & Security → Automation → enable Terminal → Mail)
-  - **Both modes**: Need both permissions
+- **System permissions**: Manual CLI usage requires Automation permission (System Settings → Privacy & Security → Automation → enable Terminal → Mail). Mail rule automation doesn't require special permissions—uses SMTP for sending
+- **SMTP Configuration**: Mail rule automation requires `.env` file with SMTP credentials (SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL). Gmail users must use app passwords from https://myaccount.google.com/apppasswords
 - **Ollama unresponsiveness**: After extended uptime, Ollama may become stuck. Pipeline auto-detects (120s timeout) and kills/restarts it. If this fails, manually run `pkill -f "ollama serve"` (launchd will auto-restart)
 
 ## Module Integration Examples
@@ -241,6 +243,21 @@ summaries = [
 html = render_digest_html(summaries)
 text = render_digest_text(summaries)
 ```
+
+### SMTP Email Sending
+
+Send digest emails via SMTP:
+
+```python
+from pathlib import Path
+from Summarizer.cli import send_digest_via_smtp
+
+# Requires .env file with GMAIL_SMTP_USER, GMAIL_APP_PASSWORD, GMAIL_SMTP_HOST, GMAIL_SMTP_PORT
+eml_path = Path("runs/alert-20251020-091257/digest.eml")
+send_digest_via_smtp(eml_path, "recipient@example.com")
+```
+
+Requires `.env` configuration with SMTP credentials. For Gmail, use app password from https://myaccount.google.com/apppasswords.
 
 ## Fixture Management
 

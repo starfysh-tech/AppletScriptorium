@@ -126,17 +126,38 @@ url-to-md https://example.com --wait 2 | head
    - **System Settings** → **Privacy & Security** → **Automation**
    - Enable Terminal → Mail
 
-### Mail Rule Accessibility Permission
+### SMTP Authentication Fails
 
-**Issue**: Mail rule runs but email doesn't send
+**Issue**: "SMTP authentication failed" or "Connection refused"
 
-**Solution**:
-1. Go to **System Settings** → **Privacy & Security** → **Accessibility**
-2. Look for **Mail** in the list
-3. If not present, click **+** and add `/Applications/Mail.app`
-4. Ensure the checkbox is enabled
+**Solutions**:
+1. **Check `.env` configuration**:
+   ```bash
+   cat .env | grep SMTP
+   ```
+   Verify all SMTP credentials are set correctly
 
-Without this permission, the automated copy-paste will fail.
+2. **Gmail users**: Must use app password, not regular password:
+   - Visit https://myaccount.google.com/apppasswords
+   - Create an app password for "Mail"
+   - Copy the generated password to `SMTP_PASSWORD` in `.env`
+
+3. **Test SMTP connection manually**:
+   ```bash
+   python3 -m Summarizer.cli run \
+     --output-dir runs/test \
+     --max-articles 1 \
+     --email-digest your-email@example.com \
+     --smtp-send
+   ```
+   Check `workflow.log` for detailed SMTP error messages
+
+4. **Check firewall**: Ensure port 587 (or your configured port) is not blocked
+
+5. **Non-Gmail providers**: Update `SMTP_HOST` and `SMTP_PORT` in `.env`:
+   - Outlook: `smtp-mail.outlook.com:587`
+   - Yahoo: `smtp.mail.yahoo.com:587`
+   - Custom SMTP: Check your provider's documentation
 
 ---
 
@@ -194,12 +215,20 @@ echo "test" | ollama run qwen3:latest
   0 2 * * * brew services restart ollama
   ```
 
-### Digest Not Rendering
+### Digest Email Not Received
 
-If the .eml viewer doesn't open automatically:
-1. Check the run output directory: `~/Code/AppletScriptorium/runs/alert-TIMESTAMP/`
-2. Verify both `digest.html` and `digest.eml` files exist
-3. Manually open `digest.eml` to verify HTML renders correctly
+**Issue**: Pipeline completes but digest email doesn't arrive
+
+**Solutions**:
+1. **Check spam folder**: SMTP-sent emails may be filtered as spam initially
+2. **Verify SMTP credentials**: See [SMTP Authentication Fails](#smtp-authentication-fails) above
+3. **Check workflow log**:
+   ```bash
+   cat ~/Code/AppletScriptorium/runs/alert-*/workflow.log
+   ```
+   Look for "Email sent successfully" or SMTP error messages
+4. **Verify email address**: Check recipient address in `process-alert.scpt` line 12
+5. **Test locally**: View `digest.html` in run directory to verify content generated correctly
 
 ---
 
@@ -242,43 +271,29 @@ If the .eml viewer doesn't open automatically:
 **Common Mistake:**
 Adding a `From equals googlealerts-noreply@google.com` condition prevents testing with emails from other accounts. The subject filter alone is sufficient and safer.
 
-### Digest Email Not Sending
+### Mail Rule Notification Shows Error
 
-**Issue**: digest.eml created but email not sent
+**Issue**: Notification says "Pipeline failed: [error message]"
 
 **Solutions**:
-1. **Check Accessibility permissions**: System Settings → Privacy & Security → Accessibility → enable Mail.app
-2. **Check notification**: Look for error message (should say "Google Alert digest sent" or "Message created but not sent")
-3. **Check Sent folder**: Verify email actually sent and has correct formatting
-4. **Check compose window**: If notification says "not sent", check if compose window is still open with content
-5. **Test manually**:
-   - Open `digest.eml`
-   - Copy content (Cmd+A, Cmd+C)
-   - Paste into new email to verify formatting
-
-Common causes:
-- Accessibility permissions not granted (body field focus fails)
-- Insufficient delays (script tries to send before paste completes)
-- Mail.app account not configured for sending
-- Compose window didn't receive focus (increase delay after creating window)
-
-**Debug steps:**
-1. Check workflow log: `~/Code/AppletScriptorium/runs/alert-TIMESTAMP/workflow.log`
-2. Verify .eml file exists and opens correctly when double-clicked
-3. Test clipboard: After opening .eml, manually do Cmd+A, Cmd+C - should copy ~6000+ characters
-4. Check if bold labels appear when viewing .eml file (if not, HTML rendering issue)
-
-### Increasing Delays in AppleScript
-
-If the email sends but is blank or has formatting issues, increase delays:
-
-1. Open Script Editor
-2. File → Open → Navigate to `~/Library/Application Scripts/com.apple.mail/process-alert.scpt`
-3. Find delay commands and increase values:
-   ```applescript
-   delay 2  -- Increase to 3 or 4
+1. **Check workflow log**:
+   ```bash
+   cat ~/Code/AppletScriptorium/runs/alert-*/workflow.log
    ```
-4. Save and test again
+   Look for the specific error that caused the failure
+
+2. **Common errors**:
+   - "SMTP authentication failed" → See [SMTP Authentication Fails](#smtp-authentication-fails)
+   - "Ollama unresponsive" → See [Ollama Unresponsive](#ollama-unresponsive-timeout)
+   - "Failed to fetch article" → See [Article Fetching Fails](#article-fetching-fails)
+
+3. **Test manually** to isolate the issue:
+   ```bash
+   python3 -m Summarizer.cli run \
+     --output-dir runs/debug \
+     --max-articles 1 \
+     --smtp-send
+   ```
 
 ---
 

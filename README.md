@@ -82,15 +82,17 @@ Future agents will live alongside `Summarizer/`. Shared utilities will migrate t
 
 Event-driven processing triggered when Google Alerts arrive:
 
-1. Run `./setup-mail-rule.sh` to install AppleScript
-2. Create Mail rule:
+1. Configure SMTP credentials in `.env` file (see [SETUP.md](./docs/SETUP.md#configure-smtp-email-settings) for details)
+2. Run `./setup-mail-rule.sh` to install AppleScript
+3. Create Mail rule:
    - **Subject** contains `Google Alert -`
    - **Action**: Run AppleScript → `process-alert.scpt`
    - **Note**: No From filter needed (supports test emails and forwards)
-3. Grant Accessibility permissions (System Settings → Privacy & Security → Accessibility → Mail.app)
 
 **Workflow:**
-Alert arrives → Mail rule triggers → Pipeline runs → Digest email sent automatically
+Alert arrives → Mail rule triggers → Pipeline runs → Digest sent via SMTP
+
+**No special permissions needed** — Uses SMTP for email delivery instead of UI automation.
 
 See **[SETUP.md](./docs/SETUP.md)** for detailed configuration.
 
@@ -104,12 +106,12 @@ python3 -m Summarizer.cli run \
   --output-dir runs/manual-$(date +%Y%m%d-%H%M%S) \
   --subject-filter "Google Alert -"
 
-# Limit articles and send digest via email
+# Limit articles and send digest via SMTP
 python3 -m Summarizer.cli run \
   --output-dir runs/test \
   --max-articles 5 \
   --email-digest user@example.com \
-  --email-sender user@example.com
+  --smtp-send
 ```
 
 **Configuration**: Defaults in `Summarizer/config.py`. Override via CLI flags or `ALERT_*` environment variables.
@@ -119,8 +121,8 @@ python3 -m Summarizer.cli run \
 **CLI Flags:**
 - `--model MODEL` — Override Ollama model (default: qwen3:latest)
 - `--max-articles N` — Limit articles processed
-- `--email-digest ADDRESS` — Send digest via Mail.app (repeatable)
-- `--email-sender ADDRESS` — Select Mail.app sender account
+- `--email-digest ADDRESS` — Specify digest recipient email (repeatable)
+- `--smtp-send` — Send digest via SMTP (requires `.env` configuration)
 - `--subject-filter PATTERN` — Match specific inbox messages
 
 ### Cron Scheduling

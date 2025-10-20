@@ -67,6 +67,7 @@ def test_cli_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sampl
         subject_filter=None,
         email_digest=["ops@example.com"],
         email_sender="alerts@example.com",
+        smtp_send=False,
     )
 
     cli.run_pipeline(args)
@@ -122,6 +123,7 @@ def test_cli_run_pipeline_env_recipients(tmp_path: Path, monkeypatch: pytest.Mon
         subject_filter=None,
         email_digest=None,
         email_sender=None,
+        smtp_send=False,
     )
 
     cli.run_pipeline(args)

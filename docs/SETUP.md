@@ -112,19 +112,7 @@ python3 -m pytest Summarizer/tests
 
 ### System Permissions
 
-macOS requires different permissions depending on how you run the pipeline:
-
-#### Mail Rule Automation (Recommended)
-**Required:** Accessibility permission
-
-1. Go to **System Settings** → **Privacy & Security** → **Accessibility**
-2. Look for **Mail** in the list
-3. If not present, click **+** and add `/Applications/Mail.app`
-4. Ensure the checkbox is enabled
-
-**When to grant:** After running `./setup-mail-rule.sh` and creating the Mail rule
-
-**What it enables:** AppleScript automation of keyboard actions (copy/paste digest into compose window)
+macOS requires permissions for AppleScript to interact with Mail.app:
 
 #### Manual CLI Usage
 **Required:** Automation permission
@@ -136,7 +124,7 @@ macOS requires different permissions depending on how you run the pipeline:
 
 **What it enables:** AppleScript can capture inbox messages
 
-**Note:** If using both modes, you'll need both permissions.
+**Note:** Mail rule automation doesn't require any special permissions—it uses SMTP for email delivery instead of UI automation.
 
 ---
 
@@ -175,17 +163,57 @@ If missing, run `./setup-mail-rule.sh` again.
 - **Topic filtering:** Mail rule conditions do ALL filtering. Using `Google Alert -` matches ANY Google Alert topic. For topic-specific processing, narrow the subject (e.g., `Google Alert - Medication reminder`)
 - **False positives:** Risk is minimal since few legitimate emails contain "Google Alert -" in the subject
 
-#### 3. Configure Email Recipient
+#### 3. Configure SMTP Email Settings
 
-Edit the AppleScript to set your email address:
+Set up your email credentials in the `.env` file:
 
-1. Open **Script Editor**
-2. **File** → **Open** → Navigate to `~/Library/Application Scripts/com.apple.mail/process-alert.scpt`
-3. Find line: `set digestRecipient to "user@example.com"`
-4. Change to your actual email address
-5. **File** → **Save**
+1. Copy the template:
+   ```bash
+   cp .env.template .env
+   ```
 
-#### 4. Modifying the Script (Future Changes)
+2. Edit `.env` and add your SMTP credentials:
+   ```bash
+   # Gmail example (requires app password)
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USERNAME=your-email@gmail.com
+   SMTP_PASSWORD=your-app-password-here
+   SMTP_FROM_EMAIL=your-email@gmail.com
+   ```
+
+3. **For Gmail**: Generate an app password (regular password won't work):
+   - Visit https://myaccount.google.com/apppasswords
+   - Create an app password for "Mail"
+   - Use this password in `.env` (not your regular Gmail password)
+
+4. Edit the AppleScript to set your digest recipient:
+   - Open `~/Library/Application Scripts/com.apple.mail/process-alert.scpt`
+   - Find line: `set digestRecipient to "{{EMAIL}}"`
+   - Change to your actual email address
+   - Save the file
+
+**Security Note:** Never commit `.env` to version control—it contains sensitive credentials.
+
+#### 4. Verify SMTP Configuration
+
+Test your SMTP credentials before using the Mail rule:
+
+```bash
+# Run pipeline manually with SMTP sending
+python3 -m Summarizer.cli run \
+  --output-dir runs/test-$(date +%Y%m%d-%H%M%S) \
+  --max-articles 1 \
+  --email-digest your-email@example.com \
+  --smtp-send
+```
+
+If SMTP authentication fails, check:
+- `.env` file has correct SMTP credentials
+- Gmail users: Using app password (not regular password)
+- Firewall/network allows SMTP connections
+
+#### 5. Modifying the Script (Future Changes)
 
 **Understanding the two files:**
 - **Template:** `Summarizer/templates/process-alert.scpt` (source of truth in repository)
@@ -212,10 +240,6 @@ open ~/Library/Application\ Scripts/com.apple.mail/process-alert.scpt
 
 **⚠️ Important:** Changes to installed script are overwritten by `setup-mail-rule.sh`. Always update the template if you want changes to persist across reinstalls.
 
-#### 5. Grant Accessibility Permission
-
-See [System Permissions](#system-permissions) above.
-
 #### 6. Test the Rule
 
 **Option A - Manual Test:**
@@ -227,7 +251,7 @@ See [System Permissions](#system-permissions) above.
 Wait for next Google Alert to arrive - rule triggers automatically
 
 **Expected Behavior:**
-Alert arrives → Mail rule triggers → Pipeline runs → Digest email sent automatically → Trigger email marked as read
+Alert arrives → Mail rule triggers → Pipeline runs → Digest sent via SMTP → Trigger email marked as read
 
 ---
 

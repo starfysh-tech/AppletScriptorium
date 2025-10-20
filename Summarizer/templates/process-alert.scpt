@@ -32,7 +32,7 @@ using terms from application "Mail"
 			return
 		end try
 
-		-- Run Python pipeline (using system Python - creates digest.html and digest.eml)
+		-- Run Python pipeline with SMTP sending (no UI automation needed)
 		try
 			-- Resolve python3 path dynamically
 			set pythonPath to do shell script "which python3 2>/dev/null || echo '/usr/local/bin/python3'"
@@ -49,137 +49,14 @@ using terms from application "Mail"
 				return
 			end try
 
-			set pythonCmd to "cd " & quoted form of repoPath & " && " & pythonPath & " -m Summarizer.cli run --output-dir " & quoted form of outputDir & " --email-digest " & quoted form of digestRecipient
+			-- Run pipeline with --smtp-send flag to send digest via SMTP
+			set pythonCmd to "cd " & quoted form of repoPath & " && " & pythonPath & " -m Summarizer.cli run --output-dir " & quoted form of outputDir & " --email-digest " & quoted form of digestRecipient & " --smtp-send"
 			do shell script pythonCmd
+
+			-- Notify success
+			display notification "Google Alert digest sent to " & digestRecipient with title "Google Alert Intelligence" sound name "Glass"
 		on error errMsg
 			display notification "Pipeline failed: " & errMsg with title "Google Alert Intelligence"
-			return
-		end try
-
-		-- Prepare paths
-		set emlPath to outputDir & "/digest.eml"
-		set emlFileURL to "file://" & emlPath
-
-		-- Step 1: Open .eml file to render HTML
-		try
-			do shell script "open " & quoted form of emlPath
-			delay 4
-		on error errMsg
-			display notification "Could not open .eml file: " & errMsg with title "Google Alert Intelligence"
-			return
-		end try
-
-		-- Step 2: Copy rendered HTML from .eml viewer
-		tell application "Mail"
-			activate
-			delay 1
-		end tell
-
-		try
-			tell application "System Events"
-				tell process "Mail"
-					set frontmost to true
-					keystroke "a" using command down
-					delay 0.5
-					keystroke "c" using command down
-				end tell
-			end tell
-		on error errMsg
-			display notification "Copy from viewer failed: " & errMsg with title "Google Alert Intelligence"
-			return
-		end try
-
-		delay 1
-
-		-- Step 3: Close .eml viewer
-		tell application "Mail"
-			try
-				close (front window)
-			end try
-		end tell
-
-		delay 1
-
-		-- Step 4: Create compose window with placeholder
-		tell application "Mail"
-			try
-				set emailSubject to "Google Alert Summary - " & topicName & " - " & (do shell script "date '+%B %d, %Y'")
-				set newMessage to make new outgoing message with properties {subject:emailSubject, content:"[PLACEHOLDER]", visible:true}
-				tell newMessage
-					make new to recipient with properties {address:digestRecipient}
-				end tell
-				activate
-			on error errMsg
-				display notification "Failed to create compose window: " & errMsg with title "Google Alert Intelligence"
-				return
-			end try
-		end tell
-
-		delay 2
-
-		-- Step 5: Focus body field and paste
-		try
-			tell application "System Events"
-				tell process "Mail"
-					set frontmost to true
-					set theWindow to front window
-					set allElements to entire contents of theWindow
-
-					-- Find AXWebArea (body field) and set focus
-					repeat with elem in allElements
-						try
-							if role of elem is "AXWebArea" then
-								set focused of elem to true
-								delay 0.5
-								keystroke "a" using command down
-								delay 0.5
-								keystroke "v" using command down
-								exit repeat
-							end if
-						end try
-					end repeat
-				end tell
-			end tell
-		on error errMsg
-			display notification "Paste failed: " & errMsg with title "Google Alert Intelligence"
-			return
-		end try
-
-		delay 3
-
-		-- Step 6: Send the message with Cmd+Shift+D
-		try
-			tell application "System Events"
-				tell process "Mail"
-					set frontmost to true
-					keystroke "d" using {command down, shift down}
-				end tell
-			end tell
-
-			delay 3
-
-			-- Verify window closed (successful send)
-			tell application "Mail"
-				set openWindows to every window
-				set stillOpen to false
-
-				repeat with w in openWindows
-					try
-						if name of w contains emailSubject then
-							set stillOpen to true
-							exit repeat
-						end if
-					end try
-				end repeat
-
-				if stillOpen then
-					display notification "Message created but not sent - check Mail.app" with title "Google Alert Intelligence"
-				else
-					display notification "Google Alert digest sent to " & digestRecipient with title "Google Alert Intelligence" sound name "Glass"
-				end if
-			end tell
-		on error errMsg
-			display notification "Failed to send: " & errMsg with title "Google Alert Intelligence"
 			return
 		end try
 
