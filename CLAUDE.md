@@ -172,7 +172,7 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 - **Fixture regeneration**: Run `refresh-fixtures.py` after modifying parsers, diff before committing
 - **PYTHONPATH**: Only set in shell wrappers for inline scripts; NOT needed for `-m` invocation
 - **System permissions**: Manual CLI usage requires Automation permission (System Settings → Privacy & Security → Automation → enable Terminal → Mail). Mail rule automation doesn't require special permissions—uses SMTP for sending
-- **SMTP Configuration**: Use `SMTP_*` variables (not `GMAIL_*`) in `.env` file. Required variables: SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL. Gmail users must use app passwords from https://myaccount.google.com/apppasswords
+- **SMTP Configuration**: Use `SMTP_*` variables in `.env` file. Required variables: SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL. Gmail users must use app passwords from https://myaccount.google.com/apppasswords
 - **Ollama unresponsiveness**: After extended uptime, Ollama may become stuck. Pipeline auto-detects (120s timeout) and kills/restarts it. If this fails, manually run `pkill -f "ollama serve"` (launchd will auto-restart)
 
 ## Module Integration Examples
@@ -269,7 +269,7 @@ eml_path = Path("runs/alert-20251020-091257/digest.eml")
 send_digest_via_smtp(eml_path, "recipient@example.com")
 ```
 
-Requires `.env` configuration with SMTP credentials. For Gmail, use app password from https://myaccount.google.com/apppasswords.
+Requires `.env` configuration with SMTP credentials.
 
 ## Fixture Management
 
