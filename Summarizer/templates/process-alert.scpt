@@ -18,15 +18,6 @@ using terms from application "Mail"
 			set triggerMessage to item 1 of theMessages
 			set messageSource to source of triggerMessage
 			my write_text_to_file(messageSource, alertEmlPath)
-
-			-- Extract topic from alert subject (e.g., "Google Alert - Medication reminder" → "Medication reminder")
-			set alertSubject to subject of triggerMessage
-			set topicName to ""
-			if alertSubject contains "Google Alert - " then
-				set topicName to text ((offset of "Google Alert - " in alertSubject) + 15) thru -1 of alertSubject
-			else
-				set topicName to "Unknown"
-			end if
 		on error errMsg
 			display notification "Failed to save alert: " & errMsg with title "Google Alert Intelligence"
 			return
@@ -50,7 +41,8 @@ using terms from application "Mail"
 			end try
 
 			-- Run pipeline with --smtp-send flag to send digest via SMTP
-			set pythonCmd to "cd " & quoted form of repoPath & " && " & pythonPath & " -m Summarizer.cli run --output-dir " & quoted form of outputDir & " --topic " & quoted form of topicName & " --email-digest " & quoted form of digestRecipient & " --smtp-send 2>&1"
+			-- Topic extraction now handled by Python (reads from alert.eml)
+			set pythonCmd to "cd " & quoted form of repoPath & " && " & pythonPath & " -m Summarizer.cli run --output-dir " & quoted form of outputDir & " --email-digest " & quoted form of digestRecipient & " --smtp-send 2>&1"
 			do shell script pythonCmd
 
 			-- Notify success

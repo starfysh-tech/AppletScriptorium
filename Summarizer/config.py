@@ -35,7 +35,7 @@ OLLAMA_TIMEOUT = float(os.environ.get("OLLAMA_TIMEOUT", "120.0"))
 # Legacy settings (kept for backward compatibility with tests)
 DEFAULT_MODEL = OLLAMA_MODEL
 TEMPERATURE = 0.1  # Lower = more focused, higher = more creative (0.0-1.0)
-MAX_TOKENS = 8192  # Maximum response length from LLM
+MAX_TOKENS = 16384  # Maximum response length from LLM
 
 
 # =============================================================================
@@ -86,30 +86,52 @@ Summarize this article in exactly 4 bullets.
 
 CRITICAL: You MUST generate exactly 4 bullets, one for each label below. Start directly with bullets - NO preamble or meta-commentary.
 
-Format (tags go INSIDE bold markers before colon):
+Format (return exactly 4 bullets in this order, tags go INSIDE bold markers before colon):
 - **KEY FINDING**: [One sentence with specific metrics or main insight]
-- **TACTICAL WIN [action-tag]**: [Specific actionable practice or implementation]
-- **MARKET SIGNAL [urgency-tag]**: [Trend, shift, or competitive development]
+- **TACTICAL WIN [🚀 SHIP NOW]**: [Specific actionable practice or implementation]
+- **MARKET SIGNAL [🟡 NOTABLE]**: [Trend, shift, or competitive development]
 - **CONCERN**: [Limitation, contradiction, or assumption to question]
 
-Action tags for TACTICAL WIN (inside bold):
+Choose ONE action tag for TACTICAL WIN (replace the example tag above):
 [🚀 SHIP NOW] = Quick win available immediately
 [🗺️ ROADMAP] = Requires planning/multi-step effort
 [👀 WATCH] = Early signal, no action yet
 
-Urgency tags for MARKET SIGNAL (inside bold):
+Choose ONE urgency tag for MARKET SIGNAL (replace the example tag above):
 [🔴 URGENT] = Competitive threat or pressing deadline
 [🟡 NOTABLE] = Significant trend or shift
 [⚫ CONTEXT] = Background information
 
-Example correct format:
-- **KEY FINDING**: 67% of participants reported improved outcomes, reducing discontinuation by 30%.
-- **TACTICAL WIN [🚀 SHIP NOW]**: Implement automated reminders at day 3 to boost completion rates.
-- **MARKET SIGNAL [🔴 URGENT]**: Competitor launched similar feature with 12-month advantage.
-- **CONCERN**: Self-selection bias may skew results toward more engaged users.
-
-Requirements:
+Requirements (generate unique summary from THIS article only - do NOT copy examples):
 - Each bullet <30 words (aim for <25)
 - Extract specific numbers, percentages, metrics when available
 - Focus on actionable insights and strategic implications
+- Select the most appropriate tag from the options above based on the article content
+"""
+
+# Template for cross-article insights generation
+# Used to identify patterns and themes across multiple article summaries
+CROSS_ARTICLE_INSIGHTS_PROMPT = """
+You are analyzing {count} research articles to identify cross-cutting themes and patterns.
+
+Articles (title + key findings):
+{article_summaries}
+
+Generate 3-5 cross-article insights that:
+1. Identify recurring themes or contradictions across multiple articles (cite article numbers)
+2. Highlight methodological patterns (e.g., "4 articles use PROMs to predict clinical outcomes")
+3. Surface emerging trends or knowledge gaps
+4. Note convergent/divergent findings
+
+Format each insight as one line (max 50 words):
+- THEME: [Pattern across N articles with evidence]
+- METHODOLOGY: [Common approach across N articles]
+- GAP: [Missing perspective or limitation]
+- CONTRADICTION: [Conflicting findings between articles X and Y]
+
+Requirements:
+- Each insight MUST cite specific article numbers (e.g., "articles 2, 5, 8")
+- Focus on actionable patterns, not generic observations
+- Return 3-5 insights only
+- Start directly with insights - NO preamble
 """

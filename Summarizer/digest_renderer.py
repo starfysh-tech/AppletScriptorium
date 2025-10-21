@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import html
+import logging
 import re
 from datetime import datetime
 from typing import Iterable, Sequence
+
+logger = logging.getLogger(__name__)
 
 
 def generate_executive_summary(articles: Iterable[dict]) -> list[str]:
@@ -30,29 +33,35 @@ def generate_executive_summary(articles: Iterable[dict]) -> list[str]:
             key_finding = bullets[0].get("text", "")
 
         if key_finding:
-            # Extract first sentence or key metric, target 10-15 words
-            # Split on sentence boundaries
-            sentences = re.split(r'[.;]', key_finding)
-            first_part = sentences[0].strip() if sentences else key_finding
+            # Extract first sentence, allowing up to 40 words for complete findings
+            # Split on sentence boundaries (period, semicolon, exclamation, question mark)
+            # Use negative lookbehind/lookahead to preserve decimals (e.g., "11.2 months", "Scale 2.0")
+            sentences = re.split(r'(?<!\d)[.;!?](?!\s*\d)', key_finding)
+            first_sentence = sentences[0].strip() if sentences else key_finding
 
-            # Truncate to ~15 words for executive summary
-            words = first_part.split()
-            if len(words) > 15:
-                summary = " ".join(words[:15])
+            # Only truncate if extremely long (>40 words)
+            words = first_sentence.split()
+            if len(words) > 40:
+                # Truncate at sentence boundary if possible
+                truncated = " ".join(words[:40])
+                # Add ellipsis to indicate truncation
+                summary = truncated.rstrip('.,;:') + '...'
             else:
-                summary = first_part
+                # Use full first sentence
+                summary = first_sentence.rstrip('.,;:')
 
-            # Clean up trailing punctuation
-            summary = summary.rstrip('.,;:')
             summaries.append(summary)
 
     return summaries
 
 
 def generate_cross_article_insights(articles: list[dict]) -> list[str]:
-    """Extract actionable patterns and themes across multiple articles.
+    """Generate cross-article insights using LLM to identify patterns and themes.
 
-    Returns insights with specific evidence (e.g., "COMPLETION CHALLENGE: 3 studies show 19-31% rates").
+    Uses LM Studio (or Ollama fallback) to analyze article titles + KEY FINDING bullets
+    and identify recurring themes, methodological patterns, and knowledge gaps.
+
+    Falls back gracefully if LLM unavailable - insights are optional enhancement.
     """
     insights = []
     article_list = list(articles)
@@ -60,62 +69,87 @@ def generate_cross_article_insights(articles: list[dict]) -> list[str]:
     if len(article_list) < 2:
         return insights
 
-    # Extract structured findings from each article
-    completion_rates = []
-    clinical_validity = []
-    regulatory_mentions = []
+    # Build compact summaries (title + KEY FINDING only for token efficiency)
+    summaries_text = []
+    for idx, article in enumerate(article_list, 1):
+        title = article.get("title", "")[:80]  # Truncate long titles
+        bullets = article.get("summary", [])
 
-    for article in article_list:
-        title = article.get("title", "")
-        for bullet in article.get("summary", []):
-            text = bullet.get("text", "")
-            text_lower = text.lower()
+        # Extract KEY FINDING bullet
+        key_finding = next(
+            (b.get("text", "") for b in bullets if "KEY FINDING" in b.get("text", "")),
+            bullets[0].get("text", "") if bullets else ""
+        )
 
-            # Extract completion/adherence rates
-            completion_match = re.search(r'(\d+(?:\.\d+)?%)\s*(?:completion|adherence|engagement)', text_lower)
-            if completion_match:
-                completion_rates.append(completion_match.group(1))
+        summaries_text.append(f"[{idx}] {title}\n    {key_finding}")
 
-            # Track clinical validity claims (predict mortality, outcomes)
-            if re.search(r'predict.{0,30}(mortality|outcome|hospital)', text_lower):
-                clinical_validity.append(title[:30])
+    # Import LLM infrastructure (done inside function to avoid circular imports)
+    try:
+        from .config import CROSS_ARTICLE_INSIGHTS_PROMPT, TEMPERATURE
+        from .summarizer import SummarizerConfig, SummarizerError, _run_with_lmstudio
 
-            # Track regulatory pressure mentions
-            if re.search(r'(fda|regulator|regulatory).{0,30}(require|mandate|guideline|endpoint)', text_lower):
-                regulatory_mentions.append(title[:40])
+        prompt = CROSS_ARTICLE_INSIGHTS_PROMPT.format(
+            count=len(article_list),
+            article_summaries="\n\n".join(summaries_text)
+        )
 
-    # Generate insights from patterns
-    if len(completion_rates) >= 2:
-        # Sort and format completion rates
-        rates = sorted(set(completion_rates))
-        if len(rates) >= 2:
-            rate_range = f"{rates[0]}-{rates[-1]}" if len(rates) > 1 else rates[0]
-            insights.append(f"COMPLETION CHALLENGE: {len(completion_rates)} articles report {rate_range} ePRO completion/adherence rates")
+        # Use higher temperature than summarization for creative pattern-finding
+        cfg = SummarizerConfig(temperature=0.3, max_tokens=1024)
 
-    if len(clinical_validity) >= 2:
-        insights.append(f"CLINICAL VALIDITY: PROs predict mortality/outcomes in {len(clinical_validity)} studies ({', '.join(clinical_validity[:2])}...)")
+        logger.info("[insights] Generating cross-article insights for %d articles", len(article_list))
 
-    if len(regulatory_mentions) >= 2:
-        insights.append(f"REGULATORY PRESSURE: {len(regulatory_mentions)} articles cite FDA/regulatory emphasis on PRO data integration")
+        try:
+            raw_output = _run_with_lmstudio(prompt, cfg)
 
-    # Look for common intervention patterns
-    intervention_keywords = [
-        ("reminder", "automated reminders"),
-        ("dashboard", "dashboard/visualization tools"),
-        ("ehr integration", "EHR integration"),
-        ("mobile", "mobile/app-based delivery")
+            # Parse insights (one per line starting with "- ")
+            for line in raw_output.strip().split('\n'):
+                line = line.strip()
+                if line.startswith('- '):
+                    insights.append(line[2:])  # Remove "- " prefix
+
+            logger.info("[insights] Generated %d insights", len(insights))
+            return insights[:5]  # Limit to top 5
+
+        except SummarizerError as exc:
+            logger.warning("[insights] LLM-based generation failed: %s", exc)
+            return []  # Fail gracefully - insights are optional
+
+    except ImportError as exc:
+        logger.warning("[insights] Could not import LLM infrastructure: %s", exc)
+        return []
+
+
+def _split_title_and_source(title: str) -> tuple[str, str]:
+    """Split title into main title and source suffix.
+
+    Extracts common source suffixes (e.g., " - medRxiv", " | Author - LinkedIn")
+    and returns them separately for consistent rendering.
+
+    Returns:
+        (main_title, source_suffix) where source_suffix includes leading separator
+        or (title, "") if no recognizable source pattern found
+    """
+    # Patterns for common source suffixes (order matters - most specific first)
+    patterns = [
+        r'(\s+\|[^|]+?(?:PhD|MD|MBA|MSc|BSc).* - LinkedIn)$',  # | Author Name, Credentials - LinkedIn
+        r'(\s+- medRxiv)$',
+        r'(\s+- ASCO Publications)$',
+        r'(\s+- PubMed)$',
+        r'(\s+- Nature)$',
+        r'(\s+- Science)$',
+        r'(\s+- The Lancet)$',
+        r'(\s+- BMJ)$',
+        r'(\s+- JAMA)$',
     ]
 
-    for keyword, label in intervention_keywords:
-        count = sum(1 for article in article_list
-                   for bullet in article.get("summary", [])
-                   if keyword in bullet.get("text", "").lower())
-        if count >= 2:
-            insights.append(f"IMPLEMENTATION PATTERN: {count} articles mention {label} as tactical approach")
-            break  # Only report most common pattern
+    for pattern in patterns:
+        match = re.search(pattern, title, re.IGNORECASE)
+        if match:
+            source_suffix = match.group(1)
+            main_title = title[:match.start()]
+            return (main_title, source_suffix)
 
-    # Limit to top 5 most actionable insights
-    return insights[:5]
+    return (title, "")
 
 
 def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None, topic: str | None = None) -> str:
@@ -155,7 +189,17 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
     # Generate article blocks
     article_blocks = []
     for article in article_list:
-        title = html.escape(article.get("title", ""))
+        raw_title = article.get("title", "")
+        main_title, source_suffix = _split_title_and_source(raw_title)
+
+        # If no source in title, use publisher metadata as source
+        if not source_suffix:
+            publisher_name = article.get("publisher", "")
+            if publisher_name:
+                source_suffix = f" - {publisher_name}"
+
+        title_html = html.escape(main_title)
+        source_html = html.escape(source_suffix) if source_suffix else ""
         url = article.get("url") or ""
         publisher = html.escape(article.get("publisher", ""))
         snippet = html.escape(article.get("snippet", ""))
@@ -176,7 +220,7 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
         meta_html = f"<p class=\"meta\">{meta_line}</p>" if meta_line else ""
         article_blocks.append(
             f"<article>\n"
-            f"  <h2><a href=\"{html.escape(url)}\">{title}</a></h2>\n"
+            f"  <h2><a href=\"{html.escape(url)}\">{title_html}</a>{source_html}</h2>\n"
             f"  {meta_html}\n"
             f"  <ul>\n{lines_html}\n  </ul>\n"
             f"</article>"
@@ -254,7 +298,16 @@ def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | Non
 
     # Add full articles
     for article in article_list:
-        title = article.get("title", "")
+        raw_title = article.get("title", "")
+        main_title, source_suffix = _split_title_and_source(raw_title)
+
+        # If no source in title, use publisher metadata as source
+        if not source_suffix:
+            publisher_name = article.get("publisher", "")
+            if publisher_name:
+                source_suffix = f" - {publisher_name}"
+
+        title = main_title + source_suffix  # Recombine for plaintext (no HTML formatting)
         url = article.get("url") or ""
         publisher = article.get("publisher", "")
         snippet = article.get("snippet", "")

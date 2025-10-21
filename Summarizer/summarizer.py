@@ -52,7 +52,7 @@ RunnerType = Callable[[str, SummarizerConfig], str]
 
 
 def summarize_article(article: ArticleDict, *, config: SummarizerConfig | None = None, runner: RunnerType | None = None) -> dict[str, Any]:
-    """Summarize an article using configured LLM backend.
+    """Summarize an article using configured LLM backend with retry on validation failure.
 
     Backend selection:
     - If runner is provided: Use custom runner (for testing)
@@ -61,68 +61,93 @@ def summarize_article(article: ArticleDict, *, config: SummarizerConfig | None =
       - If LM Studio fails AND OLLAMA_ENABLED=false: Raise error
     - If LMSTUDIO_BASE_URL not set: Raise error (must configure at least one backend)
 
+    Validation and retry:
+    - After parsing bullets, validates required structure (4 bullets with required labels)
+    - On validation failure: Retries once (2 total attempts)
+    - After all retries: Raises SummarizerError with validation details
+
     Raises SummarizerError on any failure.
     """
     cfg = config or SummarizerConfig()
     prompt = _build_prompt(article)
     url = article.get('url', 'unknown')
 
-    # Custom runner for testing
-    if runner:
-        logger.debug("[custom] Using provided runner for %s", url)
-        try:
-            raw_output = runner(prompt, cfg)
-            model_name = cfg.model
-            backend_used = "custom"
-        except SummarizerError:
-            raise
-        except Exception as exc:  # pragma: no cover
-            raise SummarizerError(f"Custom runner failed for {url}") from exc
-    # LM Studio backend with optional Ollama fallback
-    elif LMSTUDIO_BASE_URL:
-        if not LMSTUDIO_MODEL:
-            raise SummarizerError("LMSTUDIO_BASE_URL set but LMSTUDIO_MODEL not configured in .env")
+    # Retry loop for validation failures
+    max_attempts = 2
+    last_validation_error = ""
 
-        logger.info("[lmstudio] Calling %s at %s for %s", LMSTUDIO_MODEL, LMSTUDIO_BASE_URL, url)
-        try:
-            raw_output = _run_with_lmstudio(prompt, cfg)
-            model_name = LMSTUDIO_MODEL
-            backend_used = "lmstudio"
-        except SummarizerError as exc:
-            logger.error("[lmstudio] Failed for %s: %s", url, exc)
-
-            # Try Ollama fallback if enabled
-            if OLLAMA_ENABLED:
-                logger.warning("[lmstudio] Falling back to Ollama (WARNING: may slow down computer)")
-                try:
-                    raw_output = _run_with_ollama(prompt, cfg)
-                    model_name = OLLAMA_MODEL
-                    backend_used = "ollama"
-                except SummarizerError as ollama_exc:
-                    logger.error("[ollama] Fallback also failed: %s", ollama_exc)
-                    raise SummarizerError(f"Both LM Studio and Ollama failed for {url}") from ollama_exc
-            else:
-                # No fallback configured
+    for attempt in range(1, max_attempts + 1):
+        # Custom runner for testing
+        if runner:
+            logger.debug("[custom] Using provided runner for %s", url)
+            try:
+                raw_output = runner(prompt, cfg)
+                model_name = cfg.model
+                backend_used = "custom"
+            except SummarizerError:
                 raise
-    # No backend configured
-    else:
-        raise SummarizerError(
-            "No LLM backend configured. Set LMSTUDIO_BASE_URL and LMSTUDIO_MODEL in .env file"
-        )
+            except Exception as exc:  # pragma: no cover
+                raise SummarizerError(f"Custom runner failed for {url}") from exc
+        # LM Studio backend with optional Ollama fallback
+        elif LMSTUDIO_BASE_URL:
+            if not LMSTUDIO_MODEL:
+                raise SummarizerError("LMSTUDIO_BASE_URL set but LMSTUDIO_MODEL not configured in .env")
 
-    bullets = _parse_bullets(raw_output)
-    if not bullets:
-        logger.error("[%s] No bullets parsed from response for %s", backend_used, url)
-        raise SummarizerError(f"No summary bullets returned by {backend_used}")
+            logger.info("[lmstudio] Calling %s at %s for %s (attempt %d/%d)", LMSTUDIO_MODEL, LMSTUDIO_BASE_URL, url, attempt, max_attempts)
+            try:
+                raw_output = _run_with_lmstudio(prompt, cfg)
+                model_name = LMSTUDIO_MODEL
+                backend_used = "lmstudio"
+            except SummarizerError as exc:
+                logger.error("[lmstudio] Failed for %s: %s", url, exc)
 
-    logger.info("[%s] Successfully summarized %s", backend_used, url)
+                # Try Ollama fallback if enabled
+                if OLLAMA_ENABLED:
+                    logger.warning("[lmstudio] Falling back to Ollama (WARNING: may slow down computer)")
+                    try:
+                        raw_output = _run_with_ollama(prompt, cfg)
+                        model_name = OLLAMA_MODEL
+                        backend_used = "ollama"
+                    except SummarizerError as ollama_exc:
+                        logger.error("[ollama] Fallback also failed: %s", ollama_exc)
+                        raise SummarizerError(f"Both LM Studio and Ollama failed for {url}") from ollama_exc
+                else:
+                    # No fallback configured
+                    raise
+        # No backend configured
+        else:
+            raise SummarizerError(
+                "No LLM backend configured. Set LMSTUDIO_BASE_URL and LMSTUDIO_MODEL in .env file"
+            )
 
-    return {
-        "title": article.get("title", ""),
-        "url": url,
-        "summary": [{"type": "bullet", "text": bullet} for bullet in bullets],
-        "model": model_name,
-    }
+        # Parse and validate bullets
+        bullets = _parse_bullets(raw_output)
+        if not bullets:
+            logger.error("[%s] No bullets parsed from response for %s", backend_used, url)
+            raise SummarizerError(f"No summary bullets returned by {backend_used}")
+
+        # Validate bullet structure
+        is_valid, validation_error = _validate_bullet_structure(bullets)
+        if is_valid:
+            logger.info("[%s] Successfully summarized %s", backend_used, url)
+            return {
+                "title": article.get("title", ""),
+                "url": url,
+                "publisher": article.get("publisher", ""),
+                "snippet": article.get("snippet", ""),
+                "summary": [{"type": "bullet", "text": bullet} for bullet in bullets],
+                "model": model_name,
+            }
+
+        # Validation failed
+        last_validation_error = validation_error
+        if attempt < max_attempts:
+            logger.warning("[validate] %s for %s - retrying (attempt %d/%d)", validation_error, url, attempt + 1, max_attempts)
+        else:
+            logger.error("[validate] %s for %s - all retries exhausted", validation_error, url)
+
+    # All retries exhausted
+    raise SummarizerError(f"Summary validation failed after {max_attempts} attempts: {last_validation_error}")
 
 
 def _build_prompt(article: ArticleDict) -> str:
@@ -308,6 +333,31 @@ def _run_with_ollama(prompt: str, cfg: SummarizerConfig) -> str:
                 )
 
 
+def _validate_bullet_structure(bullets: List[str]) -> tuple[bool, str]:
+    """Validate that bullets conform to required structure.
+
+    Checks:
+    - Exactly 4 bullets
+    - All required labels present: KEY FINDING, TACTICAL WIN, MARKET SIGNAL, CONCERN
+
+    Returns:
+        (is_valid, error_message) where error_message is empty if valid
+    """
+    # Check bullet count
+    if len(bullets) != 4:
+        return (False, f"Expected 4 bullets, got {len(bullets)}")
+
+    # Check for required labels
+    bullets_text = "\n".join(bullets)
+    required_labels = ["**KEY FINDING**", "**TACTICAL WIN", "**MARKET SIGNAL", "**CONCERN**"]
+    missing_labels = [label for label in required_labels if label not in bullets_text]
+
+    if missing_labels:
+        return (False, f"Missing required labels: {', '.join(missing_labels)}")
+
+    return (True, "")
+
+
 def _normalize_bullet_tags(bullet: str) -> str:
     """Normalize tag formatting in bullets to ensure consistency.
 
@@ -344,6 +394,18 @@ def _normalize_bullet_tags(bullet: str) -> str:
         if re.search(pattern, result, re.IGNORECASE):
             result = re.sub(pattern, f'[{full_tag}]', result, flags=re.IGNORECASE)
 
+    # Defensive fallback for placeholder tags (shouldn't occur with fixed prompt)
+    # Maps generic placeholders to conservative default tags
+    placeholder_mappings = {
+        '[action-tag]': '[🗺️ ROADMAP]',  # Conservative default for TACTICAL WIN
+        '[urgency-tag]': '[🟡 NOTABLE]',  # Conservative default for MARKET SIGNAL
+    }
+
+    for placeholder, default_tag in placeholder_mappings.items():
+        if placeholder in result:
+            logger.warning("LLM generated placeholder tag: %s (replacing with %s)", placeholder, default_tag)
+            result = result.replace(placeholder, default_tag)
+
     return result
 
 
@@ -351,7 +413,8 @@ def _parse_bullets(output: str) -> List[str]:
     lines = [line.strip() for line in output.splitlines() if line.strip()]
     bullets: List[str] = []
     for line in lines:
-        if line.startswith("- ") or line.startswith("* "):
+        # Support ASCII markers (- *) and Unicode bullet (•)
+        if line.startswith("- ") or line.startswith("* ") or line.startswith("• "):
             bullets.append(line[2:].strip())
         elif line and line[0].isdigit() and line[1:3] in {". ", ") "}:
             bullets.append(line[3:].strip())
@@ -364,18 +427,30 @@ def _parse_bullets(output: str) -> List[str]:
 
 
 def _sentence_split(text: str) -> List[str]:
+    """Split text into sentences, avoiding splits inside numbers/decimals.
+
+    Fallback for when LLM doesn't return structured bullets.
+    """
     sentences = []
     buffer = ""
-    for char in text:
+    for i, char in enumerate(text):
         buffer += char
         if char in ".!?":
+            # Don't split if period is inside a number (e.g., "0.74")
+            next_char = text[i+1] if i+1 < len(text) else ""
+            prev_char = text[i-1] if i > 0 else ""
+
+            # Skip if surrounded by digits (decimal number)
+            if prev_char.isdigit() and (next_char.isdigit() or next_char == ")"):
+                continue
+
             cleaned = buffer.strip()
             if cleaned:
                 sentences.append(cleaned)
             buffer = ""
     if buffer.strip():
         sentences.append(buffer.strip())
-    return sentences[:3]
+    return sentences[:4]  # Changed from 3 to 4 to match expected bullet count
 
 
 __all__ = ["summarize_article", "SummarizerConfig", "SummarizerError"]

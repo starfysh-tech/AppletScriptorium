@@ -91,6 +91,52 @@ def write_link_tsv(links: Iterable[dict], path: Path) -> None:
             ])
 
 
+def extract_topic_from_alert_eml(eml_path: Path) -> str:
+    """Extract Google Alert topic from email subject using proper MIME decoding.
+
+    Handles RFC 2047 MIME-encoded subjects (e.g., =?UTF-8?Q?...?=) and strips
+    Unicode curly quotes that commonly appear in Google Alert subjects.
+
+    Args:
+        eml_path: Path to .eml file
+
+    Returns:
+        Extracted topic string, or empty string if not found/parseable
+
+    Example:
+        Subject: =?UTF-8?Q?Google_Alert_=2D_=E2=80=9CPatient_reported_outcome=E2=80=9D?=
+        Returns: "Patient reported outcome"
+    """
+    from email.header import decode_header
+
+    try:
+        with open(eml_path, 'r', encoding='utf-8') as f:
+            msg = email.message_from_file(f)
+
+        subject = msg.get('Subject', '')
+        if not subject:
+            return ''
+
+        # Decode MIME-encoded subject (handles =?UTF-8?Q?...?= format)
+        decoded_parts = decode_header(subject)
+        subject_text = ''.join(
+            part.decode(encoding or 'utf-8') if isinstance(part, bytes) else part
+            for part, encoding in decoded_parts
+        )
+
+        # Extract topic after "Google Alert - "
+        if 'Google Alert - ' in subject_text:
+            topic = subject_text.split('Google Alert - ', 1)[1]
+            # Strip Unicode curly quotes (U+201C, U+201D) and regular quotes
+            topic = topic.strip('\u201c\u201d"')
+            return topic
+
+        return ''
+    except Exception as exc:
+        logging.warning("[topic] Failed to extract topic from %s: %s", eml_path, exc)
+        return ''
+
+
 def _fetch_and_extract_article(
     idx: int,
     link: dict,
@@ -166,6 +212,14 @@ def _fetch_and_extract_article(
             return None, {"url": url, "reason": "clean failed: empty markdown"}
 
     content_path.write_text(content_text, encoding="utf-8")
+
+    # Validate extracted content length to catch extraction failures
+    word_count = len(content_text.split())
+    if word_count < 100:
+        logging.error("[clean][ERROR] %s -> insufficient content (%d words)", url, word_count)
+        return None, {"url": url, "reason": f"only {word_count} words extracted (likely extraction failure)"}
+    elif word_count < 200:
+        logging.warning("[clean][WARN] %s -> short content (%d words), summary quality may be poor", url, word_count)
 
     # Return article data for Phase 2 summarization
     article_data = {
@@ -369,7 +423,15 @@ def run_pipeline(args: argparse.Namespace) -> Path:
     sum_cfg = SummarizerConfig(model=args.model)
 
     summaries, failures = process_articles(links, output_dir, fetch_cfg, sum_cfg, max_articles=args.max_articles)
-    render_outputs(summaries, failures, output_dir, topic=args.topic)
+
+    # Extract topic from alert email if not provided via --topic flag
+    topic = args.topic
+    if not topic:
+        topic = extract_topic_from_alert_eml(alert_eml)
+        if topic:
+            logging.info("[topic] Extracted from alert email: %s", topic)
+
+    render_outputs(summaries, failures, output_dir, topic=topic)
 
     recipients: List[str] = []
     if args.email_digest:
@@ -392,7 +454,7 @@ def run_pipeline(args: argparse.Namespace) -> Path:
                 sender_address = env_sender.strip() or None
 
         # Create .eml file (may not be created if no summaries generated)
-        send_digest_email(output_dir, recipients, sender_address, topic=args.topic)
+        send_digest_email(output_dir, recipients, sender_address, topic=topic)
 
         # If --smtp-send flag is set, send via SMTP instead of UI automation
         if args.smtp_send:
@@ -447,22 +509,22 @@ def send_digest_via_smtp(eml_path: Path, recipient: str) -> None:
         ConnectionError: On network connection failures
     """
     # Load SMTP configuration from environment
-    smtp_user = os.environ.get("GMAIL_SMTP_USER")
-    smtp_password = os.environ.get("GMAIL_APP_PASSWORD")
-    smtp_host = os.environ.get("GMAIL_SMTP_HOST", "smtp.gmail.com")
-    smtp_port = os.environ.get("GMAIL_SMTP_PORT", "587")
+    smtp_user = os.environ.get("SMTP_USERNAME")
+    smtp_password = os.environ.get("SMTP_PASSWORD")
+    smtp_host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+    smtp_port = os.environ.get("SMTP_PORT", "587")
 
     if not smtp_user or not smtp_password:
         raise ValueError(
-            "SMTP credentials missing. Set GMAIL_SMTP_USER and GMAIL_APP_PASSWORD environment variables.\n"
-            "Generate app password at: https://myaccount.google.com/apppasswords"
+            "SMTP credentials missing. Set SMTP_USERNAME and SMTP_PASSWORD environment variables in .env file.\n"
+            "For Gmail, generate app password at: https://myaccount.google.com/apppasswords"
         )
 
     # Validate port is numeric
     try:
         smtp_port = str(int(smtp_port))
     except ValueError:
-        raise ValueError(f"GMAIL_SMTP_PORT must be numeric, got: {smtp_port}")
+        raise ValueError(f"SMTP_PORT must be numeric, got: {smtp_port}")
 
     # Load .eml file
     if not eml_path.exists():
