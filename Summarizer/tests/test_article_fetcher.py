@@ -28,6 +28,7 @@ def test_fetch_caches_network_response(monkeypatch: pytest.MonkeyPatch):
         class FakeResponse:
             status_code = 200
             text = "<html>ok</html>"
+            headers = {'content-type': 'text/html'}
 
             def raise_for_status(self):
                 return None
@@ -60,6 +61,7 @@ def test_fetch_retries_then_succeeds(monkeypatch: pytest.MonkeyPatch):
         class FakeResponse:
             status_code = 200
             text = "<html>recovered</html>"
+            headers = {'content-type': 'text/html'}
 
             def raise_for_status(self):
                 return None
@@ -97,6 +99,7 @@ def test_fetch_includes_env_headers(monkeypatch: pytest.MonkeyPatch):
         class FakeResponse:
             status_code = 200
             text = "<html>ok</html>"
+            headers = {'content-type': 'text/html'}
 
             def raise_for_status(self):
                 return None

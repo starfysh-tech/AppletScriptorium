@@ -26,23 +26,30 @@ def test_summarizer_uses_runner(sample_article):
         assert cfg.model == "qwen3:latest"
         assert "Title:" in prompt
         assert "Machine-learning risk models" in prompt
-        return "- Bullet one\n- Bullet two\n- Bullet three"
+        return """- **KEY FINDING**: Bullet one
+- **TACTICAL WIN [Production]**: Bullet two
+- **MARKET SIGNAL [Adoption]**: Bullet three
+- **CONCERN**: Bullet four"""
 
     result = summarize_article(sample_article, config=SummarizerConfig(model="qwen3:latest"), runner=fake_runner)
-    assert result["summary"] == [
-        {"type": "bullet", "text": "Bullet one"},
-        {"type": "bullet", "text": "Bullet two"},
-        {"type": "bullet", "text": "Bullet three"},
-    ]
+    assert len(result["summary"]) == 4
+    assert result["summary"][0]["text"] == "**KEY FINDING**: Bullet one"
+    assert result["summary"][1]["text"] == "**TACTICAL WIN [Production]**: Bullet two"
+    assert result["summary"][2]["text"] == "**MARKET SIGNAL [Adoption]**: Bullet three"
+    assert result["summary"][3]["text"] == "**CONCERN**: Bullet four"
 
 
 def test_summarizer_handles_non_bullet_output(sample_article):
     def fake_runner(prompt: str, cfg: SummarizerConfig) -> str:
-        return "Bullet one. Bullet two. Bullet three."
+        return "**KEY FINDING**: One. **TACTICAL WIN [tag]**: Two. **MARKET SIGNAL [tag]**: Three. **CONCERN**: Four."
 
     result = summarize_article(sample_article, runner=fake_runner)
     texts = [block["text"] for block in result["summary"]]
-    assert texts == ["Bullet one.", "Bullet two.", "Bullet three."]
+    assert len(texts) == 4
+    assert "**KEY FINDING**" in texts[0]
+    assert "**TACTICAL WIN" in texts[1]
+    assert "**MARKET SIGNAL" in texts[2]
+    assert "**CONCERN**" in texts[3]
 
 
 def test_summarizer_raises_on_failure(sample_article):

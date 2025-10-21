@@ -49,15 +49,17 @@ def test_cli_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sampl
 
     sent = {}
 
-    def fake_send(output_dir, recipients, sender):
+    def fake_send(output_dir, recipients, sender, topic=None):
         sent["output_dir"] = output_dir
         sent["recipients"] = recipients
         sent["sender"] = sender
+        sent["topic"] = topic
 
     monkeypatch.setattr(cli, "capture_alert", fake_capture)
     monkeypatch.setattr(cli, "load_links", fake_load_links)
     monkeypatch.setattr(cli, "process_articles", fake_process)
     monkeypatch.setattr(cli, "send_digest_email", fake_send)
+    monkeypatch.delenv("ALERT_DIGEST_EMAIL", raising=False)
 
     args = argparse.Namespace(
         command="run",
@@ -68,6 +70,7 @@ def test_cli_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sampl
         email_digest=["ops@example.com"],
         email_sender="alerts@example.com",
         smtp_send=False,
+        topic=None,
     )
 
     cli.run_pipeline(args)
@@ -105,9 +108,10 @@ def test_cli_run_pipeline_env_recipients(tmp_path: Path, monkeypatch: pytest.Mon
 
     sent = {}
 
-    def fake_send(output_dir, recipients, sender):
+    def fake_send(output_dir, recipients, sender, topic=None):
         sent["recipients"] = recipients
         sent["sender"] = sender
+        sent["topic"] = topic
 
     monkeypatch.setattr(cli, "capture_alert", fake_capture)
     monkeypatch.setattr(cli, "load_links", fake_load_links)
@@ -124,6 +128,7 @@ def test_cli_run_pipeline_env_recipients(tmp_path: Path, monkeypatch: pytest.Mon
         email_digest=None,
         email_sender=None,
         smtp_send=False,
+        topic=None,
     )
 
     cli.run_pipeline(args)
@@ -149,8 +154,8 @@ def test_process_articles_html_path(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     ]
 
     article_html = {
-        "https://example.org/alpha": "<html><body><article><p>Alpha remote monitoring results.</p></article></body></html>",
-        "https://example.org/beta": "<html><body><article><p>Beta report details barriers to scaling.</p></article></body></html>",
+        "https://example.org/alpha": "<html><body><article><p>Alpha remote monitoring results show significant improvements in patient engagement across diverse clinical settings. The study tracked over 500 participants across multiple clinical sites over a twelve-month period. Remote tools were found to double survey completion rates in oncology clinics, with particular success in capturing patient-reported outcomes during treatment cycles. Researchers noted that digital platforms enabled real-time data collection and analysis, leading to more responsive care adjustments and improved clinical decision-making. The findings suggest that technology-enabled monitoring can bridge gaps in traditional care delivery models and improve overall treatment outcomes for cancer patients undergoing active therapy regimens. Patient satisfaction scores increased by an average of 25 percent when remote monitoring was integrated into standard care protocols. Healthcare providers reported that the additional data helped identify complications earlier and reduced emergency room visits by nearly 30 percent among enrolled participants.</p></article></body></html>",
+        "https://example.org/beta": "<html><body><article><p>Beta report details barriers to scaling patient-reported outcome programs across healthcare systems in both urban and rural settings. Key challenges identified include technical infrastructure limitations, staff training requirements, and integration with existing electronic health record systems that vary significantly across institutions. The report emphasizes that successful implementation requires strong organizational commitment and dedicated resources for ongoing maintenance and support throughout the deployment lifecycle. Healthcare administrators must balance the proven benefits of PRO collection against the operational costs and workflow disruptions during rollout phases that can span multiple years. Several case studies demonstrate that phased deployment strategies yield better adoption rates compared to system-wide launches, particularly when implementation teams prioritize user feedback and iterative improvements based on real-world experience. Organizations that invested in comprehensive training programs and provided ongoing technical support saw significantly higher clinician engagement and patient participation rates over time.</p></article></body></html>",
     }
 
     last_url = {"value": None}
@@ -206,7 +211,9 @@ def test_process_articles_html_path(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 def test_process_articles_markdown_fallback(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture):
     links = [{"title": "Blocked Article", "url": "https://blocked.example"}]
 
-    markdown_body = "# Blocked Article\n\nFallback content"
+    markdown_body = """# Blocked Article
+
+This is fallback content retrieved using the url-to-md CLI tool for sites that block direct HTTP access. The article discusses various aspects of patient care and clinical outcomes measurement in modern healthcare settings. Remote monitoring technologies have revolutionized how clinicians track patient progress between office visits. Digital health platforms enable real-time data collection and analysis, providing insights that were previously unavailable. Healthcare systems are increasingly adopting these tools to improve care quality and patient satisfaction. Implementation challenges include technical integration, staff training, and ensuring patient engagement with new technologies. Successful programs typically feature strong leadership support, adequate resources, and iterative refinement based on user feedback."""
 
     def fake_fetch(url: str, cfg: FetchConfig):
         return markdown_body
