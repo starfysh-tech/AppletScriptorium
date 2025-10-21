@@ -1,0 +1,14 @@
+# Force Unix line endings for all text files
+* text=auto eol=lf
+
+# Explicitly enforce LF for scripts
+*.sh text eol=lf
+*.py text eol=lf
+*.applescript text eol=lf
+*.scpt text eol=lf
+
+# Binary files
+*.eml binary
+*.jpg binary
+*.png binary
+*.pdf binary

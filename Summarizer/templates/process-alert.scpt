@@ -25,8 +25,8 @@ using terms from application "Mail"
 
 		-- Run Python pipeline with SMTP sending (no UI automation needed)
 		try
-			-- Use Homebrew python3 explicitly (Mail.app's 'which' may find Xcode's python)
-			set pythonPath to "/usr/local/bin/python3"
+			-- Detect Python path dynamically for Intel/Apple Silicon portability
+			set pythonPath to do shell script "which python3"
 
 			-- Verify Python 3.11+ is available
 			try

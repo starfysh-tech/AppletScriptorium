@@ -118,11 +118,21 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 - Custom headers via `ALERT_HTTP_HEADERS_JSON` env var: `'{"example.com": {"Cookie": "session=abc"}}'`
 
 ### Summarization
-- Requires local Ollama installation with `qwen3:latest` model pulled
-- Model can be overridden via `--model` CLI flag or `ALERT_MODEL` env var
+
+**LLM Backend:**
+- **Required**: LM Studio with loaded model and running server
+- **Configuration**: `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` in `.env`
+- **Optional fallback**: Ollama (set `OLLAMA_ENABLED=true`)
+- **Backend chain**: LM Studio (primary) → Ollama (if enabled and LM Studio fails) → Error
+- Model can be overridden via `--model` CLI flag (applies to active backend)
 - Returns structured 4-bullet format: KEY FINDING, TACTICAL WIN [tag], MARKET SIGNAL [tag], CONCERN
 - Digest includes executive summary and cross-article insights
 - Works with any Google Alert topic—summaries adapt to content
+
+**LM Studio Health Detection:**
+- **Timeout**: `LMSTUDIO_TIMEOUT = 30.0` (seconds) — detects unresponsive server
+- **Failure**: Falls back to Ollama if `OLLAMA_ENABLED=true`, otherwise raises error
+- **Tuning**: Adjust `LMSTUDIO_TIMEOUT` in `.env` if needed
 
 **Ollama Health Detection & Auto-Recovery** (`Summarizer/summarizer.py:_run_with_ollama`):
 - **Timeout**: `OLLAMA_TIMEOUT = 120.0` (seconds) — detects unresponsive daemon
@@ -154,13 +164,15 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 
 ## Common Gotchas
 
+- **LM Studio required**: Pipeline will fail without `LMSTUDIO_BASE_URL` and `LMSTUDIO_MODEL` configured in `.env`
 - **AppleScript Mail rules**: Cannot use venv, must use system Python with `--user` packages
+- **AppleScript Python path**: Now uses dynamic detection (`which python3`) for Intel/Apple Silicon portability (process-alert.scpt:29)
 - **Python imports**: Must use `-m Summarizer.cli` for relative imports to work
 - **Markdown fallback cache**: `article_fetcher._CACHE_MARKDOWN` stores cleaned Markdown per URL
 - **Fixture regeneration**: Run `refresh-fixtures.py` after modifying parsers, diff before committing
 - **PYTHONPATH**: Only set in shell wrappers for inline scripts; NOT needed for `-m` invocation
 - **System permissions**: Manual CLI usage requires Automation permission (System Settings → Privacy & Security → Automation → enable Terminal → Mail). Mail rule automation doesn't require special permissions—uses SMTP for sending
-- **SMTP Configuration**: Mail rule automation requires `.env` file with SMTP credentials (SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL). Gmail users must use app passwords from https://myaccount.google.com/apppasswords
+- **SMTP Configuration**: Use `SMTP_*` variables (not `GMAIL_*`) in `.env` file. Required variables: SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL. Gmail users must use app passwords from https://myaccount.google.com/apppasswords
 - **Ollama unresponsiveness**: After extended uptime, Ollama may become stuck. Pipeline auto-detects (120s timeout) and kills/restarts it. If this fails, manually run `pkill -f "ollama serve"` (launchd will auto-restart)
 
 ## Module Integration Examples
@@ -252,7 +264,7 @@ Send digest emails via SMTP:
 from pathlib import Path
 from Summarizer.cli import send_digest_via_smtp
 
-# Requires .env file with GMAIL_SMTP_USER, GMAIL_APP_PASSWORD, GMAIL_SMTP_HOST, GMAIL_SMTP_PORT
+# Requires .env file with SMTP_USERNAME, SMTP_PASSWORD, SMTP_HOST, SMTP_PORT, SMTP_FROM_EMAIL
 eml_path = Path("runs/alert-20251020-091257/digest.eml")
 send_digest_via_smtp(eml_path, "recipient@example.com")
 ```

@@ -378,7 +378,7 @@ def parse_args(argv=None) -> argparse.Namespace:
     run_parser.add_argument(
         "--smtp-send",
         action="store_true",
-        help="Send digest via SMTP instead of creating .eml file for UI automation (requires GMAIL_SMTP_USER and GMAIL_APP_PASSWORD environment variables)",
+        help="Send digest via SMTP instead of creating .eml file for UI automation (requires SMTP_USERNAME and SMTP_PASSWORD environment variables)",
     )
     run_parser.add_argument(
         "--topic",
@@ -497,10 +497,10 @@ def send_digest_via_smtp(eml_path: Path, recipient: str) -> None:
         recipient: Email recipient address
 
     Environment Variables:
-        GMAIL_SMTP_USER: SMTP username (e.g., user@gmail.com)
-        GMAIL_APP_PASSWORD: Gmail app password (16-char)
-        GMAIL_SMTP_HOST: SMTP server (default: smtp.gmail.com)
-        GMAIL_SMTP_PORT: SMTP port (default: 587)
+        SMTP_USERNAME: SMTP username (e.g., user@gmail.com)
+        SMTP_PASSWORD: SMTP password (use app password for Gmail)
+        SMTP_HOST: SMTP server (default: smtp.gmail.com)
+        SMTP_PORT: SMTP port (default: 587)
 
     Raises:
         FileNotFoundError: If .eml file doesn't exist

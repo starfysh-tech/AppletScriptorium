@@ -4,6 +4,7 @@ Common issues and solutions for AppletScriptorium Google Alert Intelligence.
 
 ## Table of Contents
 - [Installation Issues](#installation-issues)
+- [LLM Backend Issues](#llm-backend-issues)
 - [Permission Issues](#permission-issues)
 - [Pipeline Issues](#pipeline-issues)
 - [Mail Rule Issues](#mail-rule-issues)
@@ -106,6 +107,106 @@ echo "Summarize: AI assistants are transforming software development" | ollama r
 url-to-md https://example.com --wait 2 | head
 # Should print article text converted to Markdown
 ```
+
+---
+
+## LLM Backend Issues
+
+### LM Studio Connection Failed
+
+**Issue**: `Failed to connect to LM Studio at http://localhost:1234`
+
+**Solutions**:
+```bash
+# 1. Verify LM Studio is running
+# Check menu bar for LM Studio icon
+
+# 2. Verify server is started in LM Studio
+# Press CMD+R or check Server tab shows "Running"
+
+# 3. Test connection manually
+curl http://localhost:1234/v1/models
+
+# Expected: JSON response with available models
+# If connection refused: Server not started in LM Studio
+```
+
+**Fix**:
+1. Open LM Studio
+2. Load a model (AI Chat tab → select model)
+3. Start server (CMD+R or Server tab → Start Server)
+4. Verify URL in `.env` matches server URL shown in LM Studio
+
+### LM Studio Model Not Configured
+
+**Issue**: `LMSTUDIO_BASE_URL set but LMSTUDIO_MODEL not configured in .env`
+
+**Solution**:
+```bash
+# Edit .env and add exact model name from LM Studio
+# Model name is case-sensitive and must match exactly
+LMSTUDIO_MODEL=llama-3.2-3b-instruct
+```
+
+**Finding model name in LM Studio**:
+1. Go to AI Chat tab
+2. Look at model dropdown
+3. Copy exact name (including hyphens, no path/folders)
+
+### Ollama Unresponsive (Timeout)
+
+**Issue**: `Ollama unresponsive (timeout after 120s); attempting restart`
+
+**Automatic Recovery**:
+- Pipeline detects timeout and kills stuck process
+- Launchd auto-restarts Ollama
+- Summarization retries once
+
+**Manual Recovery** (if auto-restart fails):
+```bash
+# Kill stuck Ollama process
+pkill -f "ollama serve"
+
+# Wait 5 seconds for launchd to restart
+sleep 5
+
+# Verify Ollama is running
+pgrep -fl ollama
+
+# Or restart manually
+brew services restart ollama
+```
+
+**Prevention**:
+- Restart Ollama periodically: `brew services restart ollama`
+- Adjust timeout if needed: `OLLAMA_TIMEOUT=180.0` in `.env`
+
+### Backend Fallback Not Working
+
+**Issue**: Pipeline fails even though Ollama is configured
+
+**Diagnosis**:
+```bash
+# Check LM Studio status
+curl http://localhost:1234/v1/models
+
+# Check Ollama status
+ollama list
+pgrep -fl ollama
+
+# Check .env configuration
+grep -E "LMSTUDIO|OLLAMA" .env
+```
+
+**Backend fallback chain**:
+1. LM Studio (if `LMSTUDIO_BASE_URL` set) → tries first
+2. Ollama (if LM Studio fails AND `OLLAMA_ENABLED=true`) → fallback
+3. Error (if both fail or neither configured)
+
+**Fix**:
+- At minimum: Configure LM Studio with `LMSTUDIO_BASE_URL` and `LMSTUDIO_MODEL`
+- Optional: Enable Ollama fallback with `OLLAMA_ENABLED=true`
+- Never leave both unconfigured
 
 ---
 

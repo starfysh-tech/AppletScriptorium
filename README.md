@@ -119,11 +119,13 @@ python3 -m Summarizer.cli run \
 **Outputs**: `alert.eml`, `alert.tsv`, `articles/`, `digest.html`, `digest.txt`, `workflow.log`
 
 **CLI Flags:**
-- `--model MODEL` — Override LLM model (default: configured in `.env`)
+- `--model MODEL` — Override LLM model for active backend (default: configured in `.env`)
 - `--max-articles N` — Limit articles processed
 - `--email-digest ADDRESS` — Specify digest recipient email (repeatable)
+- `--email-sender EMAIL` — Sender address for digest emails
 - `--smtp-send` — Send digest via SMTP (requires `.env` configuration)
 - `--subject-filter PATTERN` — Match specific inbox messages
+- `--topic TOPIC` — Topic name for digest subject line
 
 ### Cron Scheduling
 
@@ -178,9 +180,10 @@ python3 -m pytest Summarizer/tests/test_link_extractor.py -v
 **Key technical details:**
 - System Python required (no venv support for Mail rules)
 - Module invocation: `python3 -m Summarizer.cli` (NOT `python3 Summarizer/cli.py`)
-- **LLM Backend**: LM Studio (primary) with optional Ollama fallback (configure in `.env`)
-  - **LM Studio**: Fast, stable, OpenAI-compatible API
-  - **Ollama fallback**: Optional (WARNING: may slow down computer) — only used if `OLLAMA_ENABLED=true` in `.env`
+- **LLM Backend**: LM Studio (required) with optional Ollama fallback (configure in `.env`)
+  - **LM Studio**: Required. Configure `LMSTUDIO_BASE_URL` and `LMSTUDIO_MODEL` in `.env`
+  - **Ollama fallback**: Optional (set `OLLAMA_ENABLED=true`) — only used if LM Studio fails
+  - **Important**: Pipeline requires at least LM Studio configured to function
 - Parallel processing: ThreadPoolExecutor with max 5 workers for article fetching; sequential summarization to prevent LLM overload
 - Fixture management: `Summarizer/refresh-fixtures.py`
 - Optional: `url-to-md` CLI for Cloudflare-protected sites (`npm install -g url-to-markdown-cli-tool`)

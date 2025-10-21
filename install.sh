@@ -97,19 +97,8 @@ fi
 
 echo ""
 
-# Step 4: Install Playwright browsers
-log_info "Step 4/8: Installing Playwright browsers (~200MB download)..."
-if $PYTHON_CMD -m playwright install; then
-    log_success "Playwright browsers installed"
-else
-    log_warn "Playwright installation had issues (non-critical)"
-    log_info "You can retry with: python3 -m playwright install"
-fi
-
-echo ""
-
-# Step 5: Start Ollama and pull model
-log_info "Step 5/8: Setting up Ollama..."
+# Step 4: Start Ollama and pull model
+log_info "Step 4/7: Setting up Ollama..."
 
 # Start Ollama service if not running
 if ! pgrep -x "ollama" >/dev/null; then
@@ -134,8 +123,8 @@ fi
 
 echo ""
 
-# Step 6: Make scripts executable and create directories
-log_info "Step 6/8: Configuring filesystem..."
+# Step 5: Make scripts executable and create directories
+log_info "Step 5/7: Configuring filesystem..."
 
 chmod +x "$REPO_ROOT/Summarizer/fetch-alert-source.applescript" 2>/dev/null || true
 chmod +x "$REPO_ROOT/run_workflow.sh" 2>/dev/null || true
@@ -150,8 +139,8 @@ log_success "Scripts made executable, runs/ directory created"
 
 echo ""
 
-# Step 7: Run tests
-log_info "Step 7/8: Running test suite (21 tests)..."
+# Step 6: Run tests
+log_info "Step 6/7: Running test suite (21 tests)..."
 if $PYTHON_CMD -m pytest "$REPO_ROOT/Summarizer/tests" -q; then
     log_success "All tests passed"
 else
@@ -161,8 +150,8 @@ fi
 
 echo ""
 
-# Step 8: Summary and next steps
-log_info "Step 8/8: Installation complete!"
+# Step 7: Summary and next steps
+log_info "Step 7/7: Installation complete!"
 echo ""
 log_success "Google Alert Intelligence is installed and ready!"
 echo ""
