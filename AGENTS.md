@@ -1,15 +1,36 @@
 # Project Overview
 
-AppletScriptorium is a macOS automation framework using AppleScript, shell scripts, and Python. The first agent, **Summarizer**, processes Google Alert emails: extracts links, fetches articles, summarizes with local LLM (Ollama), and generates email digests. Build the simplest solution that works on local macOS—avoid premature abstractions.
+AppletScriptorium is a macOS automation framework using AppleScript, shell scripts, and Python. Build intelligent workflows that run locally on your Mac.
+
+## Tools
+
+### Summarizer
+Processes Google Alert emails: extracts links, fetches articles, summarizes with local LLM (LM Studio/Ollama), generates email digests.
+
+**Tech:** Python, AppleScript, Mail.app integration, local LLM inference
+
+### ExtensionAuditor
+Scans Chrome extensions from local profile, enriches with Chrome Web Store data, generates CRXplorer-compatible CSV reports.
+
+**Tech:** Pure Python (stdlib only), cross-platform, hybrid local/web extraction
+
+---
+
+Build the simplest solution that works on local macOS—avoid premature abstractions.
 
 ## Build and Test Commands
 
 ### Prerequisites
+**Summarizer:**
 - Python 3.11+ system Python (venv NOT supported—see Constraints below)
-- Ollama with `qwen3:latest` model
+- LM Studio with loaded model (required) OR Ollama with `qwen3:latest` model (optional fallback)
 - Mail.app configured
 
-### Development Commands
+**ExtensionAuditor:**
+- Python 3.11+ (stdlib only, no external dependencies)
+- Chrome/Chromium browser with extensions installed
+
+### Summarizer Commands
 ```bash
 # Run full pipeline (use -m for module invocation)
 python3 -m Summarizer.cli run --output-dir runs/test --max-articles 3
@@ -28,6 +49,20 @@ Summarizer/refresh-fixtures.py
 
 # Validate AppleScript syntax before committing
 osascript -s Summarizer/templates/process-alert.scpt
+```
+
+### ExtensionAuditor Commands
+```bash
+# Scan extensions and generate CSV
+cd ExtensionAuditor
+./extension-auditor.py
+
+# Output validation
+head -5 extensions.csv
+wc -l extensions.csv
+
+# Upload to CRXplorer
+open https://crxplorer.com/
 ```
 
 ### Testing Instructions
@@ -58,7 +93,7 @@ osascript -s Summarizer/templates/process-alert.scpt
 ## Project Structure
 
 ```
-Summarizer/                    # Each agent in own directory
+Summarizer/                    # Google Alert Intelligence tool
 ├── cli.py                     # Main orchestrator (invoke with -m)
 ├── config.py                  # Configuration constants (model, timeouts, domains)
 ├── link_extractor.py          # extract_links(eml_path) → list of dicts
@@ -73,9 +108,13 @@ Summarizer/                    # Each agent in own directory
 │   ├── google-alert-sample-2025-10-06-links.tsv
 │   └── articles/              # Sample HTML for testing
 └── tests/                     # Pytest suite
+
+ExtensionAuditor/              # Chrome extension security scanner
+├── extension-auditor.py       # Main scanner script (cross-platform)
+└── README.md                  # Usage documentation
 ```
 
-Future agents live alongside `Summarizer/`. Shared utilities migrate to `shared/` when needed.
+Future tools live alongside existing tools. Shared utilities migrate to `shared/` when needed.
 
 ## Critical Constraints
 

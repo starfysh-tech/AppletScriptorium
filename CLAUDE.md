@@ -4,7 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AppletScriptorium is a macOS automation framework that uses AppleScript, shell scripts, and Python to build agents that automate local workflows. The first agent, **Summarizer**, monitors Mail.app for Google Alerts on any topic you choose, extracts article links, fetches pages, summarizes them with a local LLM (LM Studio or Ollama), and generates intelligent email digests. Mail rule conditions handle all topic filtering—the code is generic and processes whatever alert triggers it.
+AppletScriptorium is a macOS automation framework that uses AppleScript, shell scripts, and Python to build tools that automate local workflows.
+
+**Current Tools:**
+- **Summarizer**: Monitors Mail.app for Google Alerts on any topic, extracts article links, fetches pages, summarizes with local LLM (LM Studio or Ollama), generates intelligent email digests. Mail rule conditions handle all topic filtering—code is generic.
+- **ExtensionAuditor**: Scans Chrome extensions from local profile, enriches with Chrome Web Store data, generates CRXplorer-compatible CSV reports for security analysis.
+
+This file primarily documents Summarizer development patterns. For ExtensionAuditor usage, see `ExtensionAuditor/README.md`.
 
 ## Architecture
 
@@ -19,9 +25,10 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 8. **CLI Orchestration** (`cli.py`) — Ties all steps together with logging, error handling, and parallel execution
 
 ### Module Organization
-- Each agent lives in its own top-level directory (currently `Summarizer/`)
-- Fixtures live in `Summarizer/Samples/` and anchor regression tests
-- Future shared utilities will move to `shared/` when multiple agents need them
+- Each tool lives in its own top-level directory (`Summarizer/`, `ExtensionAuditor/`)
+- Summarizer fixtures live in `Summarizer/Samples/` and anchor regression tests
+- ExtensionAuditor is a standalone script (no dependencies, cross-platform)
+- Future shared utilities will move to `shared/` when multiple tools need them
 
 ## Core Files Reference
 

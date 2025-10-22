@@ -30,3 +30,4 @@ storage/
 # Debug scripts and logs
 debug-*.scpt
 *-debug.log
+extensions.csv

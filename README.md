@@ -1,8 +1,26 @@
-# AppletScriptorium — Summarizer Module
+# AppletScriptorium — macOS Automation Tools
 
-AppletScriptorium is a collection of macOS automation agents orchestrated through AppleScript, shell, and Python helpers. The first agent, **Summarizer**, watches Mail.app for Google Alerts, extracts article links, fetches pages, summarizes them with a local LLM, and generates intelligent digest emails.
+AppletScriptorium is a collection of macOS automation tools orchestrated through AppleScript, shell, and Python. Build intelligent workflows that run locally on your Mac.
 
-## How It Works
+## Tools
+
+### Summarizer
+Automated Google Alert intelligence digest generator. Monitors Mail.app for alerts, fetches articles, summarizes with local LLM, and delivers intelligent digests.
+
+**Use case:** Stay informed on industry trends, competitor news, research papers without reading every article.
+
+[See Summarizer documentation →](./Summarizer/)
+
+### ExtensionAuditor
+Chrome extension security scanner. Analyzes installed extensions and generates reports for vulnerability scanning.
+
+**Use case:** Audit browser extensions for security risks, outdated versions, and malicious code.
+
+[See ExtensionAuditor documentation →](./ExtensionAuditor/)
+
+---
+
+## Summarizer: How It Works
 
 Subscribe to Google Alerts on any topics you care about (tech trends, competitor news, research papers, etc.). When an alert arrives in your inbox, the Summarizer automatically processes it:
 
@@ -53,7 +71,7 @@ cd AppletScriptorium
 │   ├── TROUBLESHOOTING.md        # Common issues and solutions
 │   ├── workflow-diagram.png      # Visual workflow diagram
 │   └── workflow-diagram.mmd      # Mermaid source for diagram
-├── Summarizer/                   # Google Alert Intelligence agent
+├── Summarizer/                   # Google Alert Intelligence tool
 │   ├── config.py                 # Configuration constants
 │   ├── cli.py                    # Main orchestrator
 │   ├── link_extractor.py         # Extract links from alert emails
@@ -69,10 +87,13 @@ cd AppletScriptorium
 │   ├── requirements.txt          # Python dependencies
 │   ├── Samples/                  # Fixtures for regression tests
 │   └── tests/                    # Pytest suite
+├── ExtensionAuditor/             # Chrome extension security scanner
+│   ├── extension-auditor.py      # Main scanner script (cross-platform)
+│   └── README.md                 # Usage documentation
 └── README.md                     # This file
 ```
 
-Future agents will live alongside `Summarizer/`. Shared utilities will migrate to `shared/` when needed.
+Future tools will live alongside existing tools. Shared utilities will migrate to `shared/` when needed.
 
 ---
 
