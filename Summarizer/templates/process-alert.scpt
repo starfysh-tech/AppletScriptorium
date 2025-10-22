@@ -25,20 +25,8 @@ using terms from application "Mail"
 
 		-- Run Python pipeline with SMTP sending (no UI automation needed)
 		try
-			-- Detect Python path dynamically for Intel/Apple Silicon portability
-			set pythonPath to do shell script "which python3"
-
-			-- Verify Python 3.11+ is available
-			try
-				set pythonVersion to do shell script pythonPath & " --version 2>&1"
-				if pythonVersion does not contain "Python 3." then
-					display notification "Python 3 not found at: " & pythonPath with title "Google Alert Intelligence"
-					return
-				end if
-			on error
-				display notification "Python 3 not found. Install via Homebrew: brew install python3" with title "Google Alert Intelligence"
-				return
-			end try
+			-- Python path configured during setup (selected by user based on available installations)
+			set pythonPath to "{{PYTHON_PATH}}"
 
 			-- Run pipeline with --smtp-send flag to send digest via SMTP
 			-- Topic extraction now handled by Python (reads from alert.eml)

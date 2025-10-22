@@ -71,7 +71,7 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 - **Cannot activate venv** — Mail.app scripts run in restricted sandbox, must use system Python
 - **Tab indentation** — AppleScript uses tabs, not spaces
 - **Validation** — Run `osascript -s` to check syntax before committing
-- **Python path** — Now uses `which python3` for Intel/Apple Silicon portability (process-alert.scpt:38)
+- **Python path** — Selected interactively during `setup-mail-rule.sh`; script detects all Python installations, checks for dependencies, and lets user choose
 
 ### Common Bash Commands
 ```bash
@@ -166,7 +166,7 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 
 - **LM Studio required**: Pipeline will fail without `LMSTUDIO_BASE_URL` and `LMSTUDIO_MODEL` configured in `.env`
 - **AppleScript Mail rules**: Cannot use venv, must use system Python with `--user` packages
-- **AppleScript Python path**: Now uses dynamic detection (`which python3`) for Intel/Apple Silicon portability (process-alert.scpt:29)
+- **AppleScript Python path**: User selects Python installation during `setup-mail-rule.sh` (script detects all installations, checks dependencies with ✓/⚠/✗ indicators, prompts for selection)
 - **Python imports**: Must use `-m Summarizer.cli` for relative imports to work
 - **Markdown fallback cache**: `article_fetcher._CACHE_MARKDOWN` stores cleaned Markdown per URL
 - **Fixture regeneration**: Run `refresh-fixtures.py` after modifying parsers, diff before committing
