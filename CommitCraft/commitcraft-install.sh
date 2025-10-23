@@ -26,9 +26,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Files managed by this installer (relative to SCRIPT_DIR)
 declare -A SOURCE_FILES=(
     ["~/.claude/scripts/commitcraft-analyze.sh"]="commitcraft-analyze.sh"
-    ["~/.claude/scripts/commitcraft-init.sh"]="commitcraft-init.sh"
-    ["~/.git-templates/hooks/post-checkout"]="post-checkout"
+    ["~/.claude/scripts/commitcraft-release-analyze.sh"]="commitcraft-release-analyze.sh"
     ["~/.claude/commands/commitcraft-push.md"]="commitcraft-push.md"
+    ["~/.claude/commands/commitcraft-release.md"]="commitcraft-release.md"
 )
 
 # ============================================================================
@@ -140,10 +140,7 @@ show_not_installed() {
     echo ""
     echo "This will install:"
     echo "  • ~/.claude/scripts/ (2 scripts)"
-    echo "  • ~/.claude/commands/ (1 command)"
-    echo "  • ~/.git-templates/hooks/post-checkout"
-    echo "  • Git config: init.templatedir"
-    echo "  • Shell alias (optional)"
+    echo "  • ~/.claude/commands/ (2 commands)"
     echo ""
     echo "Options:"
     echo -e "  ${BOLD}1.${NC} Install"
@@ -209,7 +206,6 @@ install_or_update() {
     # Create directories
     mkdir -p ~/.claude/scripts
     mkdir -p ~/.claude/commands
-    mkdir -p ~/.git-templates/hooks
 
     # Copy files
     for dest in "${!SOURCE_FILES[@]}"; do
@@ -260,7 +256,7 @@ Your personal Claude Code enhancements.
 To check for updates:
 ```bash
 cd ~/path/to/AppletScriptorium/CommitCraft
-./install-hooks.sh
+./commitcraft-install.sh
 ```
 
 ## Source
@@ -270,46 +266,11 @@ EOF
         echo -e "${GREEN}✓${NC} Created README.md"
     fi
 
-    # Configure git
-    local current_template=$(git config --global --get init.templatedir 2>/dev/null || echo "")
-    if [ "$current_template" != "~/.git-templates" ]; then
-        git config --global init.templatedir '~/.git-templates'
-        echo -e "${GREEN}✓${NC} Set git config: init.templatedir"
-    fi
-
-    # Shell alias (optional)
-    configure_shell_alias
-
     echo ""
     echo -e "${GREEN}✓${NC} Installation/update complete"
     echo ""
     read -p "Press Enter to exit..."
     exit 0
-}
-
-configure_shell_alias() {
-    # Detect shell config
-    local shell_rc=""
-    if [ -f "$HOME/.zshrc" ]; then
-        shell_rc="$HOME/.zshrc"
-    elif [ -f "$HOME/.bashrc" ]; then
-        shell_rc="$HOME/.bashrc"
-    fi
-
-    if [ -n "$shell_rc" ] && ! grep -q "alias commitcraft-init=" "$shell_rc" 2>/dev/null; then
-        echo ""
-        echo "Optional: Add shell alias for convenience"
-        echo "Alias: commitcraft-init → ~/.claude/scripts/commitcraft-init.sh"
-        echo ""
-        read -p "Add alias to $shell_rc? [y/N] " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            echo "" >> "$shell_rc"
-            echo "# CommitCraft alias" >> "$shell_rc"
-            echo "alias commitcraft-init='~/.claude/scripts/commitcraft-init.sh'" >> "$shell_rc"
-            echo -e "${GREEN}✓${NC} Added alias (run 'source $shell_rc' to activate)"
-        fi
-    fi
 }
 
 show_diffs() {

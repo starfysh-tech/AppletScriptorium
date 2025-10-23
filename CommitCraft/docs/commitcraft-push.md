@@ -18,59 +18,20 @@ The `/commitcraft-push` command provides AI-assisted git commits with automated 
 
 ### Basic Workflow
 
-When you run `/commitcraft-push` in Claude Code, the following happens:
+When you run `/commitcraft-push` in Claude Code, the following happens automatically:
 
-1. **Sync check** - Fetches remote and checks if branch is behind
-2. **Context gathering** - Runs `commitcraft-analyze.sh` (if installed)
-3. **Change review** - Analyzes diffs for each modified file
-4. **Message generation** - Creates conventional commit message
-5. **User approval** - Shows message for review/editing
-6. **Commit** - Stages files and commits with attribution
-7. **Push** - Optionally pushes to remote (if requested)
+1. **Analysis** - Runs `~/.claude/scripts/commitcraft-analyze.sh` for security/sync checking
+2. **Blocker check** - Stops if secrets, merge conflicts, or behind remote detected
+3. **Stage all** - Runs `git add -A` to stage changes
+4. **Generate message** - Creates conventional commit message with Claude
+5. **Commit** - Commits with Claude attribution
+6. **Push** - Pushes to origin
 
-### First Use in a Repository
+**Fully automated unless blocked.** No user interaction needed unless there's a problem.
 
-**Scenario:** You run `/commitcraft-push` in a repo where tools aren't installed yet.
+### Example Usage
 
-```bash
-/commitcraft-push "Add user authentication"
-```
-
-**What happens:**
-
-```
-CommitCraft tools not installed in this repo.
-
-Would you like to install them? They enable:
-  - commitcraft-analyze.sh (commit context)
-  - Enhanced workflows
-
-Choose:
-  i - Install tools in .claude/
-  n - Never ask again (ignore)
-  d - Defer (ask later)
-
-Your choice:
-```
-
-**If you choose "Install" (i):**
-- Creates `.claude/scripts/` directory
-- Copies `commitcraft-analyze.sh` from `~/.claude/`
-- Adds `.claude/` to `.gitignore`
-- Proceeds with full analysis
-
-**If you choose "Ignore" (n):**
-- Creates `.claude-ignore` marker in `.git/info/exclude`
-- Uses basic analysis (`git diff --stat`)
-- Never prompts again in this repo
-
-**If you choose "Defer" (d):**
-- Uses basic analysis for this session
-- Will prompt again next time you run `/commitcraft-push`
-
-### Subsequent Uses
-
-**Scenario:** Tools are already installed, you have staged changes.
+**Scenario:** You have uncommitted changes and want to commit/push.
 
 ```bash
 /commitcraft-push

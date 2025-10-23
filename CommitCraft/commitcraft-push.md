@@ -1,91 +1,83 @@
 ---
-description: "CommitCraft enhanced git commit workflow"
+description: "CommitCraft automated git commit and push workflow"
 allowed-tools: ["Bash", "Read", "Edit"]
 ---
 
-# CommitCraft Enhanced Git Commit Workflow
+# CommitCraft Automated Git Workflow
 
-Creates commits with security scanning, conventional format, and Claude attribution.
+Fully automated commit workflow with security scanning, conventional format, and Claude attribution.
+
+**This command runs automatically unless there's a problem. Only stops for blockers.**
 
 ## Workflow
 
-### Step 0: Check for Required Tools
+### Step 1: Run Analysis and Check for Blockers
 
-Check if `.claude/scripts/commitcraft-analyze.sh` exists in this repository.
-
-**If NOT found, stop and show this message:**
-
-```
-❌ CommitCraft tools not installed in this repository.
-
-The /commitcraft-push command requires commitcraft-analyze.sh for:
-- Security scanning (secret detection)
-- Large file detection
-- Branch sync status (ahead/behind remote)
-- Enhanced commit context
-
-To install tools in this repo:
+Execute analysis script:
 ```bash
-commitcraft-init
+~/.claude/scripts/commitcraft-analyze.sh
 ```
 
-After installation, run /commitcraft-push again.
-```
+**Immediately check output for BLOCKERS:**
 
-**IMPORTANT: Show this error message and STOP. Do NOT attempt to run installation commands. Wait for the user to install manually.**
+1. **Secrets detected** → STOP and show:
+   ```
+   🛑 BLOCKED: Potential secrets detected in changes
 
-**Do NOT proceed without the script. Stop here.**
+   Found: [list secret patterns]
+
+   Review changes and remove secrets before committing.
+   Run 'git diff' to inspect changes.
+   ```
+
+2. **Behind remote** → STOP and show:
+   ```
+   🛑 BLOCKED: Branch is behind origin/main
+
+   Run: git pull --rebase origin main
+
+   Then run /commitcraft-push again.
+   ```
+
+3. **Merge conflicts** → STOP and show:
+   ```
+   🛑 BLOCKED: Merge conflicts detected
+
+   Resolve conflicts manually, then run /commitcraft-push again.
+   ```
+
+4. **Large files (>1000 lines changed)** → Note but continue:
+   ```
+   ⚠️  WARNING: Large files detected (will still commit)
+   [list files]
+   ```
+
+**If NO blockers → Continue to Step 2 automatically.**
 
 ---
 
-**If found, continue to Step 1.**
+### Step 2: Stage All Changes
 
----
-
-### Step 1: Gather Complete Context
-
-Execute the analysis script once to capture all commit context:
-
+Stage all modified and untracked files automatically:
 ```bash
-.claude/scripts/commitcraft-analyze.sh
+git add -A
 ```
-
-This single execution provides:
-- Branch sync status (ahead/behind remote)
-- Security scan (potential secrets)
-- Large file detection (>1000 lines changed)
-- Code quality markers (TODO/FIXME)
-- Recent commit history
-- Staged/unstaged changes
-
-Review the output before proceeding to Step 2.
-
----
-
-### Step 2: Review Changes
-
-For each changed file, review key changes:
-```bash
-git diff <file>
-```
-
-**Critical checks:**
-- Flag any secrets/credentials
-- Warn about large files
-- Note any TODOs or commented-out code
 
 ---
 
 ### Step 3: Generate Commit Message
 
-Follow Conventional Commits format:
+Analyze changes and generate Conventional Commits format message automatically.
 
+**Format:**
 ```
 <type>(<scope>): <subject>
-[BLANK LINE]
+
 <body>
-[BLANK LINE]
-<footer>
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 **Types:**
@@ -99,46 +91,53 @@ Follow Conventional Commits format:
 - `⚡ perf` - Performance improvements
 - `🌱 ci` - CI/CD pipeline changes
 
-**Format rules:**
-- **Scope** (optional): Noun describing affected area
-- **Subject**: Imperative mood ("Add feature" not "Added feature"), ≤50 chars
+**Rules:**
+- **Scope** (optional): Component/area affected
+- **Subject**: Imperative mood, ≤50 chars
 - **Body**: Detailed description, ≤72 chars/line
-- **Footer**: "BREAKING CHANGE: <description>" or issue references
+- Reference `.claude/CLAUDE.md` or `CLAUDE.md` for project-specific rules
 
 ---
 
-### Step 4: Stage and Commit
+### Step 4: Commit
 
-Stage relevant files:
-```bash
-git add <files>
-```
-
-Create commit with attribution:
+Create commit automatically:
 ```bash
 git commit -m "$(cat <<'EOF'
-<user-approved message>
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
+<generated message>
 EOF
 )"
 ```
 
 ---
 
-### Step 5: Push (If Requested)
+### Step 5: Push
 
+Push to origin automatically:
 ```bash
 git push origin <branch-name>
 ```
 
 ---
 
-## Important Reminders
+### Step 6: Report Success
 
-- Reference `.claude/CLAUDE.md` or `CLAUDE.md` for project-specific commit rules
-- STOP if secrets detected - review before committing
-- Verify commit message is accurate and concise
-- Goal: Useful commit history for future developers
+Show final status:
+```
+✓ Committed: <commit-hash>
+✓ Pushed to: origin/<branch-name>
+
+<commit message>
+```
+
+---
+
+## Blocker Summary
+
+**Only stop for these issues:**
+- 🛑 Secrets detected
+- 🛑 Behind remote (needs rebase)
+- 🛑 Merge conflicts
+- 🛑 Tools not installed
+
+**Everything else runs automatically without user interaction.**

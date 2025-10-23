@@ -12,10 +12,7 @@
 # INSTALLATION & SETUP
 # =============================================================================
 
-# Install CommitCraft tools in current repository
-alias commitcraft-init='~/.claude/scripts/commitcraft-init.sh'
-
-# Run global setup (installs ~/.claude/ and git templates)
+# Run global setup (installs ~/.claude/)
 # NOTE: Replace path with your AppletScriptorium location
 alias claude-setup='~/Code/AppletScriptorium/CommitCraft/commitcraft-install.sh'
 

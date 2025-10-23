@@ -1,6 +1,26 @@
 # AppletScriptorium — macOS Automation Tools
 
-AppletScriptorium is a collection of macOS automation tools orchestrated through AppleScript, shell, and Python. Build intelligent workflows that run locally on your Mac.
+AppletScriptorium is a collection of practical automation tools that solve real workflow problems on macOS. Each tool is built with simplicity, local execution, and user control in mind.
+
+## Strategy & Goals
+
+**Philosophy:** Build simple, focused tools that automate tedious tasks without complexity or vendor lock-in.
+
+**Core principles:**
+- **Local-first** - Everything runs on your Mac, no cloud dependencies
+- **Simple over clever** - Straightforward solutions that work reliably
+- **User control** - You choose when and how tools run
+- **No magic** - Plain scripts you can read, modify, and understand
+
+**What belongs here:**
+- Tools that save significant time on repetitive tasks
+- Automation that enhances existing workflows (email, git, browser)
+- Scripts that integrate local services (LLMs, Mail.app, Chrome)
+
+**What doesn't:**
+- Complex frameworks requiring extensive configuration
+- Cloud-dependent services
+- Tools duplicating existing solutions without clear advantage
 
 ## Tools
 
@@ -19,9 +39,9 @@ Chrome extension security scanner. Analyzes installed extensions and generates r
 [See ExtensionAuditor documentation →](./ExtensionAuditor/)
 
 ### CommitCraft
-Development workflow enhancement toolkit. Provides git commit analysis with security scanning, conventional format enforcement, and Claude Code integration.
+Development workflow enhancement toolkit. Provides automated git commits with security scanning, conventional format enforcement, and semantic versioning with automated GitHub releases.
 
-**Use case:** Craft better commits with automated security checks, large file detection, and consistent formatting.
+**Use case:** Automate commits and releases with security checks, version bumping, and auto-generated release notes.
 
 [See CommitCraft documentation →](./CommitCraft/)
 
@@ -98,13 +118,17 @@ cd AppletScriptorium
 │   ├── extension-auditor.py      # Main scanner script (cross-platform)
 │   └── README.md                 # Usage documentation
 ├── CommitCraft/                  # Development workflow enhancement toolkit
-│   ├── commitcraft-init.sh       # Per-repo installer
 │   ├── commitcraft-analyze.sh    # Pre-commit analysis script
-│   ├── commitcraft-push.md       # Enhanced commit command
+│   ├── commitcraft-release-analyze.sh  # Release version analysis
+│   ├── commitcraft-push.md       # Automated commit command
+│   ├── commitcraft-release.md    # Automated release command
 │   ├── commitcraft-install.sh    # Global installer with TUI
-│   ├── post-checkout             # Git hook for passive discovery
+│   ├── shell-aliases             # Optional shell convenience aliases
 │   ├── README.md                 # Setup and usage guide
 │   └── docs/                     # Detailed documentation
+│       ├── commitcraft-push.md   # Commit command user guide
+│       ├── commitcraft-release.md # Release command user guide
+│       └── adding-tools.md       # Extension guide
 └── README.md                     # This file
 ```
 
@@ -224,6 +248,36 @@ python3 -m pytest Summarizer/tests/test_link_extractor.py -v
 - Fixture management: `Summarizer/refresh-fixtures.py`
 - Optional: `url-to-md` CLI for Cloudflare-protected sites (`npm install -g url-to-markdown-cli-tool`)
 - Optional: `JINA_API_KEY` env var for Jina Reader API fallback
+
+---
+
+## Contributing New Tools
+
+New tools should follow these guidelines:
+
+1. **Solve a real problem** - Automate something genuinely tedious
+2. **Keep it simple** - Straightforward implementation over clever abstraction
+3. **Work locally** - Prefer local execution, avoid cloud dependencies
+4. **Document clearly** - README with usage examples and troubleshooting
+5. **Test thoroughly** - Include test suite or validation script
+
+**Directory structure:**
+```
+ToolName/
+├── main-script.py           # Primary script
+├── config.py                # Configuration (if needed)
+├── README.md                # Usage documentation
+├── requirements.txt         # Dependencies (if Python)
+└── tests/                   # Test suite
+```
+
+**Before contributing:**
+- Check existing tools don't already solve this
+- Verify it runs reliably on macOS
+- Include setup/installation instructions
+- Add troubleshooting section
+
+See individual tool READMEs for examples.
 
 ---
 

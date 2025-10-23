@@ -1,19 +1,21 @@
 # CommitCraft
 
-A lightweight, git-based system for propagating CommitCraft tools and enhancements across all your repositories without intrusion or forced installs.
+Development workflow enhancement toolkit. Provides git commit analysis with security scanning, conventional format enforcement, and automated release management.
 
 ## Overview
 
-When you develop useful CommitCraft scripts and workflows (git commit analysis, project initialization helpers, custom commands), you want them available across all your projects. But copying files manually is tedious, and auto-installation removes user choice.
+CommitCraft provides tools that enhance your development workflow across all repositories:
 
-This system solves the discoverability problem through git hooks that passively remind you about available tools when you clone or work in repositories. When you first use a command like `/commitcraft-push` (git commit workflow), you get an interactive prompt: install the tools, ignore them permanently, or defer the decision. Your choice is remembered per-repository.
+- **Commit Analysis** - Security scanning, large file detection, sync checking
+- **Automated Commits** - AI-assisted commit messages with conventional format
+- **Release Automation** - Semantic versioning with auto-generated release notes
 
 **Key benefits:**
 
-- Non-intrusive: Passive reminders, not forced installs
-- User agency: You choose install/ignore/defer on first use
-- Works everywhere: Git hooks run automatically in all repos after one-time setup
-- Template-based: This repo provides a reference implementation you can customize
+- Single-step global setup works in all repositories
+- No per-repo configuration needed
+- Commands available immediately after installation
+- Scripts stay in `~/.claude/` - no local copies to maintain
 
 ## Quick Start
 
@@ -22,343 +24,301 @@ This system solves the discoverability problem through git hooks that passively 
 git clone https://github.com/starfysh-tech/AppletScriptorium.git
 cd AppletScriptorium/CommitCraft
 
-# Run the intelligent installer
+# Run the installer
 ./commitcraft-install.sh
 ```
 
 **The installer automatically detects your current state:**
-- **Not installed:** Offers to install hooks and tools
+- **Not installed:** Offers to install tools to `~/.claude/`
 - **Updates available:** Shows what changed, offers to update
 - **Up to date:** Confirms all files current
 
 Uses content hashing (MD5) for accurate change detection—works reliably after `git pull`.
 
-After setup, the system activates automatically in all git repositories:
-
-- Passive reminders appear after `git checkout` or `git clone`
-- Interactive prompts appear when you use commands like `/commitcraft-push`
-- Your choices are saved per-repository
+After setup, CommitCraft commands work immediately in any git repository.
 
 ## How It Works
 
-The system uses a three-tier architecture:
+CommitCraft uses a simple 2-tier architecture:
 
 **1. Global Tools (~/.claude/)**
-- Your personal CommitCraft toolkit
-- Contains scripts like `commitcraft-analyze.sh`
-- Installed once, available everywhere
+- Scripts installed to `~/.claude/scripts/`
+- Commands installed to `~/.claude/commands/`
+- Works in all repositories automatically
 
-**2. Git Hook Templates (~/.git-templates/hooks/)**
-- Git hooks that run automatically in all repos
-- `post-checkout`: Shows passive reminder after clone/checkout
-- Triggers interactive prompts when commands detect missing tools
-
-**3. Local Tools (.claude/)**
-- Repository-specific copies of global tools
-- Created when you choose "Install" at the prompt
-- Can be customized per-project
+**2. Commands Reference Scripts**
+- Commands like `/commitcraft-push` run scripts from `~/.claude/scripts/`
+- No local installation or configuration needed
+- Works in any directory
 
 **Flow:**
 
-1. Git hook runs after checkout/clone
-2. Checks if `.claude/` exists or `.claude-ignore` present
-3. If neither, shows passive reminder (once per repo)
-4. When you use `/commitcraft-push` or similar command:
-   - Detects missing `.claude/` directory
-   - Prompts: Install / Ignore / Defer
-   - Your choice is saved (.claude/ created or .claude-ignore added to .git/info/exclude)
+1. Run `./commitcraft-install.sh` once (copies files to `~/.claude/`)
+2. Commands immediately available in Claude Code (any repo)
+3. Scripts run from global location using current working directory
 
 ## Available Tools
 
-### Tool #1: Enhanced Git Commit (/commitcraft-push command)
+### /commitcraft-push Command
 
-**Brief:** AI-assisted commits with security scanning, conventional format, and rich context analysis.
+**Brief:** Automated git commit workflow with security scanning and AI-assisted messaging.
 
-**Scripts:**
-- `commitcraft-analyze.sh` - Gathers commit context (status, diffs, secrets, TODOs, file tree)
+**What it does:**
+1. Runs `commitcraft-analyze.sh` for context (security, diffs, sync status)
+2. Checks for blockers (secrets, behind remote, conflicts)
+3. Auto-stages all changes
+4. Generates conventional commit message with Claude
+5. Auto-commits with attribution
+6. Auto-pushes to origin
 
-**Commands:**
-- `/commitcraft-push` - Interactive git commit workflow with AI assistance
+**Blockers (stops only for these):**
+- 🛑 Potential secrets detected
+- 🛑 Branch behind remote (need pull first)
+- 🛑 Merge conflicts present
+- 🛑 Large files (>1000 lines changed)
 
-**Key features:**
-- Automated secret scanning before commit
-- Conventional commit format enforcement
-- Rich context gathering for AI-generated messages
-- Interactive review and approval workflow
+**Otherwise fully automated** - no user interaction needed.
 
-**Detailed documentation:** See [docs/commitcraft-push.md](/Users/randallnoval/Code/AppletScriptorium/CommitCraft/docs/commitcraft-push.md)
+**Detailed documentation:** See [docs/commitcraft-push.md](docs/commitcraft-push.md)
 
-### commitcraft-init
+---
 
-Command-line tool to install CommitCraft tools in the current repository:
+### /commitcraft-release Command
 
+**Brief:** Automated semantic versioning and GitHub release creation.
+
+**What it does:**
+1. Runs `commitcraft-release-analyze.sh` for version analysis
+2. Checks for blockers (dirty tree, no gh CLI, no commits)
+3. Auto-detects version bump from conventional commits
+4. Generates structured release notes
+5. Creates git tag
+6. Pushes tag to origin
+7. Creates GitHub release
+
+**Version bump rules:**
+- **BREAKING CHANGE** in commits → major (v2.0.0 → v3.0.0)
+- **feat:** commits → minor (v2.0.0 → v2.1.0)
+- **fix:** commits → patch (v2.0.0 → v2.0.1)
+
+**Blockers (stops only for these):**
+- 🛑 Uncommitted changes
+- 🛑 GitHub CLI not installed/authenticated
+- 🛑 No commits since last release
+
+**Otherwise fully automated** - no user interaction needed.
+
+---
+
+### commitcraft-analyze.sh Script
+
+**Brief:** Pre-commit analysis for security and quality checks.
+
+**What it does:**
+- Scans for potential secrets (API keys, passwords, tokens)
+- Detects large file changes (>1000 lines)
+- Checks sync status with remote
+- Surfaces TODO/FIXME markers in changes
+- Provides context for AI commit message generation
+
+**Usage:**
 ```bash
-# Install tools
-commitcraft-init
+# Via alias (if configured)
+git-analyze
 
-# Creates:
-# .claude/scripts/commitcraft-analyze.sh
-# .claude/scripts/commitcraft-init.sh
-# Updates .gitignore to exclude .claude/
+# Or directly
+~/.claude/scripts/commitcraft-analyze.sh
 ```
 
-Available via shell alias after running `commitcraft-install.sh`.
+**Used by:** `/commitcraft-push` command
 
-## Using in New Repos
+---
 
-### First Clone
+### commitcraft-release-analyze.sh Script
 
+**Brief:** Release analysis for semantic versioning.
+
+**What it does:**
+- Validates gh CLI availability and authentication
+- Checks for clean working tree
+- Parses latest semver tag
+- Categorizes commits by type (breaking/feat/fix/docs)
+- Calculates version bump
+- Displays structured analysis
+
+**Usage:**
 ```bash
-# Clone any repository
-git clone https://github.com/example/project.git
-cd project
-
-# You see a passive reminder:
-# 📎 CommitCraft tools are available via `commitcraft-init`. Run anytime to install.
+~/.claude/scripts/commitcraft-release-analyze.sh
 ```
 
-### First Command Use
+**Used by:** `/commitcraft-release` command
 
-```bash
-# Try using a command in CommitCraft
-/commitcraft-push "Add user authentication"
+## Installation Details
 
-# You see an interactive prompt:
-# CommitCraft tools not installed in this repo.
-#
-# Would you like to install them? They enable:
-#   - commitcraft-analyze.sh (commit context)
-#   - Enhanced workflows
-#
-# Choose:
-#   i - Install tools in .claude/
-#   n - Never ask again (ignore)
-#   d - Defer (ask later)
-#
-# Your choice:
+### What Gets Installed
+
+```
+~/.claude/
+├── scripts/
+│   ├── commitcraft-analyze.sh
+│   └── commitcraft-release-analyze.sh
+└── commands/
+    ├── commitcraft-push.md
+    └── commitcraft-release.md
 ```
 
-**After choosing "Install":**
-- `.claude/` directory created with scripts
-- `.claude/` added to `.gitignore` (tools stay local)
-- Commands work seamlessly
+### Shell Aliases (Optional)
 
-**After choosing "Ignore":**
-- `.claude-ignore` marker added to `.git/info/exclude`
-- Commands use fallback behavior (work without tools)
-- Never prompted again in this repo
-
-**After choosing "Defer":**
-- Nothing changes
-- Prompted again next time you use the command
-
-## Using in Existing Repos
-
-For repositories that existed before you installed the hooks:
-
-### Automatic Activation
+Add to your `~/.zshrc` or `~/.bashrc`:
 
 ```bash
-cd existing-project
+# Run global setup
+alias claude-setup='~/Code/AppletScriptorium/CommitCraft/commitcraft-install.sh'
 
-# Next time you checkout a branch:
-git checkout feature-branch
-
-# You see the passive reminder:
-# 📎 CommitCraft tools are available via `commitcraft-init`. Run anytime to install.
+# Run pre-commit analysis
+alias git-analyze='~/.claude/scripts/commitcraft-analyze.sh'
 ```
 
-### Manual Installation
+See [shell-aliases](shell-aliases) for complete set of convenience aliases.
+
+## Using Commands
+
+### In Any Repository
 
 ```bash
-cd existing-project
+cd any-project
 
-# Run the installer directly
-commitcraft-init
+# Use CommitCraft commands immediately
+/commitcraft-push
+/commitcraft-release
 
-# Tools installed in .claude/
+# Or run scripts directly
+~/.claude/scripts/commitcraft-analyze.sh
 ```
 
-### Opt-Out
+**No per-repo setup needed.** Commands work in any git repository after global installation.
 
-To permanently ignore tools in a specific repo:
+## Updating
 
-```bash
-# Create the ignore marker
-touch .git/info/exclude
-echo '.claude-ignore' >> .git/info/exclude
-touch .claude-ignore
-
-# Or just answer "n" when prompted by a command
-```
-
-## Adding New Tools
-
-This system is designed for extension. To add new tools:
-
-**Quick steps:**
-
-1. Create your script in `CommitCraft/scripts/`
-2. Update `SOURCE_FILES` array in `commitcraft-install.sh`
-3. Run `./commitcraft-install.sh` to propagate to `~/.claude/`
-4. Create command template that checks for `.claude/` and prompts for installation
-
-**Detailed documentation:** See [docs/adding-tools.md](/Users/randallnoval/Code/AppletScriptorium/CommitCraft/docs/adding-tools.md)
-
-## Customization
-
-### Per-Repo Scripts
-
-After installing tools in a repo, customize them locally:
-
-```bash
-cd myproject
-
-# Edit local copy
-vim .claude/scripts/commitcraft-analyze.sh
-
-# Changes only affect this repo
-# Global template (~/.claude/) stays unchanged
-```
-
-### Updating Global Baseline
-
-To pull latest versions from AppletScriptorium:
+### Update Global Toolkit
 
 ```bash
 cd AppletScriptorium/CommitCraft
 git pull
 
-# Re-run installer—it detects what's changed
+# Re-run installer - shows what changed
 ./commitcraft-install.sh
 ```
 
-**The installer shows you exactly what changed:**
-- Lists files with updates available
-- Uses content hashing to detect real changes (not timestamps)
-- Offers to update all or skip
+The installer uses content hashing to detect changes and shows exactly which files have updates available.
 
-**After updating `~/.claude/`:**
+### No Per-Repo Updates Needed
 
-To propagate updates to existing repos:
+Since commands reference `~/.claude/scripts/` directly, all repositories use the latest versions automatically after updating global installation.
 
+## Adding New Tools
+
+This system is designed for extension. To add new tools:
+
+**Steps:**
+
+1. Create script in `CommitCraft/` (e.g., `my-tool.sh`)
+2. Create command in `CommitCraft/` (e.g., `my-command.md`)
+3. Update `SOURCE_FILES` array in `commitcraft-install.sh`:
+   ```bash
+   declare -A SOURCE_FILES=(
+       # ... existing files ...
+       ["~/.claude/scripts/my-tool.sh"]="my-tool.sh"
+       ["~/.claude/commands/my-command.md"]="my-command.md"
+   )
+   ```
+4. Run `./commitcraft-install.sh` to propagate to `~/.claude/`
+5. Command immediately available in all repos
+
+**Command pattern:**
 ```bash
-# Re-run commitcraft-init in each repo
-cd myproject
-commitcraft-init  # Updates .claude/ with latest from ~/.claude/
+# Commands should reference global scripts
+~/.claude/scripts/my-tool.sh
 ```
+
+**Detailed documentation:** See [docs/adding-tools.md](docs/adding-tools.md)
 
 ## Troubleshooting
 
-### Hook Not Running
+### Commands Not Found
 
-**Symptom:** No passive reminder after `git clone` or `git checkout`
+**Symptom:** `/commitcraft-push` not recognized in Claude Code
 
 **Fixes:**
 
 ```bash
-# Verify hooks are installed globally
-ls -la ~/.git-templates/hooks/
+# Verify commands installed globally
+ls -la ~/.claude/commands/
 
-# Should see: post-checkout
+# Should see: commitcraft-push.md, commitcraft-release.md
 
-# Verify git is configured to use templates
-git config --global init.templateDir
-# Should output: ~/.git-templates
-
-# Re-run setup if needed
+# Re-run installer if missing
 cd AppletScriptorium/CommitCraft
 ./commitcraft-install.sh
-
-# For existing repos, manually copy hooks
-mkdir -p .git/hooks
-cp ~/.git-templates/hooks/post-checkout .git/hooks/
-chmod +x .git/hooks/post-checkout
 ```
 
-### Tools Not Installing
+### Scripts Not Found
 
-**Symptom:** `commitcraft-init` command not found or fails
+**Symptom:** Command fails with "script not found" error
 
 **Fixes:**
 
 ```bash
-# Verify global tools exist
+# Verify scripts installed globally
 ls -la ~/.claude/scripts/
 
-# Should see: commitcraft-init.sh, commitcraft-analyze.sh
-
-# Option 1: Use shell alias (if you added it during install)
-commitcraft-init
-
-# Option 2: Use full path (always works)
-~/.claude/scripts/commitcraft-init.sh
-
-# Option 3: Add to PATH
-echo 'export PATH="$HOME/.claude/scripts:$PATH"' >> ~/.zshrc
-source ~/.zshrc
+# Should see: commitcraft-analyze.sh, commitcraft-release-analyze.sh
 
 # Verify permissions
 chmod +x ~/.claude/scripts/*
+
+# Re-run installer if needed
+cd AppletScriptorium/CommitCraft
+./commitcraft-install.sh
 ```
 
 ### Shell Alias Not Working
 
-**Symptom:** `commitcraft-init` command not found after install
+**Symptom:** `git-analyze` command not found
 
-**Cause:** Shell aliases are optional during installation
+**Cause:** Shell aliases are optional
 
 **Fixes:**
 
 ```bash
-# Option 1: Re-run installer
-cd AppletScriptorium/CommitCraft
-./commitcraft-install.sh
-
-# Option 2: Add alias manually to your shell config
-echo "alias commitcraft-init='~/.claude/scripts/commitcraft-init.sh'" >> ~/.zshrc
+# Option 1: Add alias manually
+echo "alias git-analyze='~/.claude/scripts/commitcraft-analyze.sh'" >> ~/.zshrc
 source ~/.zshrc
 
-# Option 3: Just use the full path (no alias needed)
-~/.claude/scripts/commitcraft-init.sh
+# Option 2: Use full path (no alias needed)
+~/.claude/scripts/commitcraft-analyze.sh
+
+# Option 3: Add to PATH
+echo 'export PATH="$HOME/.claude/scripts:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
-### Reset/Uninstall
+### Uninstall
 
-**Remove from specific repo:**
-
-```bash
-cd myproject
-
-# Remove tools
-rm -rf .claude
-
-# Remove ignore marker
-rm .claude-ignore
-# Also remove from .git/info/exclude if added manually
-```
-
-**Uninstall completely:**
+**Remove global tools:**
 
 ```bash
-# Remove global tools
+# Remove all CommitCraft files
 rm -rf ~/.claude
 
-# Remove git hook templates
-rm -rf ~/.git-templates/hooks
-
-# Remove git configuration
-git config --global --unset init.templateDir
-
-# Existing repos keep their hooks
-# To remove from existing repo:
-rm .git/hooks/post-checkout
+# Verify removal
+ls -la ~/.claude
 ```
 
 **Clean reinstall:**
 
 ```bash
-# Uninstall (steps above)
+# Uninstall (step above)
 # Then re-run setup
 cd AppletScriptorium/CommitCraft
 ./commitcraft-install.sh
@@ -366,11 +326,11 @@ cd AppletScriptorium/CommitCraft
 
 ## Philosophy
 
-This system respects user agency:
+This system prioritizes simplicity:
 
-- **Passive, not aggressive:** Reminders, not auto-installs
-- **Choice preserved:** Install/ignore/defer on your terms
-- **Transparent:** Plain shell scripts, no magic
-- **Customizable:** Modify per-repo or globally
+- **Single setup** - Install once, use everywhere
+- **No per-repo config** - Works in any repository immediately
+- **Transparent** - Plain shell scripts, no magic
+- **Updateable** - One command updates all repositories
 
-The goal is discoverability without intrusion. You control when and where CommitCraft enhancements are used.
+The goal is to provide useful development tools without complexity or maintenance burden.

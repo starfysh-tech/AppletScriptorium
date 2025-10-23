@@ -2,11 +2,12 @@
 
 ## Overview
 
-CommitCraft is a multi-tool platform for propagating Claude Code enhancements across all your repositories. The system uses git hooks for discoverability and provides an interactive installation workflow that respects user choice.
+CommitCraft is a development workflow enhancement toolkit. Tools are simple: create a script, create a command that uses it, and add both to the installer. After running the installer, the command works in any repository.
 
 **Current tools:**
-- Tool #1: Enhanced Git Commit (`/commitcraft-push` + `commitcraft-analyze.sh`)
-- Tool #2: (your future tool here)
+- Tool #1: Automated Commits (`/commitcraft-push` + `commitcraft-analyze.sh`)
+- Tool #2: Automated Releases (`/commitcraft-release` + `commitcraft-release-analyze.sh`)
+- Tool #3: (your future tool here)
 
 ## File Organization
 
@@ -14,16 +15,18 @@ CommitCraft is a multi-tool platform for propagating Claude Code enhancements ac
 
 ```
 CommitCraft/
-├── commitcraft-install.sh    # Platform installer
-├── commitcraft-init.sh       # Per-repo installer
-├── post-checkout             # Git hook
-├── your-script.sh            # Your tool script
-├── your-command.md           # Your command
-├── README.md                 # Platform docs
+├── commitcraft-install.sh          # Global installer
+├── commitcraft-analyze.sh          # Tool #1 script
+├── commitcraft-release-analyze.sh  # Tool #2 script
+├── commitcraft-push.md             # Tool #1 command
+├── commitcraft-release.md          # Tool #2 command
+├── your-tool.sh                    # Your script
+├── your-command.md                 # Your command
+├── README.md                       # Platform docs
 └── docs/
-    ├── your-tool.md          # Your tool docs
-    ├── commitcraft-push.md   # Tool #1 docs
-    └── adding-tools.md       # This file
+    ├── commitcraft-push.md         # Tool #1 docs
+    ├── adding-tools.md             # This file
+    └── your-tool.md                # Your tool docs
 ```
 
 ### Flat Structure
@@ -36,13 +39,13 @@ CommitCraft/
 
 ### 1. Create the Script
 
-Place your script at `CommitCraft/your-script.sh`
+Place your script at `CommitCraft/your-tool.sh`
 
 **Best practices:**
 - Use bash shebang: `#!/usr/bin/env bash`
 - Add header comments explaining purpose
 - Include usage examples
-- Make it executable: `chmod +x your-script.sh`
+- Make it executable: `chmod +x your-tool.sh`
 
 **Example:**
 
@@ -51,7 +54,7 @@ Place your script at `CommitCraft/your-script.sh`
 # Your Tool Name - Brief description
 #
 # Usage:
-#   ./your-script.sh [options]
+#   your-tool.sh [options]
 #
 # Dependencies:
 #   - tool1
@@ -64,15 +67,15 @@ set -euo pipefail
 
 ### 2. Update commitcraft-install.sh
 
-Add your script to the `SOURCE_FILES` array (line 27):
+Add your script to the `SOURCE_FILES` array (around line 27):
 
 ```bash
 declare -A SOURCE_FILES=(
     ["~/.claude/scripts/commitcraft-analyze.sh"]="commitcraft-analyze.sh"
-    ["~/.claude/scripts/commitcraft-init.sh"]="commitcraft-init.sh"
-    ["~/.git-templates/hooks/post-checkout"]="post-checkout"
+    ["~/.claude/scripts/commitcraft-release-analyze.sh"]="commitcraft-release-analyze.sh"
     ["~/.claude/commands/commitcraft-push.md"]="commitcraft-push.md"
-    ["~/.claude/scripts/your-script.sh"]="your-script.sh"  # Add this
+    ["~/.claude/commands/commitcraft-release.md"]="commitcraft-release.md"
+    ["~/.claude/scripts/your-tool.sh"]="your-tool.sh"  # Add this
 )
 ```
 
@@ -85,10 +88,10 @@ This ensures your script is copied to `~/.claude/scripts/` on install.
 ./commitcraft-install.sh
 
 # Verify file copied
-ls -la ~/.claude/scripts/your-script.sh
+ls -la ~/.claude/scripts/your-tool.sh
 
 # Test execution
-~/.claude/scripts/your-script.sh
+~/.claude/scripts/your-tool.sh
 ```
 
 ## Adding a New Command
@@ -101,7 +104,7 @@ Place your command at `CommitCraft/your-command.md`
 - Add frontmatter with description and allowed-tools
 - Keep it simple (complex workflows should be Skills)
 - Single-purpose and frequently-used
-- Check for `.claude/` directory and prompt for installation if missing
+- Reference scripts from `~/.claude/scripts/` (global location)
 
 **Example structure:**
 
@@ -113,32 +116,31 @@ allowed-tools: ["Bash", "Read", "Edit"]
 
 # Your Command Name
 
+Brief description and purpose.
+
 ## Workflow
 
-1. Check if tools are installed:
-   ```bash
-   if [ ! -d .claude ]; then
-       # Show installation prompt
-       echo "Claude Code tools not installed in this repo."
-       echo ""
-       echo "Would you like to install them? They enable:"
-       echo "  - your-script.sh (feature description)"
-       echo "  - Enhanced workflows"
-       echo ""
-       echo "Choose:"
-       echo "  i - Install tools in .claude/"
-       echo "  n - Never ask again (ignore)"
-       echo "  d - Defer (ask later)"
-       # Handle user choice
-   fi
-   ```
+### Step 1: Run Analysis
 
-2. Execute your workflow steps...
+Execute your script from global location:
+```bash
+~/.claude/scripts/your-tool.sh
 ```
+
+### Step 2: Process Results
+
+Handle output and take action...
+
+### Step 3: Report Success
+
+Show results to user.
+```
+
+**Key point:** Commands reference `~/.claude/scripts/` directly - no local installation needed.
 
 ### 2. Update commitcraft-install.sh
 
-Add your command to `SOURCE_FILES` array (line 27):
+Add your command to `SOURCE_FILES` array:
 
 ```bash
 ["~/.claude/commands/your-command.md"]="your-command.md"
@@ -156,7 +158,7 @@ This ensures your command is copied to `~/.claude/commands/` on install.
 ls -la ~/.claude/commands/your-command.md
 
 # Test in Claude Code
-# Use /your-command in a repository
+# Use /your-command in any repository
 ```
 
 ## Adding Documentation
@@ -166,7 +168,6 @@ ls -la ~/.claude/commands/your-command.md
 Create `docs/your-tool.md` with:
 
 - Overview and purpose
-- Installation instructions
 - Usage examples
 - Customization options
 - Troubleshooting section
@@ -182,27 +183,30 @@ Brief description of what your tool does and why it's useful.
 
 ## Installation
 
-Covered by main commitcraft-install.sh - automatically included.
+Included automatically when running `./commitcraft-install.sh`.
+
+Installed to:
+- Script: `~/.claude/scripts/your-tool.sh`
+- Command: `~/.claude/commands/your-command.md`
 
 ## Usage
 
 ### Basic Usage
 
 ```bash
-# Example command
-your-script.sh arg1 arg2
+# Via command
+/your-command
+
+# Or directly
+~/.claude/scripts/your-tool.sh arg1 arg2
 ```
 
 ### Advanced Usage
 
 ```bash
 # Example with options
-your-script.sh --option value
+~/.claude/scripts/your-tool.sh --option value
 ```
-
-## Customization
-
-How to customize per-repo or globally.
 
 ## Troubleshooting
 
@@ -211,25 +215,41 @@ Common issues and solutions.
 
 ### 2. Update README.md
 
-Add your tool to the "Available Tools" section (after line 89):
+Add your tool to the "Available Tools" section:
 
 ```markdown
-### Tool #2: Your Tool Name (/your-command)
+### /your-command Command
 
 **Brief:** One-line description of what your tool does.
 
-**Scripts:**
-- `your-script.sh` - Brief script description
+**What it does:**
+1. Step 1 description
+2. Step 2 description
+3. Step 3 description
 
-**Commands:**
-- `/your-command` - Brief command description
+**Blockers (stops only for these):**
+- 🛑 Problem 1
+- 🛑 Problem 2
 
-**Key features:**
+**Otherwise fully automated** - no user interaction needed.
+
+---
+
+### your-tool.sh Script
+
+**Brief:** One-line script description.
+
+**What it does:**
 - Feature 1
 - Feature 2
 - Feature 3
 
-**Detailed documentation:** See [docs/your-tool.md](/Users/randallnoval/Code/AppletScriptorium/CommitCraft/docs/your-tool.md)
+**Usage:**
+```bash
+~/.claude/scripts/your-tool.sh
+```
+
+**Used by:** `/your-command` command
 ```
 
 ## Testing
@@ -238,56 +258,52 @@ Add your tool to the "Available Tools" section (after line 89):
 
 ```bash
 # Run installer
-cd /Users/randallnoval/Code/AppletScriptorium/CommitCraft
+cd ~/Code/AppletScriptorium/CommitCraft
 ./commitcraft-install.sh
 
 # Verify files copied to global location
-ls -la ~/.claude/scripts/your-script.sh
+ls -la ~/.claude/scripts/your-tool.sh
 ls -la ~/.claude/commands/your-command.md
 
 # Check permissions
-test -x ~/.claude/scripts/your-script.sh && echo "Executable" || echo "Not executable"
+test -x ~/.claude/scripts/your-tool.sh && echo "Executable" || echo "Not executable"
 ```
 
-### 2. Test in Repository
+### 2. Test in Any Repository
 
 ```bash
-# Create test repo
-cd /tmp
-mkdir test-repo
-cd test-repo
-git init
+# Navigate to any git repository
+cd ~/some-other-project
 
-# Install tools locally
-claude-init
-
-# Verify local installation
-ls -la .claude/scripts/your-script.sh
+# Test script directly
+~/.claude/scripts/your-tool.sh
 
 # Test command in Claude Code
 # Use /your-command
 ```
 
+**No per-repo setup needed** - scripts work from global location.
+
 ### 3. Test Updates
 
 ```bash
 # Modify source file
-cd /Users/randallnoval/Code/AppletScriptorium/CommitCraft
-echo "# updated comment" >> your-script.sh
+cd ~/Code/AppletScriptorium/CommitCraft
+echo "# updated comment" >> your-tool.sh
 
 # Run installer again
 ./commitcraft-install.sh
 
 # Should show "update available" and offer to update
 # Accept update and verify changes propagated
-cat ~/.claude/scripts/your-script.sh | tail -1
+cat ~/.claude/scripts/your-tool.sh | tail -1
 ```
 
 ### 4. Test Hash-Based Detection
 
 ```bash
 # Touch file (change timestamp only)
-touch your-script.sh
+touch your-tool.sh
 
 # Run installer
 ./commitcraft-install.sh
@@ -300,9 +316,9 @@ touch your-script.sh
 
 ### Naming Conventions
 
-- **Scripts:** kebab-case (e.g., `commitcraft-analyze.sh`)
-- **Commands:** kebab-case (e.g., `git-push.md`)
-- **Docs:** kebab-case (e.g., `docs/commitcraft-push.md`)
+- **Scripts:** `commitcraft-*` prefix, kebab-case (e.g., `commitcraft-analyze.sh`)
+- **Commands:** `commitcraft-*` prefix, kebab-case (e.g., `commitcraft-push.md`)
+- **Docs:** Match tool name (e.g., `docs/commitcraft-push.md`)
 
 ### Script Standards
 
@@ -310,13 +326,14 @@ touch your-script.sh
 - Include usage examples in header comments
 - Handle errors gracefully with clear messages
 - Make scripts executable before committing
+- Test with various working directories (scripts run from `~/.claude/scripts/` but operate on `$PWD`)
 
 ### Command Standards
 
-- Always check for `.claude/` directory
-- Provide installation prompt when tools missing
-- Support three choices: Install / Ignore / Defer
-- Provide fallback behavior when possible
+- Reference scripts from `~/.claude/scripts/` (not `.claude/scripts/`)
+- Focus on automation - only stop for blockers
+- Provide clear blocker messages with resolution steps
+- Report success clearly at the end
 
 ### Documentation
 
@@ -337,20 +354,20 @@ touch your-script.sh
 **Step 1: Create script**
 
 ```bash
-cd /Users/randallnoval/Code/AppletScriptorium/CommitCraft
+cd ~/Code/AppletScriptorium/CommitCraft
 
-cat > analyze-logs.sh << 'EOF'
+cat > commitcraft-logs.sh << 'EOF'
 #!/usr/bin/env bash
 # Log Analyzer - Extracts error patterns from logs
 #
 # Usage:
-#   analyze-logs.sh <logfile>
+#   commitcraft-logs.sh <logfile>
 
 set -euo pipefail
 
 logfile="${1:-}"
 if [ -z "$logfile" ]; then
-    echo "Usage: analyze-logs.sh <logfile>"
+    echo "Usage: commitcraft-logs.sh <logfile>"
     exit 1
 fi
 
@@ -358,13 +375,13 @@ fi
 grep -i "error\|warning" "$logfile" | sort | uniq -c | sort -rn
 EOF
 
-chmod +x analyze-logs.sh
+chmod +x commitcraft-logs.sh
 ```
 
 **Step 2: Create command**
 
 ```bash
-cat > analyze-logs.md << 'EOF'
+cat > commitcraft-logs.md << 'EOF'
 ---
 description: "Analyze logs for error patterns"
 allowed-tools: ["Bash", "Read"]
@@ -372,25 +389,59 @@ allowed-tools: ["Bash", "Read"]
 
 # Analyze Logs
 
-Check if tools installed, run analysis...
+Extracts and counts error patterns from log files.
+
+## Workflow
+
+### Step 1: Find log files
+
+Locate log files in current directory:
+```bash
+find . -name "*.log" -type f
+```
+
+### Step 2: Analyze
+
+Run analysis on each file:
+```bash
+~/.claude/scripts/commitcraft-logs.sh <logfile>
+```
+
+### Step 3: Report
+
+Show top error patterns to user.
 EOF
 ```
 
 **Step 3: Update commitcraft-install.sh**
 
 ```bash
-# Edit line 27, add:
-["~/.claude/scripts/analyze-logs.sh"]="analyze-logs.sh"
-["~/.claude/commands/analyze-logs.md"]="analyze-logs.md"
+# Edit SOURCE_FILES array, add:
+["~/.claude/scripts/commitcraft-logs.sh"]="commitcraft-logs.sh"
+["~/.claude/commands/commitcraft-logs.md"]="commitcraft-logs.md"
 ```
 
 **Step 4: Create documentation**
 
 ```bash
-cat > docs/analyze-logs.md << 'EOF'
+cat > docs/commitcraft-logs.md << 'EOF'
 # Log Analyzer
 
-Extracts error patterns from log files...
+Extracts error patterns from log files.
+
+## Installation
+
+Installed automatically via `./commitcraft-install.sh`.
+
+## Usage
+
+```bash
+# Via command
+/commitcraft-logs
+
+# Or directly
+~/.claude/scripts/commitcraft-logs.sh /var/log/system.log
+```
 EOF
 ```
 
@@ -404,11 +455,35 @@ Add tool description to "Available Tools" section.
 # Install
 ./commitcraft-install.sh
 
-# Test in repo
-cd /tmp/test-repo
-claude-init
-.claude/scripts/analyze-logs.sh /var/log/system.log
+# Test in any repo
+cd ~/some-project
+~/.claude/scripts/commitcraft-logs.sh app.log
 ```
+
+## Architecture Notes
+
+### Why Global Scripts?
+
+Commands reference `~/.claude/scripts/` directly because:
+
+1. **Simplicity** - No per-repo installation needed
+2. **Consistency** - All repos use same version automatically
+3. **Updates** - One update propagates everywhere
+4. **Less maintenance** - No local copies to track
+
+### Scripts Use Current Working Directory
+
+Scripts run from `~/.claude/scripts/` but operate on the current working directory (`$PWD`). This means:
+
+```bash
+# When you run this in ~/myproject:
+~/.claude/scripts/commitcraft-analyze.sh
+
+# The script runs git commands in ~/myproject
+# Not in ~/.claude/scripts/
+```
+
+Commands work in any directory without knowing the script's location.
 
 ## See Also
 
