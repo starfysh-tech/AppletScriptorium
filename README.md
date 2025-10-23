@@ -18,6 +18,13 @@ Chrome extension security scanner. Analyzes installed extensions and generates r
 
 [See ExtensionAuditor documentation →](./ExtensionAuditor/)
 
+### CommitCraft
+Development workflow enhancement toolkit. Provides git commit analysis with security scanning, conventional format enforcement, and Claude Code integration.
+
+**Use case:** Craft better commits with automated security checks, large file detection, and consistent formatting.
+
+[See CommitCraft documentation →](./CommitCraft/)
+
 ---
 
 ## Summarizer: How It Works
@@ -90,6 +97,14 @@ cd AppletScriptorium
 ├── ExtensionAuditor/             # Chrome extension security scanner
 │   ├── extension-auditor.py      # Main scanner script (cross-platform)
 │   └── README.md                 # Usage documentation
+├── CommitCraft/                  # Development workflow enhancement toolkit
+│   ├── commitcraft-init.sh       # Per-repo installer
+│   ├── commitcraft-analyze.sh    # Pre-commit analysis script
+│   ├── commitcraft-push.md       # Enhanced commit command
+│   ├── commitcraft-install.sh    # Global installer with TUI
+│   ├── post-checkout             # Git hook for passive discovery
+│   ├── README.md                 # Setup and usage guide
+│   └── docs/                     # Detailed documentation
 └── README.md                     # This file
 ```
 

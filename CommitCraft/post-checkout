@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Post-checkout git hook for CommitCraft tool discovery
+#
+# This hook runs automatically after:
+# - git clone <repo>
+# - git checkout <branch>
+#
+# Purpose: Show a one-time passive reminder that CommitCraft tools are available
+# Behavior: Non-intrusive, informational only, never blocks workflow
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+
+# Exit silently if not in a git repo
+[ -z "$REPO_ROOT" ] && exit 0
+
+# Skip if user has opted out
+[ -f "$REPO_ROOT/.claude-ignore" ] && exit 0
+
+# Skip if tools already installed
+[ -d "$REPO_ROOT/.claude" ] && exit 0
+
+# Only show message once per repo
+MARKER="$REPO_ROOT/.git/claude-suggested"
+[ -f "$MARKER" ] && exit 0
+
+# Create marker to prevent showing again
+touch "$MARKER" 2>/dev/null || exit 0
+
+# Show passive reminder
+echo ""
+echo "💡 CommitCraft Tools Available"
+echo "   Run /commitcraft-push (or other commands) to install interactively"
+echo "   Or: commitcraft-init to install manually"
+echo ""
+
+exit 0

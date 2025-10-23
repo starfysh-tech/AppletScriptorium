@@ -1,0 +1,19 @@
+# Claude Code Tools - .gitignore Snippet
+#
+# Add these patterns to your repository's .gitignore file to prevent
+# committing personal Claude Code tool customizations.
+#
+# WHEN TO USE:
+# - If you want tools to be user-specific (each developer has own setup)
+# - If tools contain machine-specific paths or credentials
+#
+# WHEN NOT TO USE:
+# - If you want to share tools with your team (commit .claude/ instead)
+# - If tools are part of project standards
+
+# Claude Code Tools - User-specific
+.claude/
+.claude-ignore
+
+# Claude Code Tools - Git markers
+.git/claude-suggested
