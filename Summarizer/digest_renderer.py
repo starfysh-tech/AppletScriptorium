@@ -201,8 +201,8 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
         title_html = html.escape(main_title)
         source_html = html.escape(source_suffix) if source_suffix else ""
         url = article.get("url") or ""
-        publisher = html.escape(article.get("publisher", ""))
-        snippet = html.escape(article.get("snippet", ""))
+        publisher = html.escape(article.get("publisher") or "")
+        snippet = html.escape(article.get("snippet") or "")
         bullets = article.get("summary", [])
         lines = []
         for block in bullets[:4]:  # Show all 4 bullets
