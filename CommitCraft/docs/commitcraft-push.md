@@ -11,6 +11,7 @@ The `/commitcraft-push` command provides AI-assisted git commits with automated 
 - **Branch sync checking** - Alerts if local is behind remote
 - **Code quality markers** - Surfaces TODO/FIXME comments in changes
 - **Conventional commits** - Enforces standardized format with emoji prefixes
+- **CHANGELOG maintenance** - Auto-updates [Unreleased] section (if CHANGELOG.md exists)
 - **Claude attribution** - Automatically adds co-authorship footer
 - **Context-aware messages** - Uses full analysis to generate accurate descriptions
 
@@ -25,7 +26,8 @@ When you run `/commitcraft-push` in Claude Code, the following happens automatic
 3. **Stage all** - Runs `git add -A` to stage changes
 4. **Generate message** - Creates conventional commit message with Claude
 5. **Commit** - Commits with Claude attribution
-6. **Push** - Pushes to origin
+6. **Update CHANGELOG** - If CHANGELOG.md exists, updates [Unreleased] section (amends commit)
+7. **Push** - Pushes to origin (includes CHANGELOG update)
 
 **Fully automated unless blocked.** No user interaction needed unless there's a problem.
 

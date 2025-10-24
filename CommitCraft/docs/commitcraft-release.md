@@ -23,8 +23,8 @@ When you run `/commitcraft-release` in Claude Code, the following happens automa
 1. **Analysis** - Runs `~/.claude/scripts/commitcraft-release-analyze.sh` for version analysis
 2. **Blocker check** - Stops if uncommitted changes, missing gh CLI, or no commits since last release
 3. **Version detection** - Auto-detects bump type from conventional commits
-4. **CHANGELOG.md update** - Adds new version section following Keep a Changelog format
-5. **GitHub release notes** - Generates concise user-focused summary
+4. **CHANGELOG.md update** - Moves [Unreleased] → new version section, validates against git commits
+5. **GitHub release notes** - Generates concise user-focused summary from CHANGELOG content
 6. **Tag creation** - Creates annotated git tag with new version
 7. **Push tag** - Pushes tag to origin
 8. **Commit CHANGELOG** - Commits and pushes updated CHANGELOG.md
@@ -73,13 +73,14 @@ f0ac055 🧪 test: fix test suite for code changes
 ```
 
 Claude then:
-1. Updates CHANGELOG.md with categorized commits
-2. Generates concise GitHub release notes
-3. Creates tag `v3.2.0`
-4. Pushes tag to origin
-5. Commits and pushes CHANGELOG.md
-6. Creates GitHub release
-7. Reports success with release URL
+1. Moves [Unreleased] content to v3.2.0 section in CHANGELOG.md
+2. Validates against git commits (safety net)
+3. Generates concise GitHub release notes from CHANGELOG
+4. Creates tag `v3.2.0`
+5. Pushes tag to origin
+6. Commits and pushes CHANGELOG.md
+7. Creates GitHub release
+8. Reports success with release URL
 
 ## Version Bump Rules
 
