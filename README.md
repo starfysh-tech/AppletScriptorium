@@ -37,6 +37,19 @@ python3 ExtensionAuditor/extension-auditor.py
 
 ---
 
+### SegmentSalmon (🟢 5 minutes)
+M3U8/HLS video stream downloader. Downloads video segments in parallel with lossless quality preservation.
+
+**Use case:** Download streaming videos from M3U8 playlists (HLS streams) with concurrent downloads and smart retry logic.
+
+**Get started:** Automatic dependency management - just run it:
+```bash
+SegmentSalmon/segment-salmon 'https://example.com/playlist.m3u8'
+```
+[Full documentation →](./SegmentSalmon/)
+
+---
+
 ### CommitCraft (🟡 10 minutes)
 Development workflow enhancement toolkit. Automated git commits and releases with AI assistance.
 
@@ -144,6 +157,10 @@ Requires LM Studio + Mail.app + SMTP setup.
 ├── ExtensionAuditor/             # Chrome extension security scanner
 │   ├── extension-auditor.py      # Main scanner script (cross-platform)
 │   └── README.md                 # Usage documentation
+├── SegmentSalmon/                # M3U8/HLS video stream downloader
+│   ├── segment-salmon            # Shell wrapper with dependency management
+│   ├── m3u8_downloader.py        # Main downloader script
+│   └── README.md                 # Usage documentation
 ├── CommitCraft/                  # Development workflow enhancement toolkit
 │   ├── commitcraft-analyze.sh    # Pre-commit analysis script
 │   ├── commitcraft-release-analyze.sh  # Release version analysis
@@ -174,6 +191,9 @@ python3 -m pytest Summarizer/tests
 
 # ExtensionAuditor - Dry run validation
 python3 ExtensionAuditor/extension-auditor.py --help
+
+# SegmentSalmon - Help and validation
+SegmentSalmon/segment-salmon --help
 
 # CommitCraft - Test analysis script
 ~/.claude/scripts/commitcraft-analyze.sh

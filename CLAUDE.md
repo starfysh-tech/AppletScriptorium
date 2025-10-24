@@ -9,8 +9,9 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 **Current Tools:**
 - **Summarizer**: Monitors Mail.app for Google Alerts on any topic, extracts article links, fetches pages, summarizes with local LLM (LM Studio or Ollama), generates intelligent email digests. Mail rule conditions handle all topic filtering—code is generic.
 - **ExtensionAuditor**: Scans Chrome extensions from local profile, enriches with Chrome Web Store data, generates CRXplorer-compatible CSV reports for security analysis.
+- **SegmentSalmon**: High-performance M3U8/HLS video stream downloader with concurrent segment downloading, smart retry logic, and lossless FFmpeg concatenation.
 
-This file primarily documents Summarizer development patterns. For ExtensionAuditor usage, see `ExtensionAuditor/README.md`.
+This file primarily documents Summarizer development patterns. For ExtensionAuditor usage, see `ExtensionAuditor/README.md`. For SegmentSalmon usage, see `SegmentSalmon/README.md`.
 
 ## Architecture
 
@@ -25,9 +26,10 @@ This file primarily documents Summarizer development patterns. For ExtensionAudi
 8. **CLI Orchestration** (`cli.py`) — Ties all steps together with logging, error handling, and parallel execution
 
 ### Module Organization
-- Each tool lives in its own top-level directory (`Summarizer/`, `ExtensionAuditor/`)
+- Each tool lives in its own top-level directory (`Summarizer/`, `ExtensionAuditor/`, `SegmentSalmon/`)
 - Summarizer fixtures live in `Summarizer/Samples/` and anchor regression tests
 - ExtensionAuditor is a standalone script (no dependencies, cross-platform)
+- SegmentSalmon is a Python script with shell wrapper for dependency management
 - Future shared utilities will move to `shared/` when multiple tools need them
 
 ## Core Files Reference
