@@ -394,7 +394,7 @@ def run_pipeline(args: argparse.Namespace) -> Path:
 
     log_file = output_dir / "workflow.log"
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="[%(asctime)s] %(message)s",
         handlers=[
             logging.FileHandler(log_file, encoding="utf-8"),

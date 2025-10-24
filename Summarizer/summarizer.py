@@ -68,6 +68,10 @@ def summarize_article(article: ArticleDict, *, config: SummarizerConfig | None =
 
     Raises SummarizerError on any failure.
     """
+    # TODO: Refactor to use separate LLM calls with dedicated prompts for each bullet type
+    # (KEY FINDING, TACTICAL WIN, MARKET SIGNAL, CONCERN) instead of single monolithic prompt.
+    # This would allow better control over each bullet's focus and reduce format confusion.
+
     cfg = config or SummarizerConfig()
     prompt = _build_prompt(article)
     url = article.get('url', 'unknown')
@@ -138,7 +142,7 @@ def summarize_article(article: ArticleDict, *, config: SummarizerConfig | None =
             raise SummarizerError(f"No summary bullets returned by {backend_used}")
 
         # Validate bullet structure
-        is_valid, validation_error = _validate_bullet_structure(bullets)
+        is_valid, validation_error = _validate_bullet_structure(bullets, raw_output)
         if is_valid:
             logger.info("[%s] Successfully summarized %s", backend_used, url)
             return {
@@ -344,36 +348,47 @@ def _run_with_ollama(prompt: str, cfg: SummarizerConfig) -> str:
                 )
 
 
-def _validate_bullet_structure(bullets: List[str]) -> tuple[bool, str]:
-    """Validate that bullets conform to required structure.
+def _validate_bullet_structure(bullets: List[str], raw_output: str) -> tuple[bool, str]:
+    """Validate that bullets conform to required structure or accept prose fallback.
 
     Checks:
-    - Exactly 4 bullets
-    - All required labels present: KEY FINDING, TACTICAL WIN, MARKET SIGNAL, CONCERN
+    - 3-4 structured bullets with required labels, OR
+    - Coherent prose (100-2000 chars) as fallback
 
     Returns:
         (is_valid, error_message) where error_message is empty if valid
     """
-    # Check bullet count
-    if len(bullets) != 4:
-        logger.debug("[validate][debug] Bullet count mismatch - expected 4, got %d", len(bullets))
-        return (False, f"Expected 4 bullets, got {len(bullets)}")
+    # Check for structured bullets (3-4 with labels)
+    if 3 <= len(bullets) <= 4:
+        # Check for required labels
+        bullets_text = "\n".join(bullets)
+        required_labels = ["**KEY FINDING**", "**TACTICAL WIN", "**MARKET SIGNAL", "**CONCERN**"]
 
-    # Check for required labels
-    bullets_text = "\n".join(bullets)
-    required_labels = ["**KEY FINDING**", "**TACTICAL WIN", "**MARKET SIGNAL", "**CONCERN**"]
+        # Find which labels are present
+        present_labels = [label for label in required_labels if label in bullets_text]
+        missing_labels = [label for label in required_labels if label not in bullets_text]
 
-    # Find which labels are present
-    present_labels = [label for label in required_labels if label in bullets_text]
-    missing_labels = [label for label in required_labels if label not in bullets_text]
+        logger.debug("[validate][debug] Found %d bullets, checking labels - present: %s, missing: %s",
+                     len(bullets), present_labels, missing_labels)
 
-    logger.debug("[validate][debug] Required labels - present: %s, missing: %s",
-                 present_labels, missing_labels)
+        if not missing_labels:
+            return (True, "")
 
-    if missing_labels:
-        return (False, f"Missing required labels: {', '.join(missing_labels)}")
+        # Has 3-4 bullets but missing labels - fall through to prose check
 
-    return (True, "")
+    # Check for prose fallback (coherent text without bullet structure)
+    prose_length = len(raw_output.strip())
+    if 100 <= prose_length <= 2000:
+        logger.debug("[validate][debug] Accepting prose fallback (%d chars)", prose_length)
+        return (True, "")
+
+    # Neither structured bullets nor valid prose
+    if len(bullets) < 3:
+        return (False, f"Expected 3-4 bullets, got {len(bullets)}, and output not valid prose ({prose_length} chars)")
+    elif len(bullets) > 4:
+        return (False, f"Expected 3-4 bullets, got {len(bullets)}")
+    else:
+        return (False, f"Expected 3-4 bullets with required labels, got {len(bullets)} bullets with missing labels: {', '.join(missing_labels)}")
 
 
 def _normalize_bullet_tags(bullet: str) -> str:

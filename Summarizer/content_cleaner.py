@@ -34,6 +34,10 @@ def _sanitize_html(html: str) -> str:
 
 def extract_content(html: str) -> str:
     """Return a cleaned Markdown string for the article body."""
+    # TODO: Investigate why medrxiv.org domain extracts metadata (author names, DOI)
+    # instead of article content. May need domain-specific extraction rules or
+    # better readability configuration for preprint servers.
+
     # Sanitize HTML before passing to readability to prevent lxml errors
     html = _sanitize_html(html)
 

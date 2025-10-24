@@ -99,7 +99,43 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ---
 
-### Step 4: Commit
+### Step 4: Update CHANGELOG (if exists)
+
+Check if CHANGELOG.md exists:
+```bash
+[ -f CHANGELOG.md ] && echo "exists" || echo "skip"
+```
+
+**If CHANGELOG.md exists:**
+
+1. Parse commit message from Step 3 to extract:
+   - **Type**: Extract from emoji prefix (✨/🐛/📚/etc.)
+   - **Scope**: Text between `(` and `)` if present
+   - **Subject**: Text after `:` (trim whitespace)
+
+2. Map type to CHANGELOG category:
+   - ✨ `feat` → `### Added`
+   - 🐛 `fix` → `### Fixed`
+   - 📚 `docs`, ♻️ `refactor`, ⚡ `perf`, 💎 `style`, 🏗️ `chore`, 🧪 `test`, 🌱 `ci` → `### Changed`
+
+3. Format entry:
+   - With scope: `- **<scope>:** <subject>`
+   - No scope: `- <subject>`
+
+4. Use Edit tool to insert entry under `[Unreleased]` section in correct category
+   - Find the category header (e.g., `### Added`)
+   - Insert new entry as first item under that header
+
+5. Stage CHANGELOG.md:
+   ```bash
+   git add CHANGELOG.md
+   ```
+
+**If CHANGELOG.md doesn't exist:** Skip this step entirely.
+
+---
+
+### Step 5: Commit
 
 Create commit automatically:
 ```bash
@@ -111,7 +147,7 @@ EOF
 
 ---
 
-### Step 5: Push
+### Step 6: Push
 
 Push to origin automatically:
 ```bash
@@ -120,7 +156,7 @@ git push origin <branch-name>
 
 ---
 
-### Step 6: Report Success
+### Step 7: Report Success
 
 Show final status:
 ```

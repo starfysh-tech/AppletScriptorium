@@ -96,11 +96,11 @@ Tags to use:
 - TACTICAL WIN: Pick ONE of [🚀 SHIP NOW] (quick win) / [🗺️ ROADMAP] (multi-step) / [👀 WATCH] (early signal)
 - MARKET SIGNAL: Pick ONE of [🔴 URGENT] (threat/deadline) / [🟡 NOTABLE] (trend) / [⚫ CONTEXT] (background)
 
-Example output structure (use THIS article's content, not these examples):
-1. **KEY FINDING**: Study shows 42% improvement in model accuracy using technique X
-2. **TACTICAL WIN [🚀 SHIP NOW]**: Apply prompt engineering pattern from section 3
-3. **MARKET SIGNAL [🟡 NOTABLE]**: Three competitors now using similar approach
-4. **CONCERN**: Results based on single dataset; generalizability unknown
+Example output structure:
+1. **KEY FINDING**: [State main finding with specific metrics from article]
+2. **TACTICAL WIN [TAG]**: [Describe actionable practice from article]
+3. **MARKET SIGNAL [TAG]**: [Identify trend or development from article]
+4. **CONCERN**: [Note limitation or assumption from article]
 
 Constraints:
 - Each bullet <30 words
