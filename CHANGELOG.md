@@ -6,12 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [4.1.0] - 2025-10-24
 ### Added
 - **SegmentSalmon:** M3U8/HLS video stream downloader with concurrent downloads and smart retry logic
 
 ### Changed
-- Add CHANGELOG.md following Keep a Changelog standard
+- Add CHANGELOG.md following Keep a Changelog standard with complete backfill of all 12 releases
 - Improve release notes format with concise GitHub releases and detailed changelog
+- Automate [Unreleased] section maintenance via /commitcraft-push and /commitcraft-release
 
 ## [4.0.1] - 2025-10-24
 ### Changed
@@ -155,7 +158,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AppleScript: process-pro-alert.scpt → process-alert.scpt
 - Config file: ~/.pro-alert-env → ~/.alert-env
 
-[unreleased]: https://github.com/starfysh-tech/AppletScriptorium/compare/v4.0.1...HEAD
+[unreleased]: https://github.com/starfysh-tech/AppletScriptorium/compare/v4.1.0...HEAD
+[4.1.0]: https://github.com/starfysh-tech/AppletScriptorium/compare/v4.0.1...v4.1.0
 [4.0.1]: https://github.com/starfysh-tech/AppletScriptorium/compare/v4.0.0...v4.0.1
 [4.0.0]: https://github.com/starfysh-tech/AppletScriptorium/compare/v3.1.0...v4.0.0
 [3.1.0]: https://github.com/starfysh-tech/AppletScriptorium/compare/v3.0.0...v3.1.0
