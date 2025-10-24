@@ -120,8 +120,19 @@ def summarize_article(article: ArticleDict, *, config: SummarizerConfig | None =
                 "No LLM backend configured. Set LMSTUDIO_BASE_URL and LMSTUDIO_MODEL in .env file"
             )
 
+        # Log raw LLM output for diagnosis
+        logger.debug("[%s][debug] Raw LLM output (%d chars): %s", backend_used, len(raw_output), raw_output[:500])
+        if len(raw_output) > 500:
+            logger.debug("[%s][debug] Raw LLM output (remaining): %s", backend_used, raw_output[500:])
+
         # Parse and validate bullets
         bullets = _parse_bullets(raw_output)
+
+        # Log parsed bullet details
+        logger.debug("[%s][debug] Parsed %d bullets from output", backend_used, len(bullets))
+        for i, bullet in enumerate(bullets, 1):
+            logger.debug("[%s][debug] Bullet %d: %s", backend_used, i, bullet[:100])
+
         if not bullets:
             logger.error("[%s] No bullets parsed from response for %s", backend_used, url)
             raise SummarizerError(f"No summary bullets returned by {backend_used}")
@@ -345,12 +356,19 @@ def _validate_bullet_structure(bullets: List[str]) -> tuple[bool, str]:
     """
     # Check bullet count
     if len(bullets) != 4:
+        logger.debug("[validate][debug] Bullet count mismatch - expected 4, got %d", len(bullets))
         return (False, f"Expected 4 bullets, got {len(bullets)}")
 
     # Check for required labels
     bullets_text = "\n".join(bullets)
     required_labels = ["**KEY FINDING**", "**TACTICAL WIN", "**MARKET SIGNAL", "**CONCERN**"]
+
+    # Find which labels are present
+    present_labels = [label for label in required_labels if label in bullets_text]
     missing_labels = [label for label in required_labels if label not in bullets_text]
+
+    logger.debug("[validate][debug] Required labels - present: %s, missing: %s",
+                 present_labels, missing_labels)
 
     if missing_labels:
         return (False, f"Missing required labels: {', '.join(missing_labels)}")

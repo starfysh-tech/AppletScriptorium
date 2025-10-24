@@ -82,31 +82,31 @@ DIGEST_SUBJECT_TEMPLATE = "Google Alert Intelligence — {date}"
 # Template for article summarization prompt sent to LLM
 # Customize this to change the summary format or focus area
 SUMMARY_PROMPT_TEMPLATE = """
-Summarize this article in exactly 4 bullets.
+Generate EXACTLY 4 bullets. NO MORE, NO LESS.
 
-CRITICAL: You MUST generate exactly 4 bullets, one for each label below. Start directly with bullets - NO preamble or meta-commentary.
+START IMMEDIATELY with bullet 1. NO preamble. STOP AFTER bullet 4.
 
-Format (return exactly 4 bullets in this order, tags go INSIDE bold markers before colon):
-- **KEY FINDING**: [One sentence with specific metrics or main insight]
-- **TACTICAL WIN [🚀 SHIP NOW]**: [Specific actionable practice or implementation]
-- **MARKET SIGNAL [🟡 NOTABLE]**: [Trend, shift, or competitive development]
-- **CONCERN**: [Limitation, contradiction, or assumption to question]
+Required format (output exactly this structure with one tag per bullet):
+1. **KEY FINDING**: [One sentence with specific metrics/main insight]
+2. **TACTICAL WIN [TAG]**: [Specific actionable practice or implementation]
+3. **MARKET SIGNAL [TAG]**: [Trend, shift, or competitive development]
+4. **CONCERN**: [Limitation, contradiction, or assumption to question]
 
-Choose ONE action tag for TACTICAL WIN (replace the example tag above):
-[🚀 SHIP NOW] = Quick win available immediately
-[🗺️ ROADMAP] = Requires planning/multi-step effort
-[👀 WATCH] = Early signal, no action yet
+Tags to use:
+- TACTICAL WIN: Pick ONE of [🚀 SHIP NOW] (quick win) / [🗺️ ROADMAP] (multi-step) / [👀 WATCH] (early signal)
+- MARKET SIGNAL: Pick ONE of [🔴 URGENT] (threat/deadline) / [🟡 NOTABLE] (trend) / [⚫ CONTEXT] (background)
 
-Choose ONE urgency tag for MARKET SIGNAL (replace the example tag above):
-[🔴 URGENT] = Competitive threat or pressing deadline
-[🟡 NOTABLE] = Significant trend or shift
-[⚫ CONTEXT] = Background information
+Example output structure (use THIS article's content, not these examples):
+1. **KEY FINDING**: Study shows 42% improvement in model accuracy using technique X
+2. **TACTICAL WIN [🚀 SHIP NOW]**: Apply prompt engineering pattern from section 3
+3. **MARKET SIGNAL [🟡 NOTABLE]**: Three competitors now using similar approach
+4. **CONCERN**: Results based on single dataset; generalizability unknown
 
-Requirements (generate unique summary from THIS article only - do NOT copy examples):
-- Each bullet <30 words (aim for <25)
-- Extract specific numbers, percentages, metrics when available
-- Focus on actionable insights and strategic implications
-- Select the most appropriate tag from the options above based on the article content
+Constraints:
+- Each bullet <30 words
+- Include numbers/metrics from article
+- Tags go INSIDE bold markers before colon
+- STOP after bullet 4 - do NOT add commentary, summaries, or additional bullets
 """
 
 # Template for cross-article insights generation
