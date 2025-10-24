@@ -8,7 +8,8 @@ The `/commitcraft-release` command provides automated semantic versioning and Gi
 
 - **Version bump detection** - Analyzes commits to determine major/minor/patch
 - **Conventional commit parsing** - Categorizes changes by type (breaking/feat/fix/docs)
-- **Auto-generated release notes** - Structured sections based on commit types
+- **CHANGELOG.md maintenance** - Updates Keep a Changelog formatted version history
+- **Concise release notes** - User-focused GitHub release summaries
 - **Git tag creation** - Creates and pushes semver tags
 - **GitHub release publishing** - Uses `gh` CLI to create releases
 - **Clean tree validation** - Ensures no uncommitted changes before releasing
@@ -22,10 +23,12 @@ When you run `/commitcraft-release` in Claude Code, the following happens automa
 1. **Analysis** - Runs `~/.claude/scripts/commitcraft-release-analyze.sh` for version analysis
 2. **Blocker check** - Stops if uncommitted changes, missing gh CLI, or no commits since last release
 3. **Version detection** - Auto-detects bump type from conventional commits
-4. **Release notes generation** - Categorizes commits into structured sections
-5. **Tag creation** - Creates annotated git tag with new version
-6. **Push tag** - Pushes tag to origin
-7. **GitHub release** - Creates release via `gh` CLI with generated notes
+4. **CHANGELOG.md update** - Adds new version section following Keep a Changelog format
+5. **GitHub release notes** - Generates concise user-focused summary
+6. **Tag creation** - Creates annotated git tag with new version
+7. **Push tag** - Pushes tag to origin
+8. **Commit CHANGELOG** - Commits and pushes updated CHANGELOG.md
+9. **GitHub release** - Creates release via `gh` CLI with concise notes
 
 **Fully automated unless blocked.** No user interaction needed unless there's a problem.
 
@@ -70,11 +73,13 @@ f0ac055 🧪 test: fix test suite for code changes
 ```
 
 Claude then:
-1. Generates release notes from commits
-2. Creates tag `v3.2.0`
-3. Pushes tag to origin
-4. Creates GitHub release
-5. Reports success with release URL
+1. Updates CHANGELOG.md with categorized commits
+2. Generates concise GitHub release notes
+3. Creates tag `v3.2.0`
+4. Pushes tag to origin
+5. Commits and pushes CHANGELOG.md
+6. Creates GitHub release
+7. Reports success with release URL
 
 ## Version Bump Rules
 
@@ -125,49 +130,78 @@ fix(ui): correct button alignment on mobile
 
 **Result:** v2.0.0 → v2.0.1
 
-## Release Notes Format
+## Release Documentation Format
 
-Release notes are automatically generated with structured sections:
+CommitCraft generates two complementary release artifacts:
 
-### Section Priority
+### 1. CHANGELOG.md (Detailed)
 
-Only non-empty sections are included:
+Maintained in the repository root following the [Keep a Changelog](https://keepachangelog.com) standard.
 
-1. **🚨 Breaking Changes** - Changes that break backward compatibility
-2. **✨ Features** - New features and enhancements
-3. **🐛 Bug Fixes** - Bug fixes and corrections
-4. **📚 Documentation** - Documentation updates
-5. **🔧 Other Changes** - Refactoring, tests, chores, etc.
+**Purpose:** Comprehensive version history for developers and contributors.
 
-### Commit Formatting
+**Format:**
+```markdown
+## [4.1.0] - 2025-10-24
+### Added
+- **SegmentSalmon:** M3U8/HLS video stream downloader
+- Automated release workflow with semantic versioning
 
-**Subject line extraction:**
-- Emojis removed (if present)
+### Changed
+- **CommitCraft:** Simplified architecture (BREAKING: re-run installer)
+- Improved README structure with complexity indicators
+
+### Fixed
+- Test suite alignment after content-type changes
+
+[4.1.0]: https://github.com/owner/repo/compare/v4.0.1...v4.1.0
+```
+
+**Section order:**
+1. **Added** - New features (`feat:` commits)
+2. **Changed** - Modifications to existing functionality (`refactor:`, breaking changes)
+3. **Deprecated** - Soon-to-be removed features
+4. **Removed** - Deleted features
+5. **Fixed** - Bug fixes (`fix:` commits)
+6. **Security** - Security patches
+
+**Omitted:** `test:`, `chore:`, `ci:` commits (internal changes)
+
+### 2. GitHub Release Notes (Concise)
+
+User-focused summary published on GitHub Releases page.
+
+**Purpose:** Quick overview for users to understand what changed and why they should upgrade.
+
+**Format:**
+```markdown
+This release adds M3U8 video downloading and improves documentation.
+
+## What's New
+
+- M3U8/HLS video stream downloader with parallel downloads
+- Developer-first README with complexity indicators
+- Automated release workflow
+
+See [CHANGELOG.md](CHANGELOG.md) for complete details.
+
+**Full Changelog**: https://github.com/owner/repo/compare/v4.0.1...v4.1.0
+```
+
+**Rules:**
+- Brief opening summary (2-3 sentences)
+- 2-4 high-level theme bullets (not individual commits)
+- Link to CHANGELOG.md for details
+- Under 30 lines total
+- User benefits, not implementation details
+
+### Commit Formatting (Both Formats)
+
+**Subject line processing:**
+- Emojis removed
 - Type prefix removed: `feat(api): add endpoint` → `Add endpoint`
 - Scope preserved as bold: `feat(api): add endpoint` → `**API:** Add endpoint`
-
-**Example generated notes:**
-
-```markdown
-## 🚨 Breaking Changes
-
-- **Auth:** Redesign authentication flow - Auth endpoints now require OAuth2 tokens instead of API keys
-
-## ✨ Features
-
-- **Setup:** Add interactive Python selection with user-friendly UI
-- **Digest:** Improve formatting and add LLM-based insights
-
-## 🐛 Bug Fixes
-
-- **Tests:** Fix test suite for code changes
-- **Auth:** Prevent token expiration race condition
-
-## 📚 Documentation
-
-- **Claude:** Remove redundant SMTP config notes
-- Align documentation with code implementation
-```
+- Breaking changes get suffix: `(BREAKING: re-run installer)`
 
 ## The commitcraft-release-analyze.sh Script
 
