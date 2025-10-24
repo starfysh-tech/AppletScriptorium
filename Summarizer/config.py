@@ -98,8 +98,8 @@ Tags to use:
 
 Example output structure:
 1. **KEY FINDING**: [State main finding with specific metrics from article]
-2. **TACTICAL WIN [TAG]**: [Describe actionable practice from article]
-3. **MARKET SIGNAL [TAG]**: [Identify trend or development from article]
+2. **TACTICAL WIN [🚀/🗺️/👀]**: [Describe actionable practice from article]
+3. **MARKET SIGNAL [🔴/🟡/⚫]**: [Identify trend or development from article]
 4. **CONCERN**: [Note limitation or assumption from article]
 
 Constraints:

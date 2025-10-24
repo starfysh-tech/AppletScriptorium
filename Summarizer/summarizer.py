@@ -394,44 +394,43 @@ def _validate_bullet_structure(bullets: List[str], raw_output: str) -> tuple[boo
 def _normalize_bullet_tags(bullet: str) -> str:
     """Normalize tag formatting in bullets to ensure consistency.
 
-    Adds emojis to tags if missing and normalizes case.
+    Normalizes all tag variations to emoji-only format.
     """
-    # Tactical Win tag normalization
+    # Tag normalization mappings (text/full tags → emoji-only)
     tactical_mappings = {
-        "SHIP NOW": "🚀 SHIP NOW",
-        "ROADMAP": "🗺️ ROADMAP",
-        "WATCH": "👀 WATCH",
+        "SHIP NOW": "🚀",
+        "ROADMAP": "🗺️",
+        "WATCH": "👀",
     }
 
-    # Market Signal tag normalization
     market_mappings = {
-        "URGENT": "🔴 URGENT",
-        "NOTABLE": "🟡 NOTABLE",
-        "CONTEXT": "⚫ CONTEXT",
+        "URGENT": "🔴",
+        "NOTABLE": "🟡",
+        "CONTEXT": "⚫",
     }
 
     # Process bullet text
     result = bullet
 
-    # Normalize tactical tags (case-insensitive)
-    for base_tag, full_tag in tactical_mappings.items():
-        # Match [TAG] or [emoji TAG] variations, case-insensitive
+    # Normalize tactical tags to emoji-only (case-insensitive)
+    for base_tag, emoji in tactical_mappings.items():
+        # Match [TAG], [emoji TAG], or [emoji] variations, case-insensitive
         pattern = r'\[(?:[^\]]*\s+)?' + re.escape(base_tag) + r'\]'
         if re.search(pattern, result, re.IGNORECASE):
-            # Replace with normalized version
-            result = re.sub(pattern, f'[{full_tag}]', result, flags=re.IGNORECASE)
+            # Replace with emoji-only version
+            result = re.sub(pattern, f'[{emoji}]', result, flags=re.IGNORECASE)
 
-    # Normalize market signal tags (case-insensitive)
-    for base_tag, full_tag in market_mappings.items():
+    # Normalize market signal tags to emoji-only (case-insensitive)
+    for base_tag, emoji in market_mappings.items():
         pattern = r'\[(?:[^\]]*\s+)?' + re.escape(base_tag) + r'\]'
         if re.search(pattern, result, re.IGNORECASE):
-            result = re.sub(pattern, f'[{full_tag}]', result, flags=re.IGNORECASE)
+            result = re.sub(pattern, f'[{emoji}]', result, flags=re.IGNORECASE)
 
     # Defensive fallback for placeholder tags (shouldn't occur with fixed prompt)
-    # Maps generic placeholders to conservative default tags
     placeholder_mappings = {
-        '[action-tag]': '[🗺️ ROADMAP]',  # Conservative default for TACTICAL WIN
-        '[urgency-tag]': '[🟡 NOTABLE]',  # Conservative default for MARKET SIGNAL
+        '[action-tag]': '[🗺️]',
+        '[urgency-tag]': '[🟡]',
+        '[TAG]': '[🟡]',  # Handle literal [TAG] from malformed prompt
     }
 
     for placeholder, default_tag in placeholder_mappings.items():
