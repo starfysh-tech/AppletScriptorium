@@ -24,65 +24,92 @@ AppletScriptorium is a collection of practical automation tools that solve real 
 
 ## Tools
 
-### Summarizer
-Automated Google Alert intelligence digest generator. Monitors Mail.app for alerts, fetches articles, summarizes with local LLM, and delivers intelligent digests.
-
-**Use case:** Stay informed on industry trends, competitor news, research papers without reading every article.
-
-[See Summarizer documentation →](./Summarizer/)
-
-### ExtensionAuditor
-Chrome extension security scanner. Analyzes installed extensions and generates reports for vulnerability scanning.
+### ExtensionAuditor (🟢 5 minutes)
+Chrome extension security scanner. Analyzes installed extensions and generates CRXplorer-compatible reports.
 
 **Use case:** Audit browser extensions for security risks, outdated versions, and malicious code.
 
-[See ExtensionAuditor documentation →](./ExtensionAuditor/)
-
-### CommitCraft
-Development workflow enhancement toolkit. Provides automated git commits with security scanning, conventional format enforcement, and semantic versioning with automated GitHub releases.
-
-**Use case:** Automate commits and releases with security checks, version bumping, and auto-generated release notes.
-
-[See CommitCraft documentation →](./CommitCraft/)
+**Get started:** Zero dependencies - just run it:
+```bash
+python3 ExtensionAuditor/extension-auditor.py
+```
+[Full documentation →](./ExtensionAuditor/)
 
 ---
 
-## Summarizer: How It Works
+### CommitCraft (🟡 10 minutes)
+Development workflow enhancement toolkit. Automated git commits and releases with AI assistance.
 
-Subscribe to Google Alerts on any topics you care about (tech trends, competitor news, research papers, etc.). When an alert arrives in your inbox, the Summarizer automatically processes it:
+**Use case:** Automate commits and releases with security checks, conventional format, and auto-generated release notes.
 
-![Workflow Diagram](docs/workflow-diagram.png)
+**Get started:** One-time global install, works in all repositories:
+```bash
+cd CommitCraft && ./commitcraft-install.sh
+```
+[Full documentation →](./CommitCraft/)
 
-**The automated workflow:**
+---
 
-1. **Captures** the alert email from Mail.app
-2. **Extracts** all article links from the email
-3. **Fetches** each article's full content
-4. **Summarizes** every article using a local AI model (runs privately on your Mac)
-5. **Generates** an intelligent digest email with:
-   - Executive summary across all articles
-   - 4-bullet summaries per article (key findings, actionable insights, market signals, concerns)
-   - Cross-article themes and patterns
-6. **Delivers** the digest to your inbox
+### Summarizer (🔴 30 minutes)
+Automated Google Alert intelligence digest generator. Monitors Mail.app, fetches articles, summarizes with local LLM.
 
-All processing happens locally on your Mac—no data sent to external services. The entire workflow runs automatically when alerts arrive (or on a schedule you control).
+**Use case:** Stay informed on industry trends, competitor news, research papers without reading every article.
 
-**Customize:** Edit `Summarizer/config.py` to adjust the AI model, summary format, timeouts, or any other behavior.
+**Get started:** Requires LM Studio, Mail.app, and SMTP configuration:
+
+[Complete setup guide →](./docs/SETUP.md)
 
 ## Quick Start
 
-**New to AppletScriptorium?** See the complete setup guide: **[SETUP.md](./docs/SETUP.md)**
+**Choose a tool to try first:**
+
+### 🟢 ExtensionAuditor (Easiest)
+
+No setup required. Instant results.
 
 ```bash
 cd ~/Code
 git clone https://github.com/yourusername/AppletScriptorium.git
 cd AppletScriptorium
-./install.sh           # Automated setup (prereqs, dependencies, model)
-./setup-mail-rule.sh   # Configure Mail rule automation (interactive)
-./validate.sh          # Verify installation
+
+# Run it
+python3 ExtensionAuditor/extension-auditor.py
 ```
 
-**Troubleshooting?** See **[TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)**
+**Output:** `extensions.csv` with all your Chrome extensions analyzed and ready for security review.
+
+**Next:** Upload to [CRXplorer](https://crxplorer.com/) for detailed vulnerability scanning.
+
+---
+
+### 🟡 CommitCraft (Best for Developers)
+
+One-time install, works everywhere.
+
+```bash
+# After cloning (above)
+cd CommitCraft
+./commitcraft-install.sh
+
+# Use in any git repository
+cd ~/your-project
+/commitcraft-push      # AI-assisted commits with security scanning
+/commitcraft-release   # Automated semantic versioning
+```
+
+**Next:** Read [CommitCraft/README.md](./CommitCraft/) for full command documentation.
+
+---
+
+### 🔴 Summarizer (Most Powerful)
+
+Requires LM Studio + Mail.app + SMTP setup.
+
+**Setup:** Follow complete guide at [docs/SETUP.md](./docs/SETUP.md)
+
+**Time:** 30 minutes for first-time setup
+
+**Reward:** Automated intelligence digests delivered to your inbox
 
 ---
 
@@ -134,120 +161,41 @@ cd AppletScriptorium
 
 Future tools will live alongside existing tools. Shared utilities will migrate to `shared/` when needed.
 
----
-
-## Usage
-
-### Mail Rule Automation (Recommended)
-
-Event-driven processing triggered when Google Alerts arrive:
-
-1. Configure SMTP credentials in `.env` file (see [SETUP.md](./docs/SETUP.md#configure-smtp-email-settings) for details)
-2. Run `./setup-mail-rule.sh` to install AppleScript
-3. Create Mail rule:
-   - **Subject** contains `Google Alert -`
-   - **Action**: Run AppleScript → `process-alert.scpt`
-   - **Note**: No From filter needed (supports test emails and forwards)
-
-**Workflow:**
-Alert arrives → Mail rule triggers → Pipeline runs → Digest sent via SMTP
-
-**No special permissions needed** — Uses SMTP for email delivery instead of UI automation.
-
-See **[SETUP.md](./docs/SETUP.md)** for detailed configuration.
-
-### CLI
-
-Run the full pipeline (fetch, summarize, generate digest):
-
-```bash
-# Process most recent Google Alert
-python3 -m Summarizer.cli run \
-  --output-dir runs/manual-$(date +%Y%m%d-%H%M%S) \
-  --subject-filter "Google Alert -"
-
-# Limit articles and send digest via SMTP
-python3 -m Summarizer.cli run \
-  --output-dir runs/test \
-  --max-articles 5 \
-  --email-digest user@example.com \
-  --smtp-send
-```
-
-**Configuration**: Defaults in `Summarizer/config.py`. Override via CLI flags or `ALERT_*` environment variables.
-
-**Outputs**: `alert.eml`, `alert.tsv`, `articles/`, `digest.html`, `digest.txt`, `workflow.log`
-
-**CLI Flags:**
-- `--model MODEL` — Override LLM model for active backend (default: configured in `.env`)
-- `--max-articles N` — Limit articles processed
-- `--email-digest ADDRESS` — Specify digest recipient email (repeatable)
-- `--email-sender EMAIL` — Sender address for digest emails
-- `--smtp-send` — Send digest via SMTP (requires `.env` configuration)
-- `--subject-filter PATTERN` — Match specific inbox messages
-- `--topic TOPIC` — Topic name for digest subject line
-
-### Cron Scheduling
-
-For fixed-schedule digests instead of event-driven processing:
-
-1. Create `~/.alert-env` with configuration
-2. Add cron job: `crontab -e`
-   ```cron
-   0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /path/to/Summarizer/bin/run_alert.sh'
-   ```
-
-See **[SETUP.md](./docs/SETUP.md)** for cron configuration details.
-
-### Workflow Script (run_workflow.sh)
-
-Alternative workflow script for sequential processing:
-
-```bash
-./run_workflow.sh
-```
-
-**What it does:**
-- Captures latest Google Alert from Mail.app inbox
-- Extracts article links sequentially (no parallelism)
-- Fetches articles, cleans content, generates summaries
-- Uses PYTHONPATH and inline Python scripts
-
-**Outputs**: Creates timestamped run directory with `alert.eml`, `alert.tsv`, `articles/*.html`, `summaries/*.json`
-
-**When to use**: Useful for debugging individual pipeline stages or when parallel processing isn't needed.
 
 ---
 
 ## Testing
 
+Each tool includes tests or validation:
+
 ```bash
-# Run all tests
+# Summarizer - Full test suite
 python3 -m pytest Summarizer/tests
 
-# Run specific test
-python3 -m pytest Summarizer/tests/test_link_extractor.py -v
+# ExtensionAuditor - Dry run validation
+python3 ExtensionAuditor/extension-auditor.py --help
+
+# CommitCraft - Test analysis script
+~/.claude/scripts/commitcraft-analyze.sh
 ```
 
 ---
 
 ## Development
 
-- **For Claude Code**: See **[CLAUDE.md](./CLAUDE.md)** for development commands, code style, and module patterns
-- **For other AI assistants**: See **[AGENTS.md](./AGENTS.md)** for build commands and project conventions
-- **Configuration**: Edit `.env` file for LLM backend, timeouts, email settings (see [.env.template](./.env.template) for options)
+**AI Assistant Guides:**
+- **Claude Code**: [CLAUDE.md](./CLAUDE.md) - Development commands, code style, module patterns
+- **Other AI**: [AGENTS.md](./AGENTS.md) - Build commands, project conventions
 
-**Key technical details:**
-- System Python required (no venv support for Mail rules)
-- Module invocation: `python3 -m Summarizer.cli` (NOT `python3 Summarizer/cli.py`)
-- **LLM Backend**: LM Studio (required) with optional Ollama fallback (configure in `.env`)
-  - **LM Studio**: Required. Configure `LMSTUDIO_BASE_URL` and `LMSTUDIO_MODEL` in `.env`
-  - **Ollama fallback**: Optional (set `OLLAMA_ENABLED=true`) — only used if LM Studio fails
-  - **Important**: Pipeline requires at least LM Studio configured to function
-- Parallel processing: ThreadPoolExecutor with max 5 workers for article fetching; sequential summarization to prevent LLM overload
-- Fixture management: `Summarizer/refresh-fixtures.py`
-- Optional: `url-to-md` CLI for Cloudflare-protected sites (`npm install -g url-to-markdown-cli-tool`)
-- Optional: `JINA_API_KEY` env var for Jina Reader API fallback
+**Configuration:**
+- Create `.env` from [.env.template](./.env.template)
+- Tool-specific configs in `Tool/config.py` or `Tool/README.md`
+
+**Key Conventions:**
+- Python module invocation: `python3 -m Tool.cli` (not direct script paths)
+- System Python required (Summarizer Mail rules)
+- Snake_case for functions/variables
+- Conventional Commits for git messages
 
 ---
 
@@ -278,6 +226,39 @@ ToolName/
 - Add troubleshooting section
 
 See individual tool READMEs for examples.
+
+---
+
+## Philosophy
+
+These tools embody Larry Wall's three great virtues of a programmer:
+
+### Laziness
+**"The quality that makes you go to great effort to reduce overall energy expenditure."**
+
+Automate tedious tasks so you never do them manually again:
+- **Summarizer:** Never read 20 articles when AI can distill the key insights for you
+- **ExtensionAuditor:** Security audit in one command, not hours of manual clicking and research
+- **CommitCraft:** Beautiful commit messages and releases without thinking about format or versioning
+
+### Impatience
+**"The anger you feel when the computer is being lazy."**
+
+Get results immediately, no complex setup or waiting:
+- **ExtensionAuditor:** Zero configuration, instant CSV output
+- **CommitCraft:** One install command, works in every repository forever
+- **Summarizer:** Configure once, then automated intelligence digests arrive like clockwork
+
+### Hubris
+**"The quality that makes you write programs that other people won't want to say bad things about."**
+
+Build tools good enough that others want to use them:
+- **Local-first:** No cloud dependencies or vendor lock-in
+- **Transparent:** Plain scripts anyone can read, modify, and understand
+- **Respectful:** Documentation that values your time, minimal configuration, clear error messages
+
+> "We will encourage you to develop the three great virtues of a programmer: laziness, impatience, and hubris."
+> — Larry Wall, *Programming Perl* (1991)
 
 ---
 
