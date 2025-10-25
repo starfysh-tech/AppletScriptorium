@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CommitCraft:** CHANGELOG automation in /commitcraft-push workflow
 
 ### Changed
+- remove test file after verification
 - add test file to verify CHANGELOG automation
 
 ## [4.1.0] - 2025-10-24
