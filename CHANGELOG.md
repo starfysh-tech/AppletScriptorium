@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **CommitCraft:** CHANGELOG automation in /commitcraft-push workflow
 
+### Changed
+- add test file to verify CHANGELOG automation
+
 ## [4.1.0] - 2025-10-24
 ### Added
 - **SegmentSalmon:** M3U8/HLS video stream downloader with concurrent downloads and smart retry logic

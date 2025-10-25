@@ -1,0 +1,2 @@
+Test file to verify CHANGELOG automation in /commitcraft-push workflow.
+This file will be removed after verification is complete.
