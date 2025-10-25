@@ -8,10 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - **CommitCraft:** CHANGELOG automation in /commitcraft-push workflow
+- **Summarizer:** improve LLM consistency with debug logging and better prompts
 
 ### Changed
-- remove test file after verification
-- add test file to verify CHANGELOG automation
+- backfill CHANGELOG with missing commits
+- **Summarizer:** convert tag format to emoji-only
+- **Summarizer:** relax validation and remove prompt examples
+
+### Fixed
+- **Summarizer:** handle None values in digest rendering
 
 ## [4.1.0] - 2025-10-24
 ### Added
