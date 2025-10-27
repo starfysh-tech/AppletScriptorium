@@ -28,6 +28,7 @@ LMSTUDIO_HEALTH_TIMEOUT = 2.0  # Fast health check timeout before requests
 # Ollama Configuration (Optional Fallback Backend)
 # WARNING: Ollama may significantly slow down your computer during processing
 # Only enabled if OLLAMA_ENABLED=true is set in .env
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_ENABLED = os.environ.get("OLLAMA_ENABLED", "").lower() == "true"
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:latest")
 OLLAMA_TIMEOUT = float(os.environ.get("OLLAMA_TIMEOUT", "120.0"))

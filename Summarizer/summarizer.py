@@ -15,7 +15,7 @@ import logging
 import re
 import subprocess
 from dataclasses import dataclass
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Literal, Optional
 
 import httpx
 
@@ -23,6 +23,7 @@ from .config import (
     DEFAULT_MODEL,
     TEMPERATURE,
     MAX_TOKENS,
+    OLLAMA_BASE_URL,
     OLLAMA_ENABLED,
     OLLAMA_MODEL,
     OLLAMA_TIMEOUT,
@@ -51,15 +52,30 @@ ArticleDict = dict[str, Any]
 RunnerType = Callable[[str, SummarizerConfig], str]
 
 
-def summarize_article(article: ArticleDict, *, config: SummarizerConfig | None = None, runner: RunnerType | None = None) -> dict[str, Any]:
+def summarize_article(
+    article: ArticleDict,
+    *,
+    config: SummarizerConfig | None = None,
+    runner: RunnerType | None = None,
+    backend: Literal["lmstudio", "ollama"] | None = None,
+) -> dict[str, Any]:
     """Summarize an article using configured LLM backend with retry on validation failure.
+
+    Args:
+        article: Article dictionary with title, url, content
+        config: Optional SummarizerConfig (defaults to SummarizerConfig())
+        runner: Optional custom runner for testing (bypasses backend selection)
+        backend: Optional backend override ("lmstudio" or "ollama")
+            - If specified: Use only this backend (no auto-fallback)
+            - If None: Use auto-fallback behavior (LM Studio → Ollama if enabled)
 
     Backend selection:
     - If runner is provided: Use custom runner (for testing)
-    - If LMSTUDIO_BASE_URL is set: Use LM Studio as primary
+    - If backend is specified: Use only that backend (no fallback)
+    - If backend is None and LMSTUDIO_BASE_URL is set: Use LM Studio as primary
       - If LM Studio fails AND OLLAMA_ENABLED=true: Fall back to Ollama
       - If LM Studio fails AND OLLAMA_ENABLED=false: Raise error
-    - If LMSTUDIO_BASE_URL not set: Raise error (must configure at least one backend)
+    - If backend is None and LMSTUDIO_BASE_URL not set: Raise error
 
     Validation and retry:
     - After parsing bullets, validates required structure (4 bullets with required labels)
@@ -92,7 +108,27 @@ def summarize_article(article: ArticleDict, *, config: SummarizerConfig | None =
                 raise
             except Exception as exc:  # pragma: no cover
                 raise SummarizerError(f"Custom runner failed for {url}") from exc
-        # LM Studio backend with optional Ollama fallback
+        # Explicit backend specified (no auto-fallback)
+        elif backend == "lmstudio":
+            if not LMSTUDIO_BASE_URL or not LMSTUDIO_MODEL:
+                raise SummarizerError("LM Studio backend requested but LMSTUDIO_BASE_URL or LMSTUDIO_MODEL not configured in .env")
+
+            logger.info("[lmstudio] Calling %s at %s for %s (attempt %d/%d)", LMSTUDIO_MODEL, LMSTUDIO_BASE_URL, url, attempt, max_attempts)
+            try:
+                raw_output = _run_with_lmstudio(prompt, cfg)
+                model_name = cfg.model or LMSTUDIO_MODEL
+                backend_used = "lmstudio"
+            except SummarizerError:
+                raise  # No fallback when backend is explicitly specified
+        elif backend == "ollama":
+            logger.info("[ollama] Calling %s for %s (attempt %d/%d)", cfg.model or OLLAMA_MODEL, url, attempt, max_attempts)
+            try:
+                raw_output = _run_with_ollama(prompt, cfg)
+                model_name = cfg.model or OLLAMA_MODEL
+                backend_used = "ollama"
+            except SummarizerError:
+                raise  # No fallback when backend is explicitly specified
+        # Auto-fallback mode: LM Studio with optional Ollama fallback
         elif LMSTUDIO_BASE_URL:
             if not LMSTUDIO_MODEL:
                 raise SummarizerError("LMSTUDIO_BASE_URL set but LMSTUDIO_MODEL not configured in .env")
@@ -100,7 +136,7 @@ def summarize_article(article: ArticleDict, *, config: SummarizerConfig | None =
             logger.info("[lmstudio] Calling %s at %s for %s (attempt %d/%d)", LMSTUDIO_MODEL, LMSTUDIO_BASE_URL, url, attempt, max_attempts)
             try:
                 raw_output = _run_with_lmstudio(prompt, cfg)
-                model_name = LMSTUDIO_MODEL
+                model_name = cfg.model or LMSTUDIO_MODEL
                 backend_used = "lmstudio"
             except SummarizerError as exc:
                 logger.error("[lmstudio] Failed for %s: %s", url, exc)
@@ -110,7 +146,7 @@ def summarize_article(article: ArticleDict, *, config: SummarizerConfig | None =
                     logger.warning("[lmstudio] Falling back to Ollama (WARNING: may slow down computer)")
                     try:
                         raw_output = _run_with_ollama(prompt, cfg)
-                        model_name = OLLAMA_MODEL
+                        model_name = cfg.model or OLLAMA_MODEL
                         backend_used = "ollama"
                     except SummarizerError as ollama_exc:
                         logger.error("[ollama] Fallback also failed: %s", ollama_exc)
@@ -264,7 +300,7 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig) -> str:
 
     url = f"{LMSTUDIO_BASE_URL}/v1/chat/completions"
     payload = {
-        "model": LMSTUDIO_MODEL,
+        "model": cfg.model or LMSTUDIO_MODEL,  # Use cfg.model if provided, else env var
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": MAX_TOKENS,
         "temperature": cfg.temperature,
