@@ -1,0 +1,795 @@
+Delivered-To: randall@mqol.com
+Received: by 2002:a05:7300:230d:b0:272:695d:183c with SMTP id r13csp1449387dye;
+        Mon, 27 Oct 2025 06:13:02 -0700 (PDT)
+X-Received: by 2002:a53:de44:0:b0:63d:5d7f:819d with SMTP id 956f58d0204a3-63f6b9d7a2dmr19369d50.16.1761570781829;
+        Mon, 27 Oct 2025 06:13:01 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1761570781; cv=none;
+        d=google.com; s=arc-20240605;
+        b=Dk4nMPt36MZgTi0tfq1jhXKB1gXw0WHHKMPZJTePn8u9G3XfOSg1rayeMFTa6DF3p8
+         Hxshs0K6L+lyOBB3BhSGNYdsM3wFrHwDfyFi6/qvNp8AEpbgnVWdyM4IJhQ0s7QQLJYO
+         xiD7fuUBseEGqIfDJutzE+Wm8tuD5U/490iiG+8R5MVbz5cajpRllFlxTfsuLRKOXM7Q
+         J4fc6De6KD2dce1vjkNNna5RdFNoA5ALTw/Mjq5YsRr5Fzmf8n7/6J5X5WDJr2X2slmM
+         C+syBe5GdNyuyfMHydha72M/delnFREZk1uS0CJ5owDLotXOBEP4tINDcn4w9+cVTHEQ
+         YEAA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:from:subject:message-id:list-unsubscribe:list-id:date
+         :mime-version:dkim-signature;
+        bh=1qXWvDx+D92n4L5WzXXHnyTs0uDTzQgqVcmi8Ou1gPw=;
+        fh=AJHKXsaUWn3OHSDNQCeEeo7A8Mkhe8tlj31ZshnoW4M=;
+        b=dpUdvXpKm3+N6JcKEhDjcNoUxlPt1S3CYadTrUaetX4yK8mIuQ5ig/jaIKnotxDsnH
+         fgmuT+V59g6bvcgBXgdfkuzh5uBmP+nHvSDBwQvTcD1/HfDFKe8Je1bXFx7gzz0kZikg
+         e7EDMOfDCmK89ZrYdwKbGgPhSvnV/KYxajld0DSLUnvdRd064hQdumahTPKzFexsejzV
+         S7YHzYBqvNnTREfu9U7MRiiTOvf+fFAkNcSy4ZBjF8ntg6VAdi3E0bQypnlpWHQFJ4JE
+         l6EmxcDDdRjpJZNpyl9G8nXbCVMQPcJliiv4KHtpA2oXw+WMT+w5VUyFDgNLHMyCm1Ag
+         3nbA==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@google.com header.s=20230601 header.b=hN5G3xU9;
+       spf=pass (google.com: domain of 33w__abqkbwoqyyqvokvo132-xy1ozv8qyyqvo.myw1kxnkvvw0yv.myw@alerts.bounces.google.com designates 209.85.220.69 as permitted sender) smtp.mailfrom=33W__aBQKBwoqyyqvokvo132-xy1ozv8qyyqvo.myw1kxnkvvw0yv.myw@alerts.bounces.google.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=google.com;
+       dara=neutral header.i=@mqol.com
+Return-Path: <33W__aBQKBwoqyyqvokvo132-xy1ozv8qyyqvo.myw1kxnkvvw0yv.myw@alerts.bounces.google.com>
+Received: from mail-sor-f69.google.com (mail-sor-f69.google.com. [209.85.220.69])
+        by mx.google.com with SMTPS id 956f58d0204a3-63f4cd36838sor1656169d50.3.2025.10.27.06.13.01
+        for <randall@mqol.com>
+        (Google Transport Security);
+        Mon, 27 Oct 2025 06:13:01 -0700 (PDT)
+Received-SPF: pass (google.com: domain of 33w__abqkbwoqyyqvokvo132-xy1ozv8qyyqvo.myw1kxnkvvw0yv.myw@alerts.bounces.google.com designates 209.85.220.69 as permitted sender) client-ip=209.85.220.69;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@google.com header.s=20230601 header.b=hN5G3xU9;
+       spf=pass (google.com: domain of 33w__abqkbwoqyyqvokvo132-xy1ozv8qyyqvo.myw1kxnkvvw0yv.myw@alerts.bounces.google.com designates 209.85.220.69 as permitted sender) smtp.mailfrom=33W__aBQKBwoqyyqvokvo132-xy1ozv8qyyqvo.myw1kxnkvvw0yv.myw@alerts.bounces.google.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=google.com;
+       dara=neutral header.i=@mqol.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20230601; t=1761570781; x=1762175581; darn=mqol.com;
+        h=to:from:subject:message-id:list-unsubscribe:list-id:date
+         :mime-version:from:to:cc:subject:date:message-id:reply-to;
+        bh=1qXWvDx+D92n4L5WzXXHnyTs0uDTzQgqVcmi8Ou1gPw=;
+        b=hN5G3xU9mG+GI5djj7u/gdDk2P73tIyznHWOVKCfTWvNgKvxhzPoX4Dp1+skZUW9cU
+         lOjrIwnrmzhMALgklzoWvkb5TVUQxAzQcQXp7vbdlWZphA55V4W575AP29jR2JIxtiKs
+         fqPHgNeIbJ4nL/AKfoM+FhZbErh9jB7paz8pNoOHug0tTRNpts/pwNHVBVo0xfpwAJmb
+         OD0BJ9aGBbeHIukzFunnQIDsNXx0k2GXco+Ei6721Hpi46yiupSNZE3DmFAji34Xb51Q
+         6ZwAOiYN6M4wBI0fxEV6wngVsWvt7b4QzmtPUAZGEalANanoyk+YZlZF030eCTexur25
+         2+iA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1761570781; x=1762175581;
+        h=to:from:subject:message-id:list-unsubscribe:list-id:date
+         :mime-version:x-gm-message-state:from:to:cc:subject:date:message-id
+         :reply-to;
+        bh=1qXWvDx+D92n4L5WzXXHnyTs0uDTzQgqVcmi8Ou1gPw=;
+        b=pg3peVzjFS3q2gu+XCfTgnjAAAteuc7jkDWFs4QkKHNg5hg3RiP3vvx0nAnElT8jNj
+         8ck9XduSgZVoXhRhPwfXgPPtsCGUAK9EreoB/uld9QptKq9cJ9ALfOYWZXIMU5w6jEHK
+         eUf58lB8NJOdigeMDPh10yZI4z23IvlAcniVll81ERheBtRsIlawGiPO00cNm3Yo463V
+         jP3ZLxKS2foGEtfxFNlSQTNVyPLymwmG/3Fkb+15tU0JgbHnHzyhQLR7C4KmA/DDr4K8
+         fCnnUME2KDWEEDvVMHzfO9JwJuapusCzKy50tU9ty7QhRzREJvO7mbVFXfKyXcrOje8A
+         LeNg==
+X-Gm-Message-State: AOJu0YwGTRUpiKjr5TeBgikdfpO40wGGdma0WR+8WstYpdpYR2KD9o3P
+	qtpZspg9QTy9R6TwRLJmKXwQ1GgRUxzQh5HAbgQ=
+X-Google-Smtp-Source: AGHT+IH1pTZIih6ZepcmnDgfzBtHq3gSwUBgvgJAli1LSdDBPp0hMzDTn3+KW2xxnFlS+DKO0lU=
+MIME-Version: 1.0
+X-Received: by 2002:a05:690e:1246:b0:636:1f5d:b60a with SMTP id
+ 956f58d0204a3-63f42b13c25mr9038673d50.7.1761570781270; Mon, 27 Oct 2025
+ 06:13:01 -0700 (PDT)
+Date: Mon, 27 Oct 2025 06:13:00 -0700
+List-Id: <9467070367796973962.alerts.google.com>
+List-Unsubscribe: <mailto:ur@unsubscribe.alerts.google.com?subject=AB2Xq4g3PD1M9aKdSrBR3cRSOxLFh7t2f9gJDLA>
+Message-ID: <68ff6fdc.050a0220.2bba6d.b0c9googlealerts@google.com>
+Subject: =?UTF-8?Q?Google_Alert_=2D_=E2=80=9CPatient_reported_outcome=E2=80=9D?=
+From: Google Alerts <googlealerts-noreply@google.com>
+To: randall@mqol.com
+Content-Type: multipart/alternative; boundary="000000000000aa156e064223a8cb"
+
+--000000000000aa156e064223a8cb
+Content-Type: text/plain; charset="UTF-8"; format=flowed; delsp=yes
+Content-Transfer-Encoding: base64
+
+PT09IE5ld3MgLSAxMCBuZXcgcmVzdWx0cyBmb3IgW+KAnFBhdGllbnQgcmVwb3J0ZWQgb3V0Y29t
+ZeKAnV0gPT09DQoNClNBVC0xNTEgUmVhbC1Xb3JsZCBFZmZlY3RzIG9mIFRlc3Rvc3Rlcm9uZSBS
+ZXBsYWNlbWVudCBUaGVyYXB5IG9uDQpIZW1hdG9jcml0IGFuZCAuLi4gLSBOSUgNCk5JSA0KU0FU
+LTE1MSBSZWFsLVdvcmxkIEVmZmVjdHMgb2YgVGVzdG9zdGVyb25lIFJlcGxhY2VtZW50IFRoZXJh
+cHkgb24NCkhlbWF0b2NyaXQgYW5kIFBhdGllbnQtUmVwb3J0ZWQgT3V0Y29tZSBNZWFzdXJlczog
+QSBSZXRyb3NwZWN0aXZlLA0KTG9uZ2l0dWRpbmFsIC4uLg0KPGh0dHBzOi8vd3d3Lmdvb2dsZS5j
+b20vdXJsP3JjdD1qJnNhPXQmdXJsPWh0dHBzOi8vcG1jLm5jYmkubmxtLm5paC5nb3YvYXJ0aWNs
+ZXMvUE1DMTI1NDQwNTEvJmN0PWdhJmNkPUNBRVlBQ29UTVRZMU9UYzJOemN4TURjME1ESTNOak00
+TlRJYVlXTXdNakppTW1KbFlUUTFOalV4T1RwamIyMDZaVzQ2VlZNJnVzZz1BT3ZWYXczX3JyN2pM
+dUhSdXlBdjV6SGF4SnkyPg0KDQpSZWltYWdpbmluZyBwYXRpZW50LXJlcG9ydGVkIG91dGNvbWVz
+IGluIHRoZSBhZ2Ugb2YgZ2VuZXJhdGl2ZSBBSSB8IG5wag0KRGlnaXRhbCBNZWRpY2luZQ0KTmF0
+dXJlDQpJbXByb3ZpbmcgdGhlIGltcGxlbWVudGF0aW9uIG9mIHBhdGllbnQtcmVwb3J0ZWQgb3V0
+Y29tZSBtZWFzdXJlIGluDQpjbGluaWNhbCBwcmFjdGljZTogdGFja2xpbmcgY3VycmVudCBjaGFs
+bGVuZ2VzIHdpdGggaW5ub3ZhdGl2ZSBkaWdpdGFsIC4uLg0KPGh0dHBzOi8vd3d3Lmdvb2dsZS5j
+b20vdXJsP3JjdD1qJnNhPXQmdXJsPWh0dHBzOi8vd3d3Lm5hdHVyZS5jb20vYXJ0aWNsZXMvczQx
+NzQ2LTAyNS0wMjAwNi0xJmN0PWdhJmNkPUNBRVlBU29UTVRZMU9UYzJOemN4TURjME1ESTNOak00
+TlRJYVlXTXdNakppTW1KbFlUUTFOalV4T1RwamIyMDZaVzQ2VlZNJnVzZz1BT3ZWYXcyUjJTbVhr
+NUlkRER5RE5nNEJGRHhKPg0KDQpQYXRpZW50LVJlcG9ydGVkIE91dGNvbWVzIEFmdGVyIEZpcnN0
+IFB1bG1vbmFyeSBWZWluIElzb2xhdGlvbiBmb3INClBhcm94WXNtYWwgQXRyaWFsIEZpYnJpbGxh
+dGlvbg0KUHViTWVkDQpCYWNrZ3JvdW5kL09iamVjdGl2ZXM6IFBhdGllbnQtcmVwb3J0ZWQgb3V0
+Y29tZSBhZnRlciB0cmVhdG1lbnQgaXMgYW4NCmltcG9ydGFudCBmYWN0b3IgdGhhdCBwb3NpdGl2
+ZWx5IGNvcnJlbGF0ZXMgd2l0aCB0aGUgcXVhbGl0eSBvZiBjYXJlIGFuZCBjYW4NCi4uLg0KPGh0
+dHBzOi8vd3d3Lmdvb2dsZS5jb20vdXJsP3JjdD1qJnNhPXQmdXJsPWh0dHBzOi8vcHVibWVkLm5j
+YmkubmxtLm5paC5nb3YvNDEwOTU3OTEvJTNGdXRtX3NvdXJjZSUzREZlZWRGZXRjaGVyJTI2dXRt
+X21lZGl1bSUzRHJzcyUyNnV0bV9jYW1wYWlnbiUzRE5vbmUlMjZ1dG1fY29udGVudCUzRDAwUWFX
+TWlYRkJNTUlOVU5BczZSakRGcnV6VGs2UDY3TGNScFVLUUhOSlQlMjZmYyUzRE5vbmUlMjZmZiUz
+RDIwMjUxMDI2MTIzMjM0JTI2diUzRDIuMTguMC5wb3N0MjIlMkI2Nzc3MWUyJmN0PWdhJmNkPUNB
+RVlBaW9UTVRZMU9UYzJOemN4TURjME1ESTNOak00TlRJYVlXTXdNakppTW1KbFlUUTFOalV4T1Rw
+amIyMDZaVzQ2VlZNJnVzZz1BT3ZWYXczb0VrbTg5MHJQNTh3eGlvVEwwamdrPg0KDQpBc3Nlc3Np
+bmcgUGF0aWVudC1SZXBvcnRlZCBGdW5jdGlvbmluZyBhbmQgU3ltcHRvbSBPdXRjb21lcyBpbiBQ
+cmV0cmVhdGVkDQpIRVIyIC4uLg0KQ2FuY2VyIE51cnNpbmcgVG9kYXkNClRoZSBzdHVkeSBtZWFz
+dXJlZCBwYXRpZW50LXJlcG9ydGVkIG91dGNvbWUgKFBSTykgZGF0YSB0byBldmFsdWF0ZSB0aGUN
+CmV4cGVyaWVuY2Ugb2YgcGF0aWVudHMgcmVjZWl2aW5nIHRyZWF0bWVudCB3aXRoIHpvbmdlcnRp
+bmliIGFuZCBleHBsb3JlZCAuLi4NCjxodHRwczovL3d3dy5nb29nbGUuY29tL3VybD9yY3Q9aiZz
+YT10JnVybD1odHRwczovL3d3dy5jYW5jZXJudXJzaW5ndG9kYXkuY29tL3Bvc3QvYmVhbWlvbi1s
+dW5nLTEtYXNzZXNzaW5nLXBhdGllbnQtcmVwb3J0ZWQtZnVuY3Rpb25pbmctYW5kLXN5bXB0b20t
+b3V0Y29tZXMtaW4tcHJldHJlYXRlZC1oZXIyLW11dGF0ZWQtbnNjbGMmY3Q9Z2EmY2Q9Q0FFWUF5
+b1RNVFkxT1RjMk56Y3hNRGMwTURJM05qTTROVElhWVdNd01qSmlNbUpsWVRRMU5qVXhPVHBqYjIw
+NlpXNDZWVk0mdXNnPUFPdlZhdzN3aVBDa0ZXeGV3Q0d3UFlkQnFaOHM+DQoNCkFzc2Vzc2luZyBR
+dWFsaXR5IG9mIExpZmUgYW5kIFBhdGllbnQtUmVwb3J0ZWQgT3V0Y29tZXMgaW4gRGlhYmV0aWMg
+TWFjdWxhcg0KRWRlbWEgLi4uDQpUaGUgQ3VyZXVzIEpvdXJuYWwgb2YgTWVkaWNhbCBTY2llbmNl
+DQpQYXRpZW50LXJlcG9ydGVkIG91dGNvbWUgbWVhc3VyZXMgKFBST01zKSBoYXZlIHRoZXJlZm9y
+ZSBnYWluZWQgLi4uDQpBbnRpLVZFR0Y6IEFudGktdmFzY3VsYXIgRW5kb3RoZWxpYWwgR3Jvd3Ro
+IEZhY3RvcjsgUFJPOiBQYXRpZW50IHJlcG9ydGVkDQpvdXRjb21lIC4uLg0KPGh0dHBzOi8vd3d3
+Lmdvb2dsZS5jb20vdXJsP3JjdD1qJnNhPXQmdXJsPWh0dHBzOi8vd3d3LmN1cmV1cy5jb20vYXJ0
+aWNsZXMvNDA2MDIwLWFzc2Vzc2luZy1xdWFsaXR5LW9mLWxpZmUtYW5kLXBhdGllbnQtcmVwb3J0
+ZWQtb3V0Y29tZXMtaW4tZGlhYmV0aWMtbWFjdWxhci1lZGVtYS10cmVhdGVkLXdpdGgtYW50aS12
+YXNjdWxhci1lbmRvdGhlbGlhbC1ncm93dGgtZmFjdG9yLWFudGktdmVnZi1hZ2VudHMtYS1zeXN0
+ZW1hdGljLXJldmlldy1hbmQtbWV0YS1hbmFseXNpcyZjdD1nYSZjZD1DQUVZQkNvVE1UWTFPVGMy
+TnpjeE1EYzBNREkzTmpNNE5USWFZV013TWpKaU1tSmxZVFExTmpVeE9UcGpiMjA2Wlc0NlZWTSZ1
+c2c9QU92VmF3MUphal9qb2djb0NiYnFibHB5MWJodj4NCg0KdGhlIGV2b2x1dGlvbiBhbmQgY2xp
+bmljYWwgaW1wYWN0IG9mIHBhdGllbnQtcmVwb3J0ZWQgb3V0Y29tZSBtZWFzdXJlcyBpbg0KbXll
+bG9wcm9saWZlcmF0aXZlIC4uLg0KUHViTWVkDQogRnJvbSBzeW1wdG9tIHNjYWxlcyB0byByZWd1
+bGF0b3J5IGVuZHBvaW50czogdGhlIGV2b2x1dGlvbiBhbmQgY2xpbmljYWwNCmltcGFjdCBvZiBw
+YXRpZW50LXJlcG9ydGVkIG91dGNvbWUgbWVhc3VyZXMgaW4gbXllbG9wcm9saWZlcmF0aXZlIG5l
+b3BsYXNtcy4NCjxodHRwczovL3d3dy5nb29nbGUuY29tL3VybD9yY3Q9aiZzYT10JnVybD1odHRw
+czovL3B1Ym1lZC5uY2JpLm5sbS5uaWguZ292LzQxMTM4MDA4LyZjdD1nYSZjZD1DQUVZQlNvVE1U
+WTFPVGMyTnpjeE1EYzBNREkzTmpNNE5USWFZV013TWpKaU1tSmxZVFExTmpVeE9UcGpiMjA2Wlc0
+NlZWTSZ1c2c9QU92VmF3MzAxVmxxc3ZkTnBTM002VmF3anFXTz4NCg0KUzk0MCBEZXZlbG9wbWVu
+dCBvZiBhIFBhdGllbnQgUmVwb3J0ZWQgT3V0Y29tZSBNZWFzdXJlIGZvciBCYXJyZXR0J3MNCkVz
+b3BoYWd1cyAoUFJPQkUpIC0gTFdXDQpPZmZpY2lhbCBqb3VybmFsIG9mIHRoZSBBbWVyaWNhbiBD
+b2xsZWdlIG9mIEdhc3Ryb2VudGVyb2xvZ3kgfCBBQ0cNCkJhcnJldHQncyBlc29waGFndXMgKEJF
+KSBsYWNrcyBhIGRpc2Vhc2Utc3BlY2lmaWMgcGF0aWVudC1yZXBvcnRlZCBvdXRjb21lDQooUFJP
+KSBpbnN0cnVtZW50IHRvIGFzc2VzcyBoZWFsdGgtcmVsYXRlZCBxdWFsaXR5IG9mIGxpZmUgKEhS
+UU9MKSB0byAuLi4NCjxodHRwczovL3d3dy5nb29nbGUuY29tL3VybD9yY3Q9aiZzYT10JnVybD1o
+dHRwczovL2pvdXJuYWxzLmx3dy5jb20vYWpnL2Z1bGx0ZXh0LzIwMjUvMTAwMDIvczk0MV9idXJk
+ZW5fYmV5b25kX2JvcmRlcnNfX2FfZ2xvYmFsX2JlbmNobWFya2luZy45NDEuYXNweCZjdD1nYSZj
+ZD1DQUVZQmlvVE1UWTFPVGMyTnpjeE1EYzBNREkzTmpNNE5USWFZV013TWpKaU1tSmxZVFExTmpV
+eE9UcGpiMjA2Wlc0NlZWTSZ1c2c9QU92VmF3MzA2aWFsTzVDejlQNW5EbDRSMTVqaz4NCg0KVGhl
+IEltcGFjdCBvZiBMdW1iYXIgQnJhY2luZyBvbiBQYXRpZW50LVJlcG9ydGVkIE91dGNvbWVzIElu
+IFNob3J0IEx1bWJhcg0KRnVzaW9uDQpTY2llbmNlRGlyZWN0LmNvbQ0KVGhpcyBzdHVkeSBhaW1z
+IHRvIGFzc2VzcyB0aGUgZWZmZWN0IG9mIGJyYWNpbmcgcGF0aWVudC1yZXBvcnRlZCBvdXRjb21l
+DQptZWFzdXJlcyAoUFJPTXMpIGZvbGxvd2luZyBzaG9ydC1zZWdtZW50IGx1bWJhciBmdXNpb24g
+c3VyZ2VyaWVzLiBNRVRIT0RTLg0KPGh0dHBzOi8vd3d3Lmdvb2dsZS5jb20vdXJsP3JjdD1qJnNh
+PXQmdXJsPWh0dHBzOi8vd3d3LnNjaWVuY2VkaXJlY3QuY29tL3NjaWVuY2UvYXJ0aWNsZS9waWkv
+UzE4Nzg4NzUwMjUwMDkyNlgmY3Q9Z2EmY2Q9Q0FFWUJ5b1RNVFkxT1RjMk56Y3hNRGMwTURJM05q
+TTROVElhWVdNd01qSmlNbUpsWVRRMU5qVXhPVHBqYjIwNlpXNDZWVk0mdXNnPUFPdlZhdzF4Q2JL
+Q0xZWXNJcFYwZnJsRllheDE+DQoNClRoZSBGZWFzaWJpbGl0eSBvZiBXZWFyYWJsZSBEZXZpY2Vz
+IHRvIEFzc2VzcyBQYXRpZW50IFJlcG9ydGVkIE91dGNvbWVzIGluDQpVcm90aGVsaWFsIENhbmNl
+ciBUcmlhbHMNClVyb1RvZGF5DQpUaGUgRElTQ1VTIHRyaWFsIGlzIG9wZW4gZm9yIHJlY3J1aXRt
+ZW50IGF0IDQ1IHNpdGVzIGluIFVLLCBTcGFpbiBhbmQNCkZyYW5jZS4gVGhpcyBzdWJzdHVkeSBp
+bmNvcnBvcmF0ZWQgYW4gYXBwLWJhc2VkIHBhdGllbnQtcmVwb3J0ZWQgb3V0Y29tZQ0KKFBSTykg
+Li4uDQo8aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbS91cmw/cmN0PWomc2E9dCZ1cmw9aHR0cHM6Ly93
+d3cudXJvdG9kYXkuY29tL2NvbmZlcmVuY2UtaGlnaGxpZ2h0cy9lc21vLTIwMjUvZXNtby0yMDI1
+LWJsYWRkZXItY2FuY2VyLzE2NDE0Mi1lc21vLTIwMjUtdGhlLWZlYXNpYmlsaXR5LW9mLXdlYXJh
+YmxlLWRldmljZXMtdG8tYXNzZXNzLXBhdGllbnQtcmVwb3J0ZWQtb3V0Y29tZXMtaW4tdXJvdGhl
+bGlhbC1jYW5jZXItdHJpYWxzLXRoZS1kaXNjdXMtc3Vic3R1ZHkuaHRtbCZjdD1nYSZjZD1DQUVZ
+Q0NvVE1UWTFPVGMyTnpjeE1EYzBNREkzTmpNNE5USWFZV013TWpKaU1tSmxZVFExTmpVeE9UcGpi
+MjA2Wlc0NlZWTSZ1c2c9QU92VmF3MUQzcXZKNTNGYlg2Ti05UEJOVGVQRj4NCg0KUGF0aWVudCdz
+IFJlcG9ydGVkIE91dGNvbWUgRm9sbG93aW5nIENoZXZyb24gRGlzdGFsIE9zdGVvdG9teSBWZXJz
+dXMgU0VSSQ0KKFNpbXBsZSAuLi4NCmN1cmV1cy5jb20NClBhdGllbnQtcmVwb3J0ZWQgb3V0Y29t
+ZSBtZWFzdXJlcyAoUFJPTXMpIGFyZSBjcnVjaWFsIGZvciBldmFsdWF0aW5nDQpzdWNjZXNzLiBD
+YXRlZ29yaWVzOiBQb2RpYXRyeSwgUGFpbiBNYW5hZ2VtZW50LCBPcnRob3BlZGljcy4gS2V5d29y
+ZHMgLi4uDQo8aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbS91cmw/cmN0PWomc2E9dCZ1cmw9aHR0cHM6
+Ly93d3cuY3VyZXVzLmNvbS9hcnRpY2xlcy80MjA0MDAtcGF0aWVudHMtcmVwb3J0ZWQtb3V0Y29t
+ZS1mb2xsb3dpbmctY2hldnJvbi1kaXN0YWwtb3N0ZW90b215LXZlcnN1cy1zZXJpLXNpbXBsZS1l
+ZmZlY3RpdmUtcmFwaWQtYW5kLWluZXhwZW5zaXZlLXByb2NlZHVyZS1pbi1oYWxsdXgtdmFsZ3Vz
+LXN1cmdlcnkucGRmJTNGZW1haWwlM0QmY3Q9Z2EmY2Q9Q0FFWUNTb1RNVFkxT1RjMk56Y3hNRGMw
+TURJM05qTTROVElhWVdNd01qSmlNbUpsWVRRMU5qVXhPVHBqYjIwNlpXNDZWVk0mdXNnPUFPdlZh
+dzJ0QUZkVVE4V0FDZlA4dTlTa2ZqZHY+DQoNCg0KLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAt
+IC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLSAtIC0gLQ0KVW5zdWJzY3JpYmUgZnJv
+bSB0aGlzIEdvb2dsZSBBbGVydDoNCjxodHRwczovL3d3dy5nb29nbGUuY29tL2FsZXJ0cy9yZW1v
+dmU/c291cmNlPWFsZXJ0c21haWwmaGw9ZW4mZ2w9VVMmbXNnaWQ9TVRZMU9UYzJOemN4TURjME1E
+STNOak00TlEmcz1BQjJYcTRnM1BEMU05YUtkU3JCUjNjUlNPeExGaDd0MmY5Z0pETEE+DQoNCkNy
+ZWF0ZSBhbm90aGVyIEdvb2dsZSBBbGVydDoNCjxodHRwczovL3d3dy5nb29nbGUuY29tL2FsZXJ0
+cz9zb3VyY2U9YWxlcnRzbWFpbCZobD1lbiZnbD1VUyZtc2dpZD1NVFkxT1RjMk56Y3hNRGMwTURJ
+M05qTTROUT4NCg0KU2lnbiBpbiB0byBtYW5hZ2UgeW91ciBhbGVydHM6DQo8aHR0cHM6Ly93d3cu
+Z29vZ2xlLmNvbS9hbGVydHM/c291cmNlPWFsZXJ0c21haWwmaGw9ZW4mZ2w9VVMmbXNnaWQ9TVRZ
+MU9UYzJOemN4TURjME1ESTNOak00TlE+DQo=
+--000000000000aa156e064223a8cb
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<html lang=3D"en-US"> <head> </head> <body> <div>  <script data-scope=3D"in=
+boxmarkup" type=3D"application/json">{
+  "api_version": "1.0",
+  "publisher": {
+    "api_key": "668269e72cfedea31b22524041ff21d9",
+    "name": "Google Alerts"
+  },
+  "entity": {
+    "external_key": "Google Alert - =E2=80=9CPatient reported outcome=E2=80=
+=9D",
+    "title": "Google Alert - =E2=80=9CPatient reported outcome=E2=80=9D",
+    "subtitle": "Latest: October 27, 2025",
+    "avatar_image_url": "https://www.gstatic.com/images/branding/product/1x=
+/gsa_512dp.png",
+    "main_image_url": "https://www.gstatic.com/bt/C3341AA7A1A076756462EE2E5=
+CD71C11/smartmail/mobile/il_newspaper_header_r1.png"
+  },
+  "updates": {
+    "snippets": [ {
+      "icon": "BOOKMARK",
+      "message": "SAT-151 Real-World Effects of Testosterone Replacement Th=
+erapy on Hematocrit and ... - NIH"
+    }, {
+      "icon": "BOOKMARK",
+      "message": "Reimagining patient-reported outcomes in the age of gener=
+ative AI | npj Digital Medicine"
+    }, {
+      "icon": "BOOKMARK",
+      "message": "Patient-Reported Outcomes After First Pulmonary Vein Isol=
+ation for ParoxYsmal Atrial Fibrillation"
+    } ]
+  },
+  "cards": [ {
+    "title": "Google Alert - =E2=80=9CPatient reported outcome=E2=80=9D",
+    "subtitle": "Highlights from the latest email",
+    "actions": [ {
+      "name": "See more results",
+      "url": "https://www.google.com/alerts?s=3DAB2Xq4g3PD1M9aKdSrBR3cRSOxL=
+Fh7t2f9gJDLA\u0026start=3D1760965972\u0026end=3D1761570780\u0026source=3Dal=
+ertsmail\u0026hl=3Den\u0026gl=3DUS\u0026msgid=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ#=
+history"
+    } ],
+    "widgets": [ {
+      "type": "LINK",
+      "title": "SAT-151 Real-World Effects of Testosterone Replacement Ther=
+apy on Hematocrit and ... - NIH",
+      "description": "SAT-151 Real-World Effects of Testosterone Replacemen=
+t Therapy on Hematocrit and Patient-Reported Outcome Measures: A Retrospect=
+ive, Longitudinal ...",
+      "url": "https://www.google.com/url?rct=3Dj\u0026sa=3Dt\u0026url=3Dhtt=
+ps://pmc.ncbi.nlm.nih.gov/articles/PMC12544051/\u0026ct=3Dga\u0026cd=3DCAEY=
+ACoTMTY1OTc2NzcxMDc0MDI3NjM4NTIaYWMwMjJiMmJlYTQ1NjUxOTpjb206ZW46VVM\u0026us=
+g=3DAOvVaw3_rr7jLuHRuyAv5zHaxJy2"
+    }, {
+      "type": "LINK",
+      "title": "Reimagining patient-reported outcomes in the age of generat=
+ive AI | npj Digital Medicine",
+      "description": "Improving the implementation of patient-reported outc=
+ome measure in clinical practice: tackling current challenges with innovati=
+ve digital ...",
+      "url": "https://www.google.com/url?rct=3Dj\u0026sa=3Dt\u0026url=3Dhtt=
+ps://www.nature.com/articles/s41746-025-02006-1\u0026ct=3Dga\u0026cd=3DCAEY=
+ASoTMTY1OTc2NzcxMDc0MDI3NjM4NTIaYWMwMjJiMmJlYTQ1NjUxOTpjb206ZW46VVM\u0026us=
+g=3DAOvVaw2R2SmXk5IdDDyDNg4BFDxJ"
+    }, {
+      "type": "LINK",
+      "title": "Patient-Reported Outcomes After First Pulmonary Vein Isolat=
+ion for ParoxYsmal Atrial Fibrillation",
+      "description": "Background/Objectives: Patient-reported outcome after=
+ treatment is an important factor that positively correlates with the quali=
+ty of care and can ...",
+      "url": "https://www.google.com/url?rct=3Dj\u0026sa=3Dt\u0026url=3Dhtt=
+ps://pubmed.ncbi.nlm.nih.gov/41095791/%3Futm_source%3DFeedFetcher%26utm_med=
+ium%3Drss%26utm_campaign%3DNone%26utm_content%3D00QaWMiXFBMMINUNAs6RjDFruzT=
+k6P67LcRpUKQHNJT%26fc%3DNone%26ff%3D20251026123234%26v%3D2.18.0.post22%2B67=
+771e2\u0026ct=3Dga\u0026cd=3DCAEYAioTMTY1OTc2NzcxMDc0MDI3NjM4NTIaYWMwMjJiMm=
+JlYTQ1NjUxOTpjb206ZW46VVM\u0026usg=3DAOvVaw3oEkm890rP58wxioTL0jgk"
+    }, {
+      "type": "LINK",
+      "title": "Assessing Patient-Reported Functioning and Symptom Outcomes=
+ in Pretreated HER2 ...",
+      "description": "The study measured patient-reported outcome (PRO) dat=
+a to evaluate the experience of patients receiving treatment with zongertin=
+ib and explored ...",
+      "url": "https://www.google.com/url?rct=3Dj\u0026sa=3Dt\u0026url=3Dhtt=
+ps://www.cancernursingtoday.com/post/beamion-lung-1-assessing-patient-repor=
+ted-functioning-and-symptom-outcomes-in-pretreated-her2-mutated-nsclc\u0026=
+ct=3Dga\u0026cd=3DCAEYAyoTMTY1OTc2NzcxMDc0MDI3NjM4NTIaYWMwMjJiMmJlYTQ1NjUxO=
+Tpjb206ZW46VVM\u0026usg=3DAOvVaw3wiPCkFWxewCGwPYdBqZ8s"
+    } ]
+  } ]
+}
+</script> <!--[if mso]>
+ <table><tr><td width=3D650>
+<![endif]-->
+ <div style=3D"width:100%;max-width:650px"> <div style=3D"font-family:Arial=
+"> <table style=3D"border-collapse:collapse;border-left:1px solid #e4e4e4;b=
+order-right:1px solid #e4e4e4"> <tr> <td style=3D"background-color:#f8f8f8;=
+padding-left:18px;border-bottom:1px solid #e4e4e4;border-top:1px solid #e4e=
+4e4"></td> <td valign=3D"middle" style=3D"padding:13px 10px 8px 0px;backgro=
+und-color:#f8f8f8;border-top:1px solid #e4e4e4;border-bottom:1px solid #e4e=
+4e4"> <a href=3D"https://www.google.com/alerts?source=3Dalertsmail&amp;hl=
+=3Den&amp;gl=3DUS&amp;msgid=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ" style=3D"text-dec=
+oration:none"> <img src=3D"https://www.google.com/intl/en_us/alerts/logo.pn=
+g?cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1" alt=3D"Google" border=3D"0" height=3D"=
+25"> </a> </td> <td style=3D"background-color:#f8f8f8;padding-left:18px;bor=
+der-top:1px solid #e4e4e4;border-bottom:1px solid #e4e4e4"></td> </tr>  <tr=
+> <td style=3D"padding-left:32px"></td> <td style=3D"padding:18px 0px 0px 0=
+px;vertical-align:middle;line-height:20px;font-family:Arial"> <span style=
+=3D"color:#262626;font-size:22px">=E2=80=9CPatient reported outcome=E2=80=
+=9D</span> <div style=3D"vertical-align:top;padding-top:6px;color:#aaa;font=
+-size:12px;line-height:16px"> <span>Weekly update</span> <span style=3D"pad=
+ding:0px 4px 0px 4px">&sdot;</span> <a style=3D"color:#aaa;text-decoration:=
+none">October 27, 2025</a> </div> </td> <td style=3D"padding-left:32px"></t=
+d> </tr>  <tr> <td style=3D"padding-left:18px"></td> <td style=3D"padding:1=
+6px 0px 12px 0px;border-bottom:1px solid #e4e4e4"> <span style=3D"font-size=
+:12px;color:#737373"> NEWS </span> </td> <td style=3D"padding-right:18px"><=
+/td> </tr>   <tr itemscope=3D"" itemtype=3D"http://schema.org/Article"> <td=
+ style=3D"padding-left:18px"></td> <td style=3D"padding:18px 0px 12px 0px;v=
+ertical-align:top;font-family:Arial"> <a></a> <div>  <span style=3D"padding=
+:0px 6px 0px 0px"> <a href=3D"https://www.google.com/url?rct=3Dj&amp;sa=3Dt=
+&amp;url=3Dhttps://pmc.ncbi.nlm.nih.gov/articles/PMC12544051/&amp;ct=3Dga&a=
+mp;cd=3DCAEYACoTMTY1OTc2NzcxMDc0MDI3NjM4NTIaYWMwMjJiMmJlYTQ1NjUxOTpjb206ZW4=
+6VVM&amp;usg=3DAOvVaw3_rr7jLuHRuyAv5zHaxJy2" itemprop=3D"url" style=3D"colo=
+r:#427fed;display:inline;text-decoration:none;font-size:16px;line-height:20=
+px"> <span itemprop=3D"name">SAT-151 Real-World Effects of Testosterone Rep=
+lacement Therapy on Hematocrit and ... - NIH</span> </a> </span>  <div> <di=
+v style=3D"padding:2px 0px 8px 0px"> <div itemprop=3D"publisher" itemscope=
+=3D"" itemtype=3D"http://schema.org/Organization" style=3D"color:#737373;fo=
+nt-size:12px"> <a style=3D"text-decoration:none;color:#737373"> <span itemp=
+rop=3D"name">NIH</span> </a> </div> <div itemprop=3D"description" style=3D"=
+color:#252525;padding:2px 0px 0px 0px;font-size:12px;line-height:18px">SAT-=
+151 Real-World Effects of Testosterone Replacement Therapy on Hematocrit an=
+d <b>Patient-Reported Outcome</b> Measures: A Retrospective, Longitudinal&n=
+bsp;...</div> </div>   <table> <tr> <td width=3D"16" style=3D"padding-right=
+:6px"> <a href=3D"https://www.google.com/alerts/share?hl=3Den&amp;gl=3DUS&a=
+mp;ru=3Dhttps://pmc.ncbi.nlm.nih.gov/articles/PMC12544051/&amp;ss=3Dfb&amp;=
+rt=3DSAT-151+Real-World+Effects+of+Testosterone+Replacement+Therapy+on+Hema=
+tocrit+and+...+-+NIH&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYzAyMmIyYmVhN=
+DU2NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmX7uKnUgXabvz_o1OJ_PvfziFTNiA" style=
+=3D"text-decoration:none"> <img alt=3D"Facebook" src=3D"https://www.gstatic=
+.com/alerts/images/fb-24.png" border=3D"0" height=3D"16" width=3D"16"></a> =
+</td> <td width=3D"16" style=3D"padding-right:6px"> <a href=3D"https://www.=
+google.com/alerts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://pmc.ncbi.nlm.n=
+ih.gov/articles/PMC12544051/&amp;ss=3Dtw&amp;rt=3DSAT-151+Real-World+Effect=
+s+of+Testosterone+Replacement+Therapy+on+Hematocrit+and+...+-+NIH&amp;cd=3D=
+KhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYzAyMmIyYmVhNDU2NTE5OmNvbTplbjpVUw&amp;ssp=
+=3DAMJHsmX7uKnUgXabvz_o1OJ_PvfziFTNiA" style=3D"text-decoration:none"> <img=
+ alt=3D"Twitter" src=3D"https://www.gstatic.com/alerts/images/tw-24.png" bo=
+rder=3D"0" height=3D"16" width=3D"16"></a> </td> <td style=3D"padding:0px 0=
+px 6px 15px;font-family:Arial"> <a href=3D"https://www.google.com/alerts/fe=
+edback?ffu=3Dhttps://pmc.ncbi.nlm.nih.gov/articles/PMC12544051/&amp;source=
+=3Dalertsmail&amp;hl=3Den&amp;gl=3DUS&amp;msgid=3DMTY1OTc2NzcxMDc0MDI3NjM4N=
+Q&amp;s=3DAB2Xq4g3PD1M9aKdSrBR3cRSOxLFh7t2f9gJDLA" style=3D"text-decoration=
+:none;vertical-align:middle;color:#aaa;font-size:10px"> Flag as irrelevant =
+</a> </td> </tr> </table>  </div> </div> </td> <td style=3D"padding-right:1=
+8px"></td> </tr>    <tr itemscope=3D"" itemtype=3D"http://schema.org/Articl=
+e"> <td style=3D"padding-left:18px"></td> <td style=3D"padding:18px 0px 12p=
+x 0px;vertical-align:top;border-top:1px solid #e4e4e4;font-family:Arial"> <=
+a></a> <div>  <span style=3D"padding:0px 6px 0px 0px"> <a href=3D"https://w=
+ww.google.com/url?rct=3Dj&amp;sa=3Dt&amp;url=3Dhttps://www.nature.com/artic=
+les/s41746-025-02006-1&amp;ct=3Dga&amp;cd=3DCAEYASoTMTY1OTc2NzcxMDc0MDI3NjM=
+4NTIaYWMwMjJiMmJlYTQ1NjUxOTpjb206ZW46VVM&amp;usg=3DAOvVaw2R2SmXk5IdDDyDNg4B=
+FDxJ" itemprop=3D"url" style=3D"color:#427fed;display:inline;text-decoratio=
+n:none;font-size:16px;line-height:20px"> <span itemprop=3D"name">Reimaginin=
+g patient-reported outcomes in the age of generative AI | npj Digital Medic=
+ine</span> </a> </span>  <div> <div style=3D"padding:2px 0px 8px 0px"> <div=
+ itemprop=3D"publisher" itemscope=3D"" itemtype=3D"http://schema.org/Organi=
+zation" style=3D"color:#737373;font-size:12px"> <a style=3D"text-decoration=
+:none;color:#737373"> <span itemprop=3D"name">Nature</span> </a> </div> <di=
+v itemprop=3D"description" style=3D"color:#252525;padding:2px 0px 0px 0px;f=
+ont-size:12px;line-height:18px">Improving the implementation of <b>patient-=
+reported outcome</b> measure in clinical practice: tackling current challen=
+ges with innovative digital&nbsp;...</div> </div>   <table> <tr> <td width=
+=3D"16" style=3D"padding-right:6px"> <a href=3D"https://www.google.com/aler=
+ts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://www.nature.com/articles/s4174=
+6-025-02006-1&amp;ss=3Dfb&amp;rt=3DReimagining+patient-reported+outcomes+in=
++the+age+of+generative+AI+%7C+npj+Digital+Medicine&amp;cd=3DKhMxNjU5NzY3NzE=
+wNzQwMjc2Mzg1MhphYzAyMmIyYmVhNDU2NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmXYq28mX=
+bYb2CdMeiLWbFA3ZNUOfA" style=3D"text-decoration:none"> <img alt=3D"Facebook=
+" src=3D"https://www.gstatic.com/alerts/images/fb-24.png" border=3D"0" heig=
+ht=3D"16" width=3D"16"></a> </td> <td width=3D"16" style=3D"padding-right:6=
+px"> <a href=3D"https://www.google.com/alerts/share?hl=3Den&amp;gl=3DUS&amp=
+;ru=3Dhttps://www.nature.com/articles/s41746-025-02006-1&amp;ss=3Dtw&amp;rt=
+=3DReimagining+patient-reported+outcomes+in+the+age+of+generative+AI+%7C+np=
+j+Digital+Medicine&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYzAyMmIyYmVhNDU=
+2NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmXYq28mXbYb2CdMeiLWbFA3ZNUOfA" style=3D"=
+text-decoration:none"> <img alt=3D"Twitter" src=3D"https://www.gstatic.com/=
+alerts/images/tw-24.png" border=3D"0" height=3D"16" width=3D"16"></a> </td>=
+ <td style=3D"padding:0px 0px 6px 15px;font-family:Arial"> <a href=3D"https=
+://www.google.com/alerts/feedback?ffu=3Dhttps://www.nature.com/articles/s41=
+746-025-02006-1&amp;source=3Dalertsmail&amp;hl=3Den&amp;gl=3DUS&amp;msgid=
+=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ&amp;s=3DAB2Xq4g3PD1M9aKdSrBR3cRSOxLFh7t2f9gJD=
+LA" style=3D"text-decoration:none;vertical-align:middle;color:#aaa;font-siz=
+e:10px"> Flag as irrelevant </a> </td> </tr> </table>  </div> </div> </td> =
+<td style=3D"padding-right:18px"></td> </tr>    <tr itemscope=3D"" itemtype=
+=3D"http://schema.org/Article"> <td style=3D"padding-left:18px"></td> <td s=
+tyle=3D"padding:18px 0px 12px 0px;vertical-align:top;border-top:1px solid #=
+e4e4e4;font-family:Arial"> <a></a> <div>  <span style=3D"padding:0px 6px 0p=
+x 0px"> <a href=3D"https://www.google.com/url?rct=3Dj&amp;sa=3Dt&amp;url=3D=
+https://pubmed.ncbi.nlm.nih.gov/41095791/%3Futm_source%3DFeedFetcher%26utm_=
+medium%3Drss%26utm_campaign%3DNone%26utm_content%3D00QaWMiXFBMMINUNAs6RjDFr=
+uzTk6P67LcRpUKQHNJT%26fc%3DNone%26ff%3D20251026123234%26v%3D2.18.0.post22%2=
+B67771e2&amp;ct=3Dga&amp;cd=3DCAEYAioTMTY1OTc2NzcxMDc0MDI3NjM4NTIaYWMwMjJiM=
+mJlYTQ1NjUxOTpjb206ZW46VVM&amp;usg=3DAOvVaw3oEkm890rP58wxioTL0jgk" itemprop=
+=3D"url" style=3D"color:#427fed;display:inline;text-decoration:none;font-si=
+ze:16px;line-height:20px"> <span itemprop=3D"name">Patient-Reported Outcome=
+s After First Pulmonary Vein Isolation for ParoxYsmal Atrial Fibrillation</=
+span> </a> </span>  <div> <div style=3D"padding:2px 0px 8px 0px"> <div item=
+prop=3D"publisher" itemscope=3D"" itemtype=3D"http://schema.org/Organizatio=
+n" style=3D"color:#737373;font-size:12px"> <a style=3D"text-decoration:none=
+;color:#737373"> <span itemprop=3D"name">PubMed</span> </a> </div> <div ite=
+mprop=3D"description" style=3D"color:#252525;padding:2px 0px 0px 0px;font-s=
+ize:12px;line-height:18px">Background/Objectives: <b>Patient-reported outco=
+me</b> after treatment is an important factor that positively correlates wi=
+th the quality of care and can&nbsp;...</div> </div>   <table> <tr> <td wid=
+th=3D"16" style=3D"padding-right:6px"> <a href=3D"https://www.google.com/al=
+erts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://pubmed.ncbi.nlm.nih.gov/410=
+95791/%3Futm_source%3DFeedFetcher%26utm_medium%3Drss%26utm_campaign%3DNone%=
+26utm_content%3D00QaWMiXFBMMINUNAs6RjDFruzTk6P67LcRpUKQHNJT%26fc%3DNone%26f=
+f%3D20251026123234%26v%3D2.18.0.post22%2B67771e2&amp;ss=3Dfb&amp;rt=3DPatie=
+nt-Reported+Outcomes+After+First+Pulmonary+Vein+Isolation+for+ParoxYsmal+At=
+rial+Fibrillation&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYzAyMmIyYmVhNDU2=
+NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmVu2LYe8_RUtacJ43njrsrdQHrrSg" style=3D"t=
+ext-decoration:none"> <img alt=3D"Facebook" src=3D"https://www.gstatic.com/=
+alerts/images/fb-24.png" border=3D"0" height=3D"16" width=3D"16"></a> </td>=
+ <td width=3D"16" style=3D"padding-right:6px"> <a href=3D"https://www.googl=
+e.com/alerts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://pubmed.ncbi.nlm.nih=
+.gov/41095791/%3Futm_source%3DFeedFetcher%26utm_medium%3Drss%26utm_campaign=
+%3DNone%26utm_content%3D00QaWMiXFBMMINUNAs6RjDFruzTk6P67LcRpUKQHNJT%26fc%3D=
+None%26ff%3D20251026123234%26v%3D2.18.0.post22%2B67771e2&amp;ss=3Dtw&amp;rt=
+=3DPatient-Reported+Outcomes+After+First+Pulmonary+Vein+Isolation+for+Parox=
+Ysmal+Atrial+Fibrillation&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYzAyMmIy=
+YmVhNDU2NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmVu2LYe8_RUtacJ43njrsrdQHrrSg" st=
+yle=3D"text-decoration:none"> <img alt=3D"Twitter" src=3D"https://www.gstat=
+ic.com/alerts/images/tw-24.png" border=3D"0" height=3D"16" width=3D"16"></a=
+> </td> <td style=3D"padding:0px 0px 6px 15px;font-family:Arial"> <a href=
+=3D"https://www.google.com/alerts/feedback?ffu=3Dhttps://pubmed.ncbi.nlm.ni=
+h.gov/41095791/%3Futm_source%3DFeedFetcher%26utm_medium%3Drss%26utm_campaig=
+n%3DNone%26utm_content%3D00QaWMiXFBMMINUNAs6RjDFruzTk6P67LcRpUKQHNJT%26fc%3=
+DNone%26ff%3D20251026123234%26v%3D2.18.0.post22%2B67771e2&amp;source=3Daler=
+tsmail&amp;hl=3Den&amp;gl=3DUS&amp;msgid=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ&amp;s=
+=3DAB2Xq4g3PD1M9aKdSrBR3cRSOxLFh7t2f9gJDLA" style=3D"text-decoration:none;v=
+ertical-align:middle;color:#aaa;font-size:10px"> Flag as irrelevant </a> </=
+td> </tr> </table>  </div> </div> </td> <td style=3D"padding-right:18px"></=
+td> </tr>    <tr itemscope=3D"" itemtype=3D"http://schema.org/Article"> <td=
+ style=3D"padding-left:18px"></td> <td style=3D"padding:18px 0px 12px 0px;v=
+ertical-align:top;border-top:1px solid #e4e4e4;font-family:Arial"> <a></a> =
+<div>  <span style=3D"padding:0px 6px 0px 0px"> <a href=3D"https://www.goog=
+le.com/url?rct=3Dj&amp;sa=3Dt&amp;url=3Dhttps://www.cancernursingtoday.com/=
+post/beamion-lung-1-assessing-patient-reported-functioning-and-symptom-outc=
+omes-in-pretreated-her2-mutated-nsclc&amp;ct=3Dga&amp;cd=3DCAEYAyoTMTY1OTc2=
+NzcxMDc0MDI3NjM4NTIaYWMwMjJiMmJlYTQ1NjUxOTpjb206ZW46VVM&amp;usg=3DAOvVaw3wi=
+PCkFWxewCGwPYdBqZ8s" itemprop=3D"url" style=3D"color:#427fed;display:inline=
+;text-decoration:none;font-size:16px;line-height:20px"> <span itemprop=3D"n=
+ame">Assessing Patient-Reported Functioning and Symptom Outcomes in Pretrea=
+ted HER2 ...</span> </a> </span>  <div> <div style=3D"padding:2px 0px 8px 0=
+px"> <div itemprop=3D"publisher" itemscope=3D"" itemtype=3D"http://schema.o=
+rg/Organization" style=3D"color:#737373;font-size:12px"> <a style=3D"text-d=
+ecoration:none;color:#737373"> <span itemprop=3D"name">Cancer Nursing Today=
+</span> </a> </div> <div itemprop=3D"description" style=3D"color:#252525;pa=
+dding:2px 0px 0px 0px;font-size:12px;line-height:18px">The study measured <=
+b>patient-reported outcome</b> (PRO) data to evaluate the experience of pat=
+ients receiving treatment with zongertinib and explored&nbsp;...</div> </di=
+v>   <table> <tr> <td width=3D"16" style=3D"padding-right:6px"> <a href=3D"=
+https://www.google.com/alerts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://ww=
+w.cancernursingtoday.com/post/beamion-lung-1-assessing-patient-reported-fun=
+ctioning-and-symptom-outcomes-in-pretreated-her2-mutated-nsclc&amp;ss=3Dfb&=
+amp;rt=3DAssessing+Patient-Reported+Functioning+and+Symptom+Outcomes+in+Pre=
+treated+HER2+...&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYzAyMmIyYmVhNDU2N=
+TE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmWLNTPfOoCto30nejmTqlc85t53zQ" style=3D"te=
+xt-decoration:none"> <img alt=3D"Facebook" src=3D"https://www.gstatic.com/a=
+lerts/images/fb-24.png" border=3D"0" height=3D"16" width=3D"16"></a> </td> =
+<td width=3D"16" style=3D"padding-right:6px"> <a href=3D"https://www.google=
+.com/alerts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://www.cancernursingtod=
+ay.com/post/beamion-lung-1-assessing-patient-reported-functioning-and-sympt=
+om-outcomes-in-pretreated-her2-mutated-nsclc&amp;ss=3Dtw&amp;rt=3DAssessing=
++Patient-Reported+Functioning+and+Symptom+Outcomes+in+Pretreated+HER2+...&a=
+mp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYzAyMmIyYmVhNDU2NTE5OmNvbTplbjpVUw&=
+amp;ssp=3DAMJHsmWLNTPfOoCto30nejmTqlc85t53zQ" style=3D"text-decoration:none=
+"> <img alt=3D"Twitter" src=3D"https://www.gstatic.com/alerts/images/tw-24.=
+png" border=3D"0" height=3D"16" width=3D"16"></a> </td> <td style=3D"paddin=
+g:0px 0px 6px 15px;font-family:Arial"> <a href=3D"https://www.google.com/al=
+erts/feedback?ffu=3Dhttps://www.cancernursingtoday.com/post/beamion-lung-1-=
+assessing-patient-reported-functioning-and-symptom-outcomes-in-pretreated-h=
+er2-mutated-nsclc&amp;source=3Dalertsmail&amp;hl=3Den&amp;gl=3DUS&amp;msgid=
+=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ&amp;s=3DAB2Xq4g3PD1M9aKdSrBR3cRSOxLFh7t2f9gJD=
+LA" style=3D"text-decoration:none;vertical-align:middle;color:#aaa;font-siz=
+e:10px"> Flag as irrelevant </a> </td> </tr> </table>  </div> </div> </td> =
+<td style=3D"padding-right:18px"></td> </tr>    <tr itemscope=3D"" itemtype=
+=3D"http://schema.org/Article"> <td style=3D"padding-left:18px"></td> <td s=
+tyle=3D"padding:18px 0px 12px 0px;vertical-align:top;border-top:1px solid #=
+e4e4e4;font-family:Arial"> <a></a> <div>  <span style=3D"padding:0px 6px 0p=
+x 0px"> <a href=3D"https://www.google.com/url?rct=3Dj&amp;sa=3Dt&amp;url=3D=
+https://www.cureus.com/articles/406020-assessing-quality-of-life-and-patien=
+t-reported-outcomes-in-diabetic-macular-edema-treated-with-anti-vascular-en=
+dothelial-growth-factor-anti-vegf-agents-a-systematic-review-and-meta-analy=
+sis&amp;ct=3Dga&amp;cd=3DCAEYBCoTMTY1OTc2NzcxMDc0MDI3NjM4NTIaYWMwMjJiMmJlYT=
+Q1NjUxOTpjb206ZW46VVM&amp;usg=3DAOvVaw1Jaj_jogcoCbbqblpy1bhv" itemprop=3D"u=
+rl" style=3D"color:#427fed;display:inline;text-decoration:none;font-size:16=
+px;line-height:20px"> <span itemprop=3D"name">Assessing Quality of Life and=
+ Patient-Reported Outcomes in Diabetic Macular Edema ...</span> </a> </span=
+>  <div> <div style=3D"padding:2px 0px 8px 0px"> <div itemprop=3D"publisher=
+" itemscope=3D"" itemtype=3D"http://schema.org/Organization" style=3D"color=
+:#737373;font-size:12px"> <a style=3D"text-decoration:none;color:#737373"> =
+<span itemprop=3D"name">The Cureus Journal of Medical Science</span> </a> <=
+/div> <div itemprop=3D"description" style=3D"color:#252525;padding:2px 0px =
+0px 0px;font-size:12px;line-height:18px"><b>Patient-reported outcome</b> me=
+asures (PROMs) have therefore gained ... Anti-VEGF: Anti-vascular Endotheli=
+al Growth Factor; PRO: <b>Patient reported outcome</b>&nbsp;...</div> </div=
+>   <table> <tr> <td width=3D"16" style=3D"padding-right:6px"> <a href=3D"h=
+ttps://www.google.com/alerts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://www=
+.cureus.com/articles/406020-assessing-quality-of-life-and-patient-reported-=
+outcomes-in-diabetic-macular-edema-treated-with-anti-vascular-endothelial-g=
+rowth-factor-anti-vegf-agents-a-systematic-review-and-meta-analysis&amp;ss=
+=3Dfb&amp;rt=3DAssessing+Quality+of+Life+and+Patient-Reported+Outcomes+in+D=
+iabetic+Macular+Edema+...&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYzAyMmIy=
+YmVhNDU2NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmX_34rKAWed-9_TnlZH9A60mz58Gg" st=
+yle=3D"text-decoration:none"> <img alt=3D"Facebook" src=3D"https://www.gsta=
+tic.com/alerts/images/fb-24.png" border=3D"0" height=3D"16" width=3D"16"></=
+a> </td> <td width=3D"16" style=3D"padding-right:6px"> <a href=3D"https://w=
+ww.google.com/alerts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://www.cureus.=
+com/articles/406020-assessing-quality-of-life-and-patient-reported-outcomes=
+-in-diabetic-macular-edema-treated-with-anti-vascular-endothelial-growth-fa=
+ctor-anti-vegf-agents-a-systematic-review-and-meta-analysis&amp;ss=3Dtw&amp=
+;rt=3DAssessing+Quality+of+Life+and+Patient-Reported+Outcomes+in+Diabetic+M=
+acular+Edema+...&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYzAyMmIyYmVhNDU2N=
+TE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmX_34rKAWed-9_TnlZH9A60mz58Gg" style=3D"te=
+xt-decoration:none"> <img alt=3D"Twitter" src=3D"https://www.gstatic.com/al=
+erts/images/tw-24.png" border=3D"0" height=3D"16" width=3D"16"></a> </td> <=
+td style=3D"padding:0px 0px 6px 15px;font-family:Arial"> <a href=3D"https:/=
+/www.google.com/alerts/feedback?ffu=3Dhttps://www.cureus.com/articles/40602=
+0-assessing-quality-of-life-and-patient-reported-outcomes-in-diabetic-macul=
+ar-edema-treated-with-anti-vascular-endothelial-growth-factor-anti-vegf-age=
+nts-a-systematic-review-and-meta-analysis&amp;source=3Dalertsmail&amp;hl=3D=
+en&amp;gl=3DUS&amp;msgid=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ&amp;s=3DAB2Xq4g3PD1M9=
+aKdSrBR3cRSOxLFh7t2f9gJDLA" style=3D"text-decoration:none;vertical-align:mi=
+ddle;color:#aaa;font-size:10px"> Flag as irrelevant </a> </td> </tr> </tabl=
+e>  </div> </div> </td> <td style=3D"padding-right:18px"></td> </tr>    <tr=
+ itemscope=3D"" itemtype=3D"http://schema.org/Article"> <td style=3D"paddin=
+g-left:18px"></td> <td style=3D"padding:18px 0px 12px 0px;vertical-align:to=
+p;border-top:1px solid #e4e4e4;font-family:Arial"> <a></a> <div>  <span sty=
+le=3D"padding:0px 6px 0px 0px"> <a href=3D"https://www.google.com/url?rct=
+=3Dj&amp;sa=3Dt&amp;url=3Dhttps://pubmed.ncbi.nlm.nih.gov/41138008/&amp;ct=
+=3Dga&amp;cd=3DCAEYBSoTMTY1OTc2NzcxMDc0MDI3NjM4NTIaYWMwMjJiMmJlYTQ1NjUxOTpj=
+b206ZW46VVM&amp;usg=3DAOvVaw301VlqsvdNpS3M6VawjqWO" itemprop=3D"url" style=
+=3D"color:#427fed;display:inline;text-decoration:none;font-size:16px;line-h=
+eight:20px"> <span itemprop=3D"name">the evolution and clinical impact of <=
+b>patient-reported outcome</b> measures in myeloproliferative ...</span> </=
+a> </span>  <div> <div style=3D"padding:2px 0px 8px 0px"> <div itemprop=3D"=
+publisher" itemscope=3D"" itemtype=3D"http://schema.org/Organization" style=
+=3D"color:#737373;font-size:12px"> <a style=3D"text-decoration:none;color:#=
+737373"> <span itemprop=3D"name">PubMed</span> </a> </div> <div itemprop=3D=
+"description" style=3D"color:#252525;padding:2px 0px 0px 0px;font-size:12px=
+;line-height:18px">From symptom scales to regulatory endpoints: the evoluti=
+on and clinical impact of <b>patient-reported outcome</b> measures in myelo=
+proliferative neoplasms.</div> </div>   <table> <tr> <td width=3D"16" style=
+=3D"padding-right:6px"> <a href=3D"https://www.google.com/alerts/share?hl=
+=3Den&amp;gl=3DUS&amp;ru=3Dhttps://pubmed.ncbi.nlm.nih.gov/41138008/&amp;ss=
+=3Dfb&amp;rt=3Dthe+evolution+and+clinical+impact+of+patient-reported+outcom=
+e+measures+in+myeloproliferative+...&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1M=
+hphYzAyMmIyYmVhNDU2NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmX-9uVDYPEOc7HcCkal8Hw=
+yMRqWdg" style=3D"text-decoration:none"> <img alt=3D"Facebook" src=3D"https=
+://www.gstatic.com/alerts/images/fb-24.png" border=3D"0" height=3D"16" widt=
+h=3D"16"></a> </td> <td width=3D"16" style=3D"padding-right:6px"> <a href=
+=3D"https://www.google.com/alerts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps:=
+//pubmed.ncbi.nlm.nih.gov/41138008/&amp;ss=3Dtw&amp;rt=3Dthe+evolution+and+=
+clinical+impact+of+patient-reported+outcome+measures+in+myeloproliferative+=
+...&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYzAyMmIyYmVhNDU2NTE5OmNvbTplbj=
+pVUw&amp;ssp=3DAMJHsmX-9uVDYPEOc7HcCkal8HwyMRqWdg" style=3D"text-decoration=
+:none"> <img alt=3D"Twitter" src=3D"https://www.gstatic.com/alerts/images/t=
+w-24.png" border=3D"0" height=3D"16" width=3D"16"></a> </td> <td style=3D"p=
+adding:0px 0px 6px 15px;font-family:Arial"> <a href=3D"https://www.google.c=
+om/alerts/feedback?ffu=3Dhttps://pubmed.ncbi.nlm.nih.gov/41138008/&amp;sour=
+ce=3Dalertsmail&amp;hl=3Den&amp;gl=3DUS&amp;msgid=3DMTY1OTc2NzcxMDc0MDI3NjM=
+4NQ&amp;s=3DAB2Xq4g3PD1M9aKdSrBR3cRSOxLFh7t2f9gJDLA" style=3D"text-decorati=
+on:none;vertical-align:middle;color:#aaa;font-size:10px"> Flag as irrelevan=
+t </a> </td> </tr> </table>  </div> </div> </td> <td style=3D"padding-right=
+:18px"></td> </tr>    <tr itemscope=3D"" itemtype=3D"http://schema.org/Arti=
+cle"> <td style=3D"padding-left:18px"></td> <td style=3D"padding:18px 0px 1=
+2px 0px;vertical-align:top;border-top:1px solid #e4e4e4;font-family:Arial">=
+ <a></a> <div>  <span style=3D"padding:0px 6px 0px 0px"> <a href=3D"https:/=
+/www.google.com/url?rct=3Dj&amp;sa=3Dt&amp;url=3Dhttps://journals.lww.com/a=
+jg/fulltext/2025/10002/s941_burden_beyond_borders__a_global_benchmarking.94=
+1.aspx&amp;ct=3Dga&amp;cd=3DCAEYBioTMTY1OTc2NzcxMDc0MDI3NjM4NTIaYWMwMjJiMmJ=
+lYTQ1NjUxOTpjb206ZW46VVM&amp;usg=3DAOvVaw306ialO5Cz9P5nDl4R15jk" itemprop=
+=3D"url" style=3D"color:#427fed;display:inline;text-decoration:none;font-si=
+ze:16px;line-height:20px"> <span itemprop=3D"name">S940 Development of a <b=
+>Patient Reported Outcome</b> Measure for Barrett&#39;s Esophagus (PROBE) -=
+ LWW</span> </a> </span>  <div> <div style=3D"padding:2px 0px 8px 0px"> <di=
+v itemprop=3D"publisher" itemscope=3D"" itemtype=3D"http://schema.org/Organ=
+ization" style=3D"color:#737373;font-size:12px"> <a style=3D"text-decoratio=
+n:none;color:#737373"> <span itemprop=3D"name">Official journal of the Amer=
+ican College of Gastroenterology | ACG</span> </a> </div> <div itemprop=3D"=
+description" style=3D"color:#252525;padding:2px 0px 0px 0px;font-size:12px;=
+line-height:18px">Barrett&#39;s esophagus (BE) lacks a disease-specific <b>=
+patient-reported outcome</b> (PRO) instrument to assess health-related qual=
+ity of life (HRQOL) to&nbsp;...</div> </div>   <table> <tr> <td width=3D"16=
+" style=3D"padding-right:6px"> <a href=3D"https://www.google.com/alerts/sha=
+re?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://journals.lww.com/ajg/fulltext/2025/=
+10002/s941_burden_beyond_borders__a_global_benchmarking.941.aspx&amp;ss=3Df=
+b&amp;rt=3DS940+Development+of+a+Patient+Reported+Outcome+Measure+for+Barre=
+tt%27s+Esophagus+(PROBE)+-+LWW&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYzA=
+yMmIyYmVhNDU2NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmXs6IXllMelAjq4VX2xF72S_ehvQ=
+w" style=3D"text-decoration:none"> <img alt=3D"Facebook" src=3D"https://www=
+.gstatic.com/alerts/images/fb-24.png" border=3D"0" height=3D"16" width=3D"1=
+6"></a> </td> <td width=3D"16" style=3D"padding-right:6px"> <a href=3D"http=
+s://www.google.com/alerts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://journa=
+ls.lww.com/ajg/fulltext/2025/10002/s941_burden_beyond_borders__a_global_ben=
+chmarking.941.aspx&amp;ss=3Dtw&amp;rt=3DS940+Development+of+a+Patient+Repor=
+ted+Outcome+Measure+for+Barrett%27s+Esophagus+(PROBE)+-+LWW&amp;cd=3DKhMxNj=
+U5NzY3NzEwNzQwMjc2Mzg1MhphYzAyMmIyYmVhNDU2NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJH=
+smXs6IXllMelAjq4VX2xF72S_ehvQw" style=3D"text-decoration:none"> <img alt=3D=
+"Twitter" src=3D"https://www.gstatic.com/alerts/images/tw-24.png" border=3D=
+"0" height=3D"16" width=3D"16"></a> </td> <td style=3D"padding:0px 0px 6px =
+15px;font-family:Arial"> <a href=3D"https://www.google.com/alerts/feedback?=
+ffu=3Dhttps://journals.lww.com/ajg/fulltext/2025/10002/s941_burden_beyond_b=
+orders__a_global_benchmarking.941.aspx&amp;source=3Dalertsmail&amp;hl=3Den&=
+amp;gl=3DUS&amp;msgid=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ&amp;s=3DAB2Xq4g3PD1M9aKd=
+SrBR3cRSOxLFh7t2f9gJDLA" style=3D"text-decoration:none;vertical-align:middl=
+e;color:#aaa;font-size:10px"> Flag as irrelevant </a> </td> </tr> </table> =
+ </div> </div> </td> <td style=3D"padding-right:18px"></td> </tr>    <tr it=
+emscope=3D"" itemtype=3D"http://schema.org/Article"> <td style=3D"padding-l=
+eft:18px"></td> <td style=3D"padding:18px 0px 12px 0px;vertical-align:top;b=
+order-top:1px solid #e4e4e4;font-family:Arial"> <a></a> <div>  <span style=
+=3D"padding:0px 6px 0px 0px"> <a href=3D"https://www.google.com/url?rct=3Dj=
+&amp;sa=3Dt&amp;url=3Dhttps://www.sciencedirect.com/science/article/pii/S18=
+7887502500926X&amp;ct=3Dga&amp;cd=3DCAEYByoTMTY1OTc2NzcxMDc0MDI3NjM4NTIaYWM=
+wMjJiMmJlYTQ1NjUxOTpjb206ZW46VVM&amp;usg=3DAOvVaw1xCbKCLYYsIpV0frlFYax1" it=
+emprop=3D"url" style=3D"color:#427fed;display:inline;text-decoration:none;f=
+ont-size:16px;line-height:20px"> <span itemprop=3D"name">The Impact of Lumb=
+ar Bracing on Patient-Reported Outcomes In Short Lumbar Fusion</span> </a> =
+</span>  <div> <div style=3D"padding:2px 0px 8px 0px"> <div itemprop=3D"pub=
+lisher" itemscope=3D"" itemtype=3D"http://schema.org/Organization" style=3D=
+"color:#737373;font-size:12px"> <a style=3D"text-decoration:none;color:#737=
+373"> <span itemprop=3D"name">ScienceDirect.com</span> </a> </div> <div ite=
+mprop=3D"description" style=3D"color:#252525;padding:2px 0px 0px 0px;font-s=
+ize:12px;line-height:18px">This study aims to assess the effect of bracing =
+<b>patient-reported outcome</b> measures (PROMs) following short-segment lu=
+mbar fusion surgeries. METHODS.</div> </div>   <table> <tr> <td width=3D"16=
+" style=3D"padding-right:6px"> <a href=3D"https://www.google.com/alerts/sha=
+re?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://www.sciencedirect.com/science/artic=
+le/pii/S187887502500926X&amp;ss=3Dfb&amp;rt=3DThe+Impact+of+Lumbar+Bracing+=
+on+Patient-Reported+Outcomes+In+Short+Lumbar+Fusion&amp;cd=3DKhMxNjU5NzY3Nz=
+EwNzQwMjc2Mzg1MhphYzAyMmIyYmVhNDU2NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmUHfyHT=
+NY-FfDEL5IOv_sBUhFQV3Q" style=3D"text-decoration:none"> <img alt=3D"Faceboo=
+k" src=3D"https://www.gstatic.com/alerts/images/fb-24.png" border=3D"0" hei=
+ght=3D"16" width=3D"16"></a> </td> <td width=3D"16" style=3D"padding-right:=
+6px"> <a href=3D"https://www.google.com/alerts/share?hl=3Den&amp;gl=3DUS&am=
+p;ru=3Dhttps://www.sciencedirect.com/science/article/pii/S187887502500926X&=
+amp;ss=3Dtw&amp;rt=3DThe+Impact+of+Lumbar+Bracing+on+Patient-Reported+Outco=
+mes+In+Short+Lumbar+Fusion&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYzAyMmI=
+yYmVhNDU2NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmUHfyHTNY-FfDEL5IOv_sBUhFQV3Q" s=
+tyle=3D"text-decoration:none"> <img alt=3D"Twitter" src=3D"https://www.gsta=
+tic.com/alerts/images/tw-24.png" border=3D"0" height=3D"16" width=3D"16"></=
+a> </td> <td style=3D"padding:0px 0px 6px 15px;font-family:Arial"> <a href=
+=3D"https://www.google.com/alerts/feedback?ffu=3Dhttps://www.sciencedirect.=
+com/science/article/pii/S187887502500926X&amp;source=3Dalertsmail&amp;hl=3D=
+en&amp;gl=3DUS&amp;msgid=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ&amp;s=3DAB2Xq4g3PD1M9=
+aKdSrBR3cRSOxLFh7t2f9gJDLA" style=3D"text-decoration:none;vertical-align:mi=
+ddle;color:#aaa;font-size:10px"> Flag as irrelevant </a> </td> </tr> </tabl=
+e>  </div> </div> </td> <td style=3D"padding-right:18px"></td> </tr>    <tr=
+ itemscope=3D"" itemtype=3D"http://schema.org/Article"> <td style=3D"paddin=
+g-left:18px"></td> <td style=3D"padding:18px 0px 12px 0px;vertical-align:to=
+p;border-top:1px solid #e4e4e4;font-family:Arial"> <a></a> <div>  <span sty=
+le=3D"padding:0px 6px 0px 0px"> <a href=3D"https://www.google.com/url?rct=
+=3Dj&amp;sa=3Dt&amp;url=3Dhttps://www.urotoday.com/conference-highlights/es=
+mo-2025/esmo-2025-bladder-cancer/164142-esmo-2025-the-feasibility-of-wearab=
+le-devices-to-assess-patient-reported-outcomes-in-urothelial-cancer-trials-=
+the-discus-substudy.html&amp;ct=3Dga&amp;cd=3DCAEYCCoTMTY1OTc2NzcxMDc0MDI3N=
+jM4NTIaYWMwMjJiMmJlYTQ1NjUxOTpjb206ZW46VVM&amp;usg=3DAOvVaw1D3qvJ53FbX6N-9P=
+BNTePF" itemprop=3D"url" style=3D"color:#427fed;display:inline;text-decorat=
+ion:none;font-size:16px;line-height:20px"> <span itemprop=3D"name">The Feas=
+ibility of Wearable Devices to Assess Patient Reported Outcomes in Urotheli=
+al Cancer Trials</span> </a> </span>  <div> <div style=3D"padding:2px 0px 8=
+px 0px"> <div itemprop=3D"publisher" itemscope=3D"" itemtype=3D"http://sche=
+ma.org/Organization" style=3D"color:#737373;font-size:12px"> <a style=3D"te=
+xt-decoration:none;color:#737373"> <span itemprop=3D"name">UroToday</span> =
+</a> </div> <div itemprop=3D"description" style=3D"color:#252525;padding:2p=
+x 0px 0px 0px;font-size:12px;line-height:18px">The DISCUS trial is open for=
+ recruitment at 45 sites in UK, Spain and France. This substudy incorporate=
+d an app-based <b>patient-reported outcome</b> (PRO)&nbsp;...</div> </div> =
+  <table> <tr> <td width=3D"16" style=3D"padding-right:6px"> <a href=3D"htt=
+ps://www.google.com/alerts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://www.u=
+rotoday.com/conference-highlights/esmo-2025/esmo-2025-bladder-cancer/164142=
+-esmo-2025-the-feasibility-of-wearable-devices-to-assess-patient-reported-o=
+utcomes-in-urothelial-cancer-trials-the-discus-substudy.html&amp;ss=3Dfb&am=
+p;rt=3DThe+Feasibility+of+Wearable+Devices+to+Assess+Patient+Reported+Outco=
+mes+in+Urothelial+Cancer+Trials&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYz=
+AyMmIyYmVhNDU2NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmWHQsZE_OLFulddjcrZ6N_3uA_f=
+9A" style=3D"text-decoration:none"> <img alt=3D"Facebook" src=3D"https://ww=
+w.gstatic.com/alerts/images/fb-24.png" border=3D"0" height=3D"16" width=3D"=
+16"></a> </td> <td width=3D"16" style=3D"padding-right:6px"> <a href=3D"htt=
+ps://www.google.com/alerts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://www.u=
+rotoday.com/conference-highlights/esmo-2025/esmo-2025-bladder-cancer/164142=
+-esmo-2025-the-feasibility-of-wearable-devices-to-assess-patient-reported-o=
+utcomes-in-urothelial-cancer-trials-the-discus-substudy.html&amp;ss=3Dtw&am=
+p;rt=3DThe+Feasibility+of+Wearable+Devices+to+Assess+Patient+Reported+Outco=
+mes+in+Urothelial+Cancer+Trials&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYz=
+AyMmIyYmVhNDU2NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmWHQsZE_OLFulddjcrZ6N_3uA_f=
+9A" style=3D"text-decoration:none"> <img alt=3D"Twitter" src=3D"https://www=
+.gstatic.com/alerts/images/tw-24.png" border=3D"0" height=3D"16" width=3D"1=
+6"></a> </td> <td style=3D"padding:0px 0px 6px 15px;font-family:Arial"> <a =
+href=3D"https://www.google.com/alerts/feedback?ffu=3Dhttps://www.urotoday.c=
+om/conference-highlights/esmo-2025/esmo-2025-bladder-cancer/164142-esmo-202=
+5-the-feasibility-of-wearable-devices-to-assess-patient-reported-outcomes-i=
+n-urothelial-cancer-trials-the-discus-substudy.html&amp;source=3Dalertsmail=
+&amp;hl=3Den&amp;gl=3DUS&amp;msgid=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ&amp;s=3DAB2=
+Xq4g3PD1M9aKdSrBR3cRSOxLFh7t2f9gJDLA" style=3D"text-decoration:none;vertica=
+l-align:middle;color:#aaa;font-size:10px"> Flag as irrelevant </a> </td> </=
+tr> </table>  </div> </div> </td> <td style=3D"padding-right:18px"></td> </=
+tr>    <tr itemscope=3D"" itemtype=3D"http://schema.org/Article"> <td style=
+=3D"padding-left:18px"></td> <td style=3D"padding:18px 0px 12px 0px;vertica=
+l-align:top;border-top:1px solid #e4e4e4;font-family:Arial"> <a></a> <div> =
+ <span style=3D"padding:0px 6px 0px 0px"> <a href=3D"https://www.google.com=
+/url?rct=3Dj&amp;sa=3Dt&amp;url=3Dhttps://www.cureus.com/articles/420400-pa=
+tients-reported-outcome-following-chevron-distal-osteotomy-versus-seri-simp=
+le-effective-rapid-and-inexpensive-procedure-in-hallux-valgus-surgery.pdf%3=
+Femail%3D&amp;ct=3Dga&amp;cd=3DCAEYCSoTMTY1OTc2NzcxMDc0MDI3NjM4NTIaYWMwMjJi=
+MmJlYTQ1NjUxOTpjb206ZW46VVM&amp;usg=3DAOvVaw2tAFdUQ8WACfP8u9Skfjdv" itempro=
+p=3D"url" style=3D"color:#427fed;display:inline;text-decoration:none;font-s=
+ize:16px;line-height:20px"> <span itemprop=3D"name"><b>Patient&#39;s Report=
+ed Outcome</b> Following Chevron Distal Osteotomy Versus SERI (Simple ...</=
+span> </a> </span>  <div> <div style=3D"padding:2px 0px 8px 0px"> <div item=
+prop=3D"publisher" itemscope=3D"" itemtype=3D"http://schema.org/Organizatio=
+n" style=3D"color:#737373;font-size:12px"> <a style=3D"text-decoration:none=
+;color:#737373"> <span itemprop=3D"name">cureus.com</span> </a> </div> <div=
+ itemprop=3D"description" style=3D"color:#252525;padding:2px 0px 0px 0px;fo=
+nt-size:12px;line-height:18px"><b>Patient-reported outcome</b> measures (PR=
+OMs) are crucial for evaluating success. Categories: Podiatry, Pain Managem=
+ent, Orthopedics. Keywords&nbsp;...</div> </div>   <table> <tr> <td width=
+=3D"16" style=3D"padding-right:6px"> <a href=3D"https://www.google.com/aler=
+ts/share?hl=3Den&amp;gl=3DUS&amp;ru=3Dhttps://www.cureus.com/articles/42040=
+0-patients-reported-outcome-following-chevron-distal-osteotomy-versus-seri-=
+simple-effective-rapid-and-inexpensive-procedure-in-hallux-valgus-surgery.p=
+df%3Femail%3D&amp;ss=3Dfb&amp;rt=3DPatient%27s+Reported+Outcome+Following+C=
+hevron+Distal+Osteotomy+Versus+SERI+(Simple+...&amp;cd=3DKhMxNjU5NzY3NzEwNz=
+QwMjc2Mzg1MhphYzAyMmIyYmVhNDU2NTE5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmWHseBDsdb5=
+wz0bwA5hlrD6F_N-MQ" style=3D"text-decoration:none"> <img alt=3D"Facebook" s=
+rc=3D"https://www.gstatic.com/alerts/images/fb-24.png" border=3D"0" height=
+=3D"16" width=3D"16"></a> </td> <td width=3D"16" style=3D"padding-right:6px=
+"> <a href=3D"https://www.google.com/alerts/share?hl=3Den&amp;gl=3DUS&amp;r=
+u=3Dhttps://www.cureus.com/articles/420400-patients-reported-outcome-follow=
+ing-chevron-distal-osteotomy-versus-seri-simple-effective-rapid-and-inexpen=
+sive-procedure-in-hallux-valgus-surgery.pdf%3Femail%3D&amp;ss=3Dtw&amp;rt=
+=3DPatient%27s+Reported+Outcome+Following+Chevron+Distal+Osteotomy+Versus+S=
+ERI+(Simple+...&amp;cd=3DKhMxNjU5NzY3NzEwNzQwMjc2Mzg1MhphYzAyMmIyYmVhNDU2NT=
+E5OmNvbTplbjpVUw&amp;ssp=3DAMJHsmWHseBDsdb5wz0bwA5hlrD6F_N-MQ" style=3D"tex=
+t-decoration:none"> <img alt=3D"Twitter" src=3D"https://www.gstatic.com/ale=
+rts/images/tw-24.png" border=3D"0" height=3D"16" width=3D"16"></a> </td> <t=
+d style=3D"padding:0px 0px 6px 15px;font-family:Arial"> <a href=3D"https://=
+www.google.com/alerts/feedback?ffu=3Dhttps://www.cureus.com/articles/420400=
+-patients-reported-outcome-following-chevron-distal-osteotomy-versus-seri-s=
+imple-effective-rapid-and-inexpensive-procedure-in-hallux-valgus-surgery.pd=
+f%3Femail%3D&amp;source=3Dalertsmail&amp;hl=3Den&amp;gl=3DUS&amp;msgid=3DMT=
+Y1OTc2NzcxMDc0MDI3NjM4NQ&amp;s=3DAB2Xq4g3PD1M9aKdSrBR3cRSOxLFh7t2f9gJDLA" s=
+tyle=3D"text-decoration:none;vertical-align:middle;color:#aaa;font-size:10p=
+x"> Flag as irrelevant </a> </td> </tr> </table>  </div> </div> </td> <td s=
+tyle=3D"padding-right:18px"></td> </tr>    <tr> <td colspan=3D"3" valign=3D=
+"middle" style=3D"background-color:#f8f8f8;font-size:14px;vertical-align:mi=
+ddle;text-align:center;padding:10px 10px 10px 10px;line-height:20px;border:=
+1px solid #e4e4e4;font-family:Arial"> <a href=3D"https://www.google.com/ale=
+rts?s=3DAB2Xq4g3PD1M9aKdSrBR3cRSOxLFh7t2f9gJDLA&amp;start=3D1760965972&amp;=
+end=3D1761570780&amp;source=3Dalertsmail&amp;hl=3Den&amp;gl=3DUS&amp;msgid=
+=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ#history" style=3D"text-decoration:none;vertic=
+al-align:middle;color:#427fed">  See more results  </a> <span style=3D"font=
+-size:12px;padding-left:15px;padding-right:15px;color:#aaa">|</span> <a hre=
+f=3D"https://www.google.com/alerts/edit?source=3Dalertsmail&amp;hl=3Den&amp=
+;gl=3DUS&amp;msgid=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ&amp;s=3DAB2Xq4g3PD1M9aKdSrB=
+R3cRSOxLFh7t2f9gJDLA&amp;email=3Drandall%40mqol.com" style=3D"text-decorati=
+on:none;vertical-align:middle;color:#427fed">Edit this alert</a>  </td> </t=
+r>  </table> <table style=3D"padding-top:6px;font-size:12px;color:#252525;t=
+ext-align:center;width:100%"> <tr> <td style=3D"font-family:Arial">  You ha=
+ve received this email because you have subscribed to <b>Google Alerts</b>.=
+ <div> <a href=3D"https://www.google.com/alerts/remove?source=3Dalertsmail&=
+amp;hl=3Den&amp;gl=3DUS&amp;msgid=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ&amp;s=3DAB2X=
+q4g3PD1M9aKdSrBR3cRSOxLFh7t2f9gJDLA" style=3D"text-decoration:none;color:#4=
+27fed">Unsubscribe</a> <span style=3D"padding:0px 4px 0px 4px;color:#252525=
+">|</span> <a href=3D"https://www.google.com/alerts?source=3Dalertsmail&amp=
+;hl=3Den&amp;gl=3DUS&amp;msgid=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ" style=3D"text-=
+decoration:none;color:#427fed">  View all your alerts  </a> </div> </td> </=
+tr> <tr> <td style=3D"padding:6px 10px 0px 0px;font-family:Arial"> <a href=
+=3D"https://www.google.com/alerts/feeds/05730096526662177387/11722189595438=
+571408" style=3D"text-decoration:none;color:#427fed"> <img src=3D"https://w=
+ww.gstatic.com/alerts/images/rss-16.gif" alt=3D"RSS" border=3D"0" style=3D"=
+padding:0px 8px 0px 0px;vertical-align:middle"> <span style=3D"display:inli=
+ne;line-height:16px;vertical-align:middle"> Receive this alert as RSS feed =
+</span> </a> </td> </tr> <tr> <td style=3D"padding:6px 0px 0px 0px;font-fam=
+ily:Arial"> <a href=3D"https://www.google.com/alerts?source=3Dalertsmail&am=
+p;hl=3Den&amp;gl=3DUS&amp;msgid=3DMTY1OTc2NzcxMDc0MDI3NjM4NQ&amp;s=3DAB2Xq4=
+g3PD1M9aKdSrBR3cRSOxLFh7t2f9gJDLA&amp;ffu=3D" style=3D"text-decoration:none=
+;color:#427fed"> <div style=3D"display:inline;line-height:16px;vertical-ali=
+gn:middle"> Send Feedback </div> </a> </td> </tr> </table> </div> </div> <!=
+--[if mso]>
+</td></tr></table>
+<![endif]-->  </div>  </body> </html>
+--000000000000aa156e064223a8cb--
