@@ -28,6 +28,13 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import click
+from dotenv import load_dotenv
+
+# CRITICAL: Load .env BEFORE importing config module
+# config.py reads environment variables during import, so .env must be loaded first
+PACKAGE_ROOT = Path(__file__).resolve().parent
+REPO_ROOT = PACKAGE_ROOT.parent
+load_dotenv(REPO_ROOT / '.env', override=True)
 
 from .article_fetcher import FetchConfig, fetch_article, clear_cache, get_last_fetch_outcome
 from .content_cleaner import extract_content

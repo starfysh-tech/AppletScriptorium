@@ -48,21 +48,44 @@ def discover_lmstudio_models() -> List[ModelInfo]:
     models = []
     lines = result.stdout.strip().split("\n")
 
-    # Skip header row (ID STATUS)
-    for line in lines[1:]:
-        line = line.strip()
-        if not line:
+    # Parse multi-column format:
+    # LLM                                               PARAMS    ARCH             SIZE
+    # deepseek/deepseek-r1-0528-qwen3-8b (1 variant)    8B        qwen3            4.62 GB
+    # mistralai/mistral-7b-instruct-v0.3 (1 variant)    7B        Llama            4.37 GB      ✓ LOADED
+
+    in_llm_section = False
+    for line in lines:
+        line_stripped = line.strip()
+
+        # Skip empty lines
+        if not line_stripped:
             continue
 
-        # Parse: "mistral-7b            loaded" or "llama3-8b             available"
-        match = re.match(r"^(\S+)\s+(loaded|available)$", line)
+        # Detect LLM section header
+        if line_stripped.startswith("LLM"):
+            in_llm_section = True
+            continue
+
+        # Stop at EMBEDDING section
+        if line_stripped.startswith("EMBEDDING"):
+            break
+
+        # Skip non-LLM lines (summary lines, etc.)
+        if not in_llm_section:
+            continue
+
+        # Parse model line: extract first column (model name) and check for "✓ LOADED" suffix
+        # Model names may contain slashes, hyphens, and may have "(1 variant)" notation
+        match = re.match(r"^([^\s]+(?:\s+\([^\)]+\))?)\s+", line)
         if match:
             model_name = match.group(1)
-            status = match.group(2)
-            loaded = (status == "loaded")
+            # Remove "(N variant)" suffix
+            model_name = re.sub(r"\s+\(\d+\s+variants?\)", "", model_name)
+            # Check if line ends with "✓ LOADED"
+            loaded = "✓ LOADED" in line
             models.append(ModelInfo(backend="lmstudio", name=model_name, loaded=loaded))
         else:
-            logger.warning(f"Failed to parse lms ls line: {line}")
+            logger.debug(f"Skipping lms ls line: {line_stripped}")
 
     logger.info(f"Discovered {len(models)} LM Studio models")
     return models

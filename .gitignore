@@ -21,6 +21,7 @@ htmlcov/
 # Runtime outputs
 runs/
 storage/
+Summarizer/evals/
 
 # Claude Code configuration
 .claude/
