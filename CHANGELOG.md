@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Summarizer:** improve LLM consistency with debug logging and better prompts
 
 ### Changed
+- **CommitCraft:** improve macOS compatibility and uninstall safety
 - backfill CHANGELOG with missing commits
 - **Summarizer:** convert tag format to emoji-only
 - **Summarizer:** relax validation and remove prompt examples

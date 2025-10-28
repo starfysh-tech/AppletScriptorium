@@ -24,11 +24,18 @@ NC='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Files managed by this installer (relative to SCRIPT_DIR)
-declare -A SOURCE_FILES=(
-    ["~/.claude/scripts/commitcraft-analyze.sh"]="commitcraft-analyze.sh"
-    ["~/.claude/scripts/commitcraft-release-analyze.sh"]="commitcraft-release-analyze.sh"
-    ["~/.claude/commands/commitcraft-push.md"]="commitcraft-push.md"
-    ["~/.claude/commands/commitcraft-release.md"]="commitcraft-release.md"
+# Using parallel arrays for Bash 3.2 compatibility (macOS default)
+DEST_PATHS=(
+    "~/.claude/scripts/commitcraft-analyze.sh"
+    "~/.claude/scripts/commitcraft-release-analyze.sh"
+    "~/.claude/commands/commitcraft-push.md"
+    "~/.claude/commands/commitcraft-release.md"
+)
+SRC_FILES=(
+    "commitcraft-analyze.sh"
+    "commitcraft-release-analyze.sh"
+    "commitcraft-push.md"
+    "commitcraft-release.md"
 )
 
 # ============================================================================
@@ -75,14 +82,13 @@ detect_state() {
     local missing=0
     local outdated=0
     local current=0
-    local total=0
+    local total=${#DEST_PATHS[@]}
 
-    for dest in "${!SOURCE_FILES[@]}"; do
-        local src_file="${SOURCE_FILES[$dest]}"
+    for ((i=0; i<total; i++)); do
+        local dest="${DEST_PATHS[$i]}"
+        local src_file="${SRC_FILES[$i]}"
         local src_path="$SCRIPT_DIR/$src_file"
         local dst_path=$(expand_path "$dest")
-
-        total=$((total + 1))
 
         local src_hash=$(get_hash "$src_path")
         local dst_hash=$(get_hash "$dst_path")
@@ -112,8 +118,10 @@ detect_state() {
 
 show_file_status() {
     echo ""
-    for dest in "${!SOURCE_FILES[@]}"; do
-        local src_file="${SOURCE_FILES[$dest]}"
+    local total=${#DEST_PATHS[@]}
+    for ((i=0; i<total; i++)); do
+        local dest="${DEST_PATHS[$i]}"
+        local src_file="${SRC_FILES[$i]}"
         local src_path="$SCRIPT_DIR/$src_file"
         local dst_path=$(expand_path "$dest")
         local display_name=$(basename "$dst_path")
@@ -155,8 +163,10 @@ show_updates_available() {
 
     # Count updates
     local update_count=0
-    for dest in "${!SOURCE_FILES[@]}"; do
-        local src_file="${SOURCE_FILES[$dest]}"
+    local total=${#DEST_PATHS[@]}
+    for ((i=0; i<total; i++)); do
+        local dest="${DEST_PATHS[$i]}"
+        local src_file="${SRC_FILES[$i]}"
         local src_path="$SCRIPT_DIR/$src_file"
         local dst_path=$(expand_path "$dest")
 
@@ -208,8 +218,10 @@ install_or_update() {
     mkdir -p ~/.claude/commands
 
     # Copy files
-    for dest in "${!SOURCE_FILES[@]}"; do
-        local src_file="${SOURCE_FILES[$dest]}"
+    local total=${#DEST_PATHS[@]}
+    for ((i=0; i<total; i++)); do
+        local dest="${DEST_PATHS[$i]}"
+        local src_file="${SRC_FILES[$i]}"
         local src_path="$SCRIPT_DIR/$src_file"
         local dst_path=$(expand_path "$dest")
         local display_name=$(basename "$dst_path")
@@ -289,9 +301,11 @@ show_diffs() {
     echo ""
 
     local has_diffs=false
+    local total=${#DEST_PATHS[@]}
 
-    for dest in "${!SOURCE_FILES[@]}"; do
-        local src_file="${SOURCE_FILES[$dest]}"
+    for ((i=0; i<total; i++)); do
+        local dest="${DEST_PATHS[$i]}"
+        local src_file="${SRC_FILES[$i]}"
         local src_path="$SCRIPT_DIR/$src_file"
         local dst_path=$(expand_path "$dest")
         local display_name=$(basename "$dst_path")
@@ -344,10 +358,42 @@ uninstall() {
     echo "Uninstalling..."
     echo ""
 
-    # Remove ~/.claude/
-    if [ -d ~/.claude ]; then
-        rm -rf ~/.claude
-        echo -e "${GREEN}✓${NC} Removed ~/.claude/"
+    # Remove only CommitCraft files (selective deletion)
+    local total=${#DEST_PATHS[@]}
+    for ((i=0; i<total; i++)); do
+        local dest="${DEST_PATHS[$i]}"
+        local dst_path=$(expand_path "$dest")
+        local display_name=$(basename "$dst_path")
+
+        if [ -f "$dst_path" ]; then
+            rm "$dst_path"
+            echo -e "${GREEN}✓${NC} Removed $display_name"
+        fi
+    done
+
+    # Remove README.md if it's the CommitCraft version
+    if [ -f ~/.claude/README.md ]; then
+        if grep -q "AppletScriptorium/CommitCraft" ~/.claude/README.md 2>/dev/null; then
+            rm ~/.claude/README.md
+            echo -e "${GREEN}✓${NC} Removed README.md"
+        fi
+    fi
+
+    # Clean up empty directories
+    if [ -d ~/.claude/scripts ] && [ -z "$(ls -A ~/.claude/scripts)" ]; then
+        rmdir ~/.claude/scripts
+        echo -e "${GREEN}✓${NC} Removed empty scripts/ directory"
+    fi
+
+    if [ -d ~/.claude/commands ] && [ -z "$(ls -A ~/.claude/commands)" ]; then
+        rmdir ~/.claude/commands
+        echo -e "${GREEN}✓${NC} Removed empty commands/ directory"
+    fi
+
+    # Only remove ~/.claude/ if it's completely empty (no other tools installed)
+    if [ -d ~/.claude ] && [ -z "$(ls -A ~/.claude)" ]; then
+        rmdir ~/.claude
+        echo -e "${GREEN}✓${NC} Removed empty ~/.claude/ directory"
     fi
 
     # Remove git template hook
