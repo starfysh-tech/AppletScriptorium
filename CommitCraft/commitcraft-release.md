@@ -13,9 +13,9 @@ Fully automated semantic versioning and GitHub release creation.
 
 ### Step 1: Run Analysis and Check for Blockers
 
-Execute analysis script:
+Execute analysis script (use working directory from <env> context):
 ```bash
-~/.claude/scripts/commitcraft-release-analyze.sh
+~/.claude/scripts/commitcraft-release-analyze.sh <working-directory>
 ```
 
 **Immediately check output for BLOCKERS:**

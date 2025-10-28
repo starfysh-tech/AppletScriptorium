@@ -5,6 +5,29 @@
 
 set -euo pipefail
 
+# Detect repository directory
+# Priority: 1) First parameter if it's a directory, 2) Env var, 3) Current directory
+REPO_DIR=""
+if [ -n "${1:-}" ] && [ -d "$1" ]; then
+    REPO_DIR="$1"
+    shift
+elif [ -n "${CLAUDE_CODE_WORKING_DIR:-}" ]; then
+    REPO_DIR="$CLAUDE_CODE_WORKING_DIR"
+else
+    REPO_DIR="$PWD"
+fi
+
+# Validate we're in a git repo
+if ! git -C "$REPO_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "Error: Not a git repository: $REPO_DIR" >&2
+    exit 1
+fi
+
+# Helper function for git commands
+git_cmd() {
+    git -C "$REPO_DIR" "$@"
+}
+
 # Color codes
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -33,7 +56,7 @@ if ! gh auth status &> /dev/null; then
 fi
 
 # Check for clean working tree
-if [ -n "$(git status --porcelain)" ]; then
+if [ -n "$(git_cmd status --porcelain)" ]; then
     echo -e "${RED}✗${NC} Working tree has uncommitted changes"
     echo ""
     echo "Commit or stash changes before creating a release"
@@ -45,13 +68,13 @@ echo -e "${GREEN}✓${NC} GitHub CLI authenticated"
 echo ""
 
 # Get latest tag
-LATEST_TAG=$(git tag --sort=-v:refname | head -1)
+LATEST_TAG=$(git_cmd tag --sort=-v:refname | head -1)
 
 if [ -z "$LATEST_TAG" ]; then
     echo -e "${YELLOW}⚠${NC}  No existing tags found"
     echo ""
     echo "Suggested first version: v1.0.0"
-    echo "Commits in repository: $(git rev-list --count HEAD)"
+    echo "Commits in repository: $(git_cmd rev-list --count HEAD)"
     exit 0
 fi
 
@@ -69,7 +92,7 @@ MINOR="${BASH_REMATCH[2]}"
 PATCH="${BASH_REMATCH[3]}"
 
 # Get commits since last tag
-COMMITS_SINCE=$(git log ${LATEST_TAG}..HEAD --oneline)
+COMMITS_SINCE=$(git_cmd log ${LATEST_TAG}..HEAD --oneline)
 COMMIT_COUNT=$(echo "$COMMITS_SINCE" | grep -c ^ || echo 0)
 
 if [ "$COMMIT_COUNT" -eq 0 ]; then
@@ -91,11 +114,11 @@ OTHER_COUNT=0
 
 # Check for breaking changes (in commit body/footer)
 while IFS= read -r commit_hash; do
-    COMMIT_MSG=$(git log -1 --format=%B "$commit_hash")
+    COMMIT_MSG=$(git_cmd log -1 --format=%B "$commit_hash")
     if echo "$COMMIT_MSG" | grep -q "BREAKING CHANGE"; then
         ((BREAKING_COUNT++))
     fi
-done < <(git log ${LATEST_TAG}..HEAD --format=%H)
+done < <(git_cmd log ${LATEST_TAG}..HEAD --format=%H)
 
 # Count by commit type (from subject line)
 FEAT_COUNT=$(echo "$COMMITS_SINCE" | grep -c "feat" || echo 0)
@@ -154,7 +177,7 @@ echo ""
 
 # Show recent commits for context
 echo "Recent commits:"
-git log ${LATEST_TAG}..HEAD --oneline --no-decorate | head -10
+git_cmd log ${LATEST_TAG}..HEAD --oneline --no-decorate | head -10
 if [ "$COMMIT_COUNT" -gt 10 ]; then
     echo "... and $((COMMIT_COUNT - 10)) more"
 fi

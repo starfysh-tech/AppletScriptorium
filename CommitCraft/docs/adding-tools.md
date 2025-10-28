@@ -485,6 +485,23 @@ Scripts run from `~/.claude/scripts/` but operate on the current working directo
 
 Commands work in any directory without knowing the script's location.
 
+### Claude Code Environment Workaround
+
+When scripts are invoked from Claude Code slash commands, the bash environment resets `$PWD` between calls. To handle this:
+
+**Script pattern:**
+- Scripts accept an optional first parameter for the repository directory
+- Fall back to `CLAUDE_CODE_WORKING_DIR` environment variable if available
+- Use current `$PWD` as final fallback
+- All git commands use `git -C "$REPO_DIR"` pattern
+
+**Slash command pattern:**
+```bash
+~/.claude/scripts/commitcraft-analyze.sh "$PWD"
+```
+
+This ensures scripts work correctly in both terminal and Claude Code environments.
+
 ## See Also
 
 - Main README.md - Platform overview and usage

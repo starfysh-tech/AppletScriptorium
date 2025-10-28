@@ -13,9 +13,9 @@ Fully automated commit workflow with security scanning, conventional format, and
 
 ### Step 1: Run Analysis and Check for Blockers
 
-Execute analysis script:
+Execute analysis script (use working directory from <env> context):
 ```bash
-~/.claude/scripts/commitcraft-analyze.sh
+~/.claude/scripts/commitcraft-analyze.sh <working-directory>
 ```
 
 **Immediately check output for BLOCKERS:**

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Summarizer:** relax validation and remove prompt examples
 
 ### Fixed
+- **CommitCraft:** resolve working directory detection in Claude Code
 - **Summarizer:** handle None values in digest rendering
 
 ## [4.1.0] - 2025-10-24
