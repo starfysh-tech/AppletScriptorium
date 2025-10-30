@@ -91,6 +91,38 @@ def write_link_tsv(links: Iterable[dict], path: Path) -> None:
             ])
 
 
+def extract_email_headers(eml_path: Path) -> Tuple[str, str]:
+    """Extract From address and Subject from email file.
+
+    Args:
+        eml_path: Path to .eml file
+
+    Returns:
+        Tuple of (from_address, subject) - empty strings if parsing fails
+    """
+    from email.header import decode_header
+
+    try:
+        with open(eml_path, 'r', encoding='utf-8') as f:
+            msg = email.message_from_file(f)
+
+        from_addr = msg.get('From', '')
+        subject = msg.get('Subject', '')
+
+        # Decode MIME-encoded subject (handles =?UTF-8?Q?...?= format)
+        if subject:
+            decoded_parts = decode_header(subject)
+            subject = ''.join(
+                part.decode(encoding or 'utf-8') if isinstance(part, bytes) else part
+                for part, encoding in decoded_parts
+            )
+
+        return from_addr, subject
+    except Exception as exc:
+        logging.warning("[headers] Failed to extract headers from %s: %s", eml_path, exc)
+        return '', ''
+
+
 def extract_topic_from_alert_eml(eml_path: Path) -> str:
     """Extract Google Alert topic from email subject using proper MIME decoding.
 
@@ -107,34 +139,18 @@ def extract_topic_from_alert_eml(eml_path: Path) -> str:
         Subject: =?UTF-8?Q?Google_Alert_=2D_=E2=80=9CPatient_reported_outcome=E2=80=9D?=
         Returns: "Patient reported outcome"
     """
-    from email.header import decode_header
-
-    try:
-        with open(eml_path, 'r', encoding='utf-8') as f:
-            msg = email.message_from_file(f)
-
-        subject = msg.get('Subject', '')
-        if not subject:
-            return ''
-
-        # Decode MIME-encoded subject (handles =?UTF-8?Q?...?= format)
-        decoded_parts = decode_header(subject)
-        subject_text = ''.join(
-            part.decode(encoding or 'utf-8') if isinstance(part, bytes) else part
-            for part, encoding in decoded_parts
-        )
-
-        # Extract topic after "Google Alert - "
-        if 'Google Alert - ' in subject_text:
-            topic = subject_text.split('Google Alert - ', 1)[1]
-            # Strip Unicode curly quotes (U+201C, U+201D) and regular quotes
-            topic = topic.strip('\u201c\u201d"')
-            return topic
-
+    _, subject = extract_email_headers(eml_path)
+    if not subject:
         return ''
-    except Exception as exc:
-        logging.warning("[topic] Failed to extract topic from %s: %s", eml_path, exc)
-        return ''
+
+    # Extract topic after "Google Alert - "
+    if 'Google Alert - ' in subject:
+        topic = subject.split('Google Alert - ', 1)[1]
+        # Strip Unicode curly quotes (U+201C, U+201D) and regular quotes
+        topic = topic.strip('\u201c\u201d"')
+        return topic
+
+    return ''
 
 
 def _fetch_and_extract_article(
@@ -354,6 +370,58 @@ def render_outputs(summaries: List[dict], failures: List[dict], output_dir: Path
     (output_dir / "summaries.json").write_text(json.dumps(summaries, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+def write_status_log(
+    from_addr: str,
+    subject: str,
+    links_count: int,
+    fetched_count: int,
+    summaries_count: int,
+    digest_created: bool,
+    smtp_sent: bool,
+    status: str,
+    error_msg: str = ""
+) -> None:
+    """Append one line to runs/summarizer-status.log with run metrics.
+
+    Args:
+        from_addr: Email From address (extracted from alert.eml)
+        subject: Email subject (extracted from alert.eml)
+        links_count: Number of article links extracted
+        fetched_count: Number of articles successfully fetched
+        summaries_count: Number of summaries generated
+        digest_created: Whether digest files were created
+        smtp_sent: Whether SMTP send succeeded
+        status: Status string (SUCCESS or FAILED - reason)
+        error_msg: Optional error message to append to FAILED status
+    """
+    status_log = REPO_ROOT / "runs" / "summarizer-status.log"
+    status_log.parent.mkdir(parents=True, exist_ok=True)
+
+    # Truncate long subjects for readability
+    display_subject = subject if len(subject) <= 40 else subject[:37] + "..."
+
+    # Build status string
+    status_str = status
+    if error_msg and "FAILED" in status:
+        status_str = f"{status} - {error_msg}"
+
+    # Format log entry
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    digest_str = "Yes" if digest_created else "No"
+    smtp_str = "Yes" if smtp_sent else "No"
+
+    log_entry = (
+        f'{timestamp} | From: {from_addr} | Subject: "{display_subject}" | '
+        f'Links: {links_count} | Fetched: {fetched_count} | Summaries: {summaries_count} | '
+        f'Digest: {digest_str} | SMTP: {smtp_str} | Status: {status_str}\n'
+    )
+
+    with open(status_log, "a", encoding="utf-8") as f:
+        f.write(log_entry)
+
+    logging.info("[status-log] Entry written to %s", status_log)
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the Google Alert Intelligence pipeline")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -405,76 +473,145 @@ def run_pipeline(args: argparse.Namespace) -> Path:
 
     logging.info("Output directory: %s", output_dir)
 
-    clear_cache()
+    # Initialize metrics tracking
+    from_addr = ""
+    subject = ""
+    links_count = 0
+    fetched_count = 0
+    summaries_count = 0
+    digest_created = False
+    smtp_sent = False
+    status = "SUCCESS"
+    error_msg = ""
 
-    alert_eml = output_dir / "alert.eml"
-    # Skip capture if alert.eml already exists (e.g., from Mail rule)
-    if not alert_eml.exists():
-        capture_alert(alert_eml, subject_filter=args.subject_filter)
-    else:
-        logging.info("Using existing alert.eml from Mail rule")
+    try:
+        clear_cache()
 
-    logging.info("Extracting link metadata")
-    links = load_links(alert_eml)
-    link_tsv = output_dir / "alert.tsv"
-    write_link_tsv(links, link_tsv)
+        alert_eml = output_dir / "alert.eml"
+        # Skip capture if alert.eml already exists (e.g., from Mail rule)
+        if not alert_eml.exists():
+            capture_alert(alert_eml, subject_filter=args.subject_filter)
+        else:
+            logging.info("Using existing alert.eml from Mail rule")
 
-    fetch_cfg = FetchConfig()
-    sum_cfg = SummarizerConfig(model=args.model)
+        # Extract email headers for status logging
+        from_addr, subject = extract_email_headers(alert_eml)
 
-    summaries, failures = process_articles(links, output_dir, fetch_cfg, sum_cfg, max_articles=args.max_articles)
+        logging.info("Extracting link metadata")
+        links = load_links(alert_eml)
+        links_count = len(links)
+        link_tsv = output_dir / "alert.tsv"
+        write_link_tsv(links, link_tsv)
 
-    # Extract topic from alert email if not provided via --topic flag
-    topic = args.topic
-    if not topic:
-        topic = extract_topic_from_alert_eml(alert_eml)
-        if topic:
-            logging.info("[topic] Extracted from alert email: %s", topic)
+        fetch_cfg = FetchConfig()
+        sum_cfg = SummarizerConfig(model=args.model)
 
-    render_outputs(summaries, failures, output_dir, topic=topic)
+        summaries, failures = process_articles(links, output_dir, fetch_cfg, sum_cfg, max_articles=args.max_articles)
+        summaries_count = len(summaries)
+        fetched_count = summaries_count + len(failures)  # Total articles that were attempted
 
-    recipients: List[str] = []
-    if args.email_digest:
-        recipients.extend(args.email_digest)
-
-    env_recipients = os.environ.get("ALERT_DIGEST_EMAIL")
-    if env_recipients:
-        for token in env_recipients.replace(";", ",").split(","):
-            address = token.strip()
-            if address:
-                recipients.append(address)
-
-    if recipients:
-        sender_address: Optional[str] = None
-        if args.email_sender:
-            sender_address = args.email_sender.strip() or None
-        if sender_address is None:
-            env_sender = os.environ.get("ALERT_EMAIL_SENDER")
-            if env_sender:
-                sender_address = env_sender.strip() or None
-
-        # Create .eml file (may not be created if no summaries generated)
-        send_digest_email(output_dir, recipients, sender_address, topic=topic)
-
-        # If --smtp-send flag is set, send via SMTP instead of UI automation
-        if args.smtp_send:
-            eml_path = output_dir / "digest.eml"
-            if eml_path.exists():
-                recipient = recipients[0]
-                try:
-                    send_digest_via_smtp(eml_path, recipient)
-                    logging.info("[smtp] Digest sent to %s", recipient)
-                except (ValueError, FileNotFoundError, smtplib.SMTPException, ConnectionError) as exc:
-                    logging.error("[smtp][ERROR] Failed to send digest: %s", exc)
-                    raise
+        # Check for failure condition: 0 summaries generated
+        if summaries_count == 0:
+            logging.warning(
+                "\n"
+                "=" * 80 + "\n"
+                "WARNING: NO SUMMARIES GENERATED\n"
+                "=" * 80 + "\n"
+                "From: %s\n"
+                "Subject: %s\n"
+                "Links extracted: %d\n"
+                "Articles fetched: %d\n"
+                "Summaries generated: 0\n"
+                "\n"
+                "This is a FAILURE condition. Pipeline completed but produced no output.\n"
+                "=" * 80,
+                from_addr,
+                subject,
+                links_count,
+                fetched_count,
+            )
+            status = "FAILED"
+            if links_count == 0:
+                error_msg = "No article links found"
             else:
-                logging.warning("[smtp] No digest generated; skipping SMTP send")
+                error_msg = "No summaries generated"
 
-    if failures:
-        for failure in failures:
-            logging.warning("[missing] %s — %s", failure.get("url", "unknown"), failure.get("reason", "unknown"))
+        # Extract topic from alert email if not provided via --topic flag
+        topic = args.topic
+        if not topic:
+            topic = extract_topic_from_alert_eml(alert_eml)
+            if topic:
+                logging.info("[topic] Extracted from alert email: %s", topic)
 
-    logging.info("Run complete. Summaries generated: %s", len(summaries))
+        render_outputs(summaries, failures, output_dir, topic=topic)
+        if summaries or failures:
+            digest_created = True
+
+        recipients: List[str] = []
+        if args.email_digest:
+            recipients.extend(args.email_digest)
+
+        env_recipients = os.environ.get("ALERT_DIGEST_EMAIL")
+        if env_recipients:
+            for token in env_recipients.replace(";", ",").split(","):
+                address = token.strip()
+                if address:
+                    recipients.append(address)
+
+        if recipients:
+            sender_address: Optional[str] = None
+            if args.email_sender:
+                sender_address = args.email_sender.strip() or None
+            if sender_address is None:
+                env_sender = os.environ.get("ALERT_EMAIL_SENDER")
+                if env_sender:
+                    sender_address = env_sender.strip() or None
+
+            # Create .eml file (may not be created if no summaries generated)
+            send_digest_email(output_dir, recipients, sender_address, topic=topic)
+
+            # If --smtp-send flag is set, send via SMTP instead of UI automation
+            if args.smtp_send:
+                eml_path = output_dir / "digest.eml"
+                if eml_path.exists():
+                    recipient = recipients[0]
+                    try:
+                        send_digest_via_smtp(eml_path, recipient)
+                        logging.info("[smtp] Digest sent to %s", recipient)
+                        smtp_sent = True
+                    except (ValueError, FileNotFoundError, smtplib.SMTPException, ConnectionError) as exc:
+                        logging.error("[smtp][ERROR] Failed to send digest: %s", exc)
+                        status = "FAILED"
+                        error_msg = f"SMTP send failed: {exc}"
+                        raise
+                else:
+                    logging.warning("[smtp] No digest generated; skipping SMTP send")
+
+        if failures:
+            for failure in failures:
+                logging.warning("[missing] %s — %s", failure.get("url", "unknown"), failure.get("reason", "unknown"))
+
+        logging.info("Run complete. Summaries generated: %s", len(summaries))
+
+    except Exception as exc:
+        status = "FAILED"
+        error_msg = str(exc)
+        logging.error("[pipeline][ERROR] Pipeline failed: %s", exc)
+        raise
+    finally:
+        # Always write status log, even on failure
+        write_status_log(
+            from_addr=from_addr,
+            subject=subject,
+            links_count=links_count,
+            fetched_count=fetched_count,
+            summaries_count=summaries_count,
+            digest_created=digest_created,
+            smtp_sent=smtp_sent,
+            status=status,
+            error_msg=error_msg,
+        )
+
     return output_dir
 
 
