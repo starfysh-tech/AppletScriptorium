@@ -212,7 +212,7 @@ If missing, run `./setup-mail-rule.sh` again.
 
    **If ALL of the following conditions are met:**
    - **Subject** → **contains** → `Google Alert -`
-   - **From** → **is equal to** → `googlealerts-noreply@google.com`
+   - **From** → **contains** → `googlealerts-noreply@google.com`
 
    **Perform the following actions:**
    - Action: **Run AppleScript** → Select `process-alert.scpt`

@@ -340,15 +340,17 @@ echo "test" | ollama run qwen3:latest
 **Issue**: Mail rule doesn't execute automatically
 
 **Solutions**:
-1. **Verify Mail rule condition** (most common issue):
+1. **Verify Mail rule conditions** (most common issue):
    - Open Mail.app → Settings → Rules
-   - Ensure rule has: **Subject** → **contains** → `Google Alert -`
-   - **Important:** Do NOT add a From condition - this prevents test emails and forwarded alerts from triggering
-   - If rule has a From condition, remove it and keep only the Subject condition
+   - Ensure rule has BOTH conditions (ALL must be met):
+     - **Subject** → **contains** → `Google Alert -`
+     - **From** → **contains** → `googlealerts-noreply@google.com`
+   - **Important:** Use "contains" NOT "is equal to" for the From condition
+   - The From condition helps prevent false positives from non-Google sources
 
-2. **Test with actual Google Alert** (not test emails from personal accounts):
-   - Test emails from non-Google accounts won't match if you have a From filter
-   - Either remove From condition or wait for real Google Alert to arrive
+2. **Test with actual Google Alert** (recommended):
+   - Test emails from non-Google accounts won't match the From filter
+   - Either send test email from `googlealerts-noreply@google.com` or wait for real Google Alert to arrive
 
 3. Check AppleScript exists:
    ```bash
@@ -370,7 +372,65 @@ echo "test" | ollama run qwen3:latest
    - Open Console.app → Search for "Mail" → Look for script errors
 
 **Common Mistake:**
-Adding a `From equals googlealerts-noreply@google.com` condition prevents testing with emails from other accounts. The subject filter alone is sufficient and safer.
+Using `From equals googlealerts-noreply@google.com` instead of `From contains googlealerts-noreply@google.com`. The "equals" operator performs literal string matching and fails when Google includes a display name like `Google Alerts <googlealerts-noreply@google.com>`. Always use "contains" for the From condition.
+
+### Rule Auto-Triggers Inconsistently (IMAP "Seen Flag" Bug)
+
+**Issue**: Mail rule works when "Apply Rules" is clicked manually, but doesn't auto-trigger for some incoming alerts
+
+**Root Cause**: This is a long-standing Mail.app limitation [[1]](https://discussions.apple.com/thread/3119801) [[2]](https://superuser.com/questions/113226/apple-mail-only-applies-rules-once-when-message-arrives) where rules only auto-apply to "unseen" (unread) messages in IMAP accounts. If you check mail on iPhone, iPad, or webmail before your Mac processes the email, the message gets marked "seen" across all devices via IMAP sync. Once "seen", Mail.app skips automatic rule evaluation entirely.
+
+**Why This Happens**:
+1. Google Alert arrives in IMAP inbox
+2. You check mail on iPhone/iPad/webmail first
+3. IMAP sync marks message as "seen" (read) across all devices
+4. Mac's Mail.app receives the "seen" status before evaluating rules
+5. Mail.app skips rule evaluation for "seen" messages
+6. Manual "Apply Rules" always works because it ignores "seen" status
+
+**Confirming This Is the Issue**:
+- Rule **always** works with "Apply Rules" → Rule configuration is correct
+- Rule **sometimes** auto-triggers → Timing-dependent issue
+- You checked mail on another device before Mac → "Seen flag" likely the cause
+- Both rule conditions match the message → Not a filter problem
+
+**Your Rule Configuration Is Correct**:
+The rule conditions are properly configured:
+- **Subject** → **contains** → `Google Alert -`
+- **From** → **contains** → `googlealerts-noreply@google.com`
+
+Both conditions match correctly when rules DO fire. This is not a configuration problem—it's a Mail.app limitation.
+
+**Workarounds**:
+
+1. **Manual trigger** (simplest):
+   - When auto-trigger fails, select the Google Alert message
+   - **Message** menu → **Apply Rules**
+
+2. **Avoid checking mail on other devices first**:
+   - Let Mac's Mail.app process alerts before checking phone/tablet
+   - Keep Mail.app running continuously on Mac
+
+3. **Use Mac-only email address for Google Alerts**:
+   - Create separate Gmail account exclusively for alerts
+   - Only check this account on Mac
+   - Forward digests to your main email after processing
+
+4. **Check Mail.app on Mac first**:
+   - Open Mail.app on Mac before checking other devices
+   - Let rules process alerts while messages are still "unseen"
+
+**Why We Can't Fix This**:
+- This is a Mail.app architectural limitation dating back to macOS 10.7 [[3]](https://discussions.apple.com/thread/7328086)
+- The rule configuration is correct and works when manually triggered
+- The AppleScript (`process-alert.scpt`) executes perfectly when invoked
+- Apple has not changed this behavior in over a decade [[4]](https://9to5mac.com/2014/01/11/how-to-use-apple-mail-rules-to-automatically-filter-out-unwanted-messages/)
+
+**References**:
+- [1] [Apple Support Communities - Mail rules not working automatically](https://discussions.apple.com/thread/3119801)
+- [2] [Super User - Mail.app only applies rules once when message arrives](https://superuser.com/questions/113226/apple-mail-only-applies-rules-once-when-message-arrives)
+- [3] [Apple Support Communities - Rules fail if message read on iOS first](https://discussions.apple.com/thread/7328086)
+- [4] [9to5Mac - How to use Apple Mail Rules](https://9to5mac.com/2014/01/11/how-to-use-apple-mail-rules-to-automatically-filter-out-unwanted-messages/)
 
 ### Mail Rule Notification Shows Error
 
