@@ -668,8 +668,6 @@ func formatProjectSummary(avgRisk: Double, medianRisk: Double, maxRisk: Double, 
 func formatAsSummary(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics, verbose: Bool) -> String {
     var output = ""
 
-    // Health status
-    let healthStatus = getHealthStatus(totals: totals, fileCount: fileMetrics.count)
     // Files needing attention: risk >= moderate (for count), but display only >= high
     let filesNeedingAttention = fileMetrics.filter { $0.riskScore >= RiskThresholds.moderate }
     let criticalAndHighFiles = fileMetrics.filter { $0.riskScore >= RiskThresholds.high }
@@ -1106,8 +1104,6 @@ struct SwiftHAL: ParsableCommand {
 
     /// Determines if a file should be excluded based on CLI options.
     static func shouldExcludeFile(_ fileURL: URL, options: CLIOptions) -> Bool {
-        let path = fileURL.path
-
         // Always exclude Package.swift (not analyzable code)
         if fileURL.lastPathComponent == "Package.swift" {
             return true

@@ -59,8 +59,11 @@ cp .build/release/SwiftHAL /usr/local/bin/hal
 ### Basic Usage
 
 ```bash
-# Smart summary (default - shows top/bottom 5 files)
+# Smart summary (default - shows high-risk and well-factored files)
 hal --path ./Sources
+
+# Positional argument (alternative to --path)
+hal ./Sources
 
 # See all files
 hal --path ./Sources --verbose
@@ -77,7 +80,19 @@ hal --path Sources/MyFile.swift
 
 ### Output Formats
 
-**Table format (default):**
+**Summary format (default - visual TUI with insights):**
+```bash
+hal --path Sources
+
+# Shows:
+# - Risk distribution histogram (Critical/High/Moderate/Low)
+# - Architecture hotspots grouped by directory
+# - Files needing attention (risk ≥ 2.0)
+# - Well-factored files (top 3 lowest risk)
+# - Project summary (avg/median/max complexity, vocabulary, health %)
+```
+
+**Table format:**
 ```bash
 hal --path Sources --format table
 ```
@@ -112,14 +127,14 @@ hal --path Sources --format json --output metrics.json
 # Include test directories
 hal --path . --include-tests
 
-# Show all files (default shows top/bottom only)
+# Show all files in summary (default shows high-risk and well-factored)
 hal --path Sources --verbose
 
 # Show metric explanations
 hal --explain
 
-# Include/exclude patterns (future)
-hal --path . --include "**/*.swift" --exclude "Tests/**"
+# Include/exclude patterns (not yet implemented)
+# hal --path . --include "**/*.swift" --exclude "Tests/**"
 ```
 
 ### Exit Codes
@@ -227,7 +242,13 @@ Example GitHub Actions workflow:
 
 **v2.0.0:**
 - JSON field renamed: `bugs` → `riskScore`
-- Default output changed to smart summary (use `--verbose` for all files)
+- Default output changed to visual TUI summary format featuring:
+  - Risk distribution histogram with color-coded bars
+  - Architecture hotspots grouped by directory
+  - Files needing attention (risk ≥ 2.0) with project average comparison
+  - Well-factored files (top 3 lowest risk)
+  - Project summary with avg/median/max complexity and health metrics
+  - Use `--verbose` to show all files instead of highlights
 
 ## License
 

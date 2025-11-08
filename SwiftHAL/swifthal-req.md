@@ -1,5 +1,7 @@
 # Swift CLI for Halstead Metrics (SwiftHAL) - Project Requirements
 
+> **Note:** This is a historical requirements document from the initial project planning phase. For current usage, features, and installation instructions, see [README.md](README.md).
+
 ## Goal
 
 Create a SwiftPM executable named `hal` that computes Halstead metrics for Swift source code, outputs JSON suitable for CI, and can recurse a project tree. The tool must use `SwiftSyntax` for parsing and tokenization.
