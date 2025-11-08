@@ -3,9 +3,9 @@ import XCTest
 
 final class ArchitectureHotspotsTests: XCTestCase {
 
-    // MARK: - group_by_directory tests
+    // MARK: - groupByDirectory tests
 
-    func test_group_by_directory_extracts_top_level_only() {
+    func test_groupByDirectory_extracts_top_level_only() {
         var metrics1 = HalsteadMetrics(path: "App/Views/File.swift")
         metrics1.n1 = 10
         metrics1.n2 = 20
@@ -24,7 +24,7 @@ final class ArchitectureHotspotsTests: XCTestCase {
         metrics3.N1 = 15
         metrics3.N2 = 30
 
-        let grouped = group_by_directory([metrics1, metrics2, metrics3])
+        let grouped = groupByDirectory([metrics1, metrics2, metrics3])
 
         XCTAssertEqual(grouped.count, 2)
         XCTAssertTrue(grouped.keys.contains("App/"))
@@ -33,21 +33,21 @@ final class ArchitectureHotspotsTests: XCTestCase {
         XCTAssertEqual(grouped["SwiftUI/"]?.count, 1)
     }
 
-    func test_group_by_directory_handles_root_level_files() {
+    func test_groupByDirectory_handles_root_level_files() {
         var metrics = HalsteadMetrics(path: "main.swift")
         metrics.n1 = 10
         metrics.n2 = 20
         metrics.N1 = 50
         metrics.N2 = 100
 
-        let grouped = group_by_directory([metrics])
+        let grouped = groupByDirectory([metrics])
 
         XCTAssertEqual(grouped.count, 1)
         XCTAssertTrue(grouped.keys.contains("."))
         XCTAssertEqual(grouped["."]?.count, 1)
     }
 
-    func test_group_by_directory_aggregates_all_subdirectories() {
+    func test_groupByDirectory_aggregates_all_subdirectories() {
         var metrics1 = HalsteadMetrics(path: "App/Views/Home/HomeView.swift")
         metrics1.n1 = 10
         metrics1.n2 = 20
@@ -66,7 +66,7 @@ final class ArchitectureHotspotsTests: XCTestCase {
         metrics3.N1 = 15
         metrics3.N2 = 30
 
-        let grouped = group_by_directory([metrics1, metrics2, metrics3])
+        let grouped = groupByDirectory([metrics1, metrics2, metrics3])
 
         XCTAssertEqual(grouped.count, 1)
         XCTAssertTrue(grouped.keys.contains("App/"))
@@ -133,9 +133,9 @@ final class ArchitectureHotspotsTests: XCTestCase {
         XCTAssertEqual(stats.low_count, 1)       // risk < 1.0
     }
 
-    // MARK: - format_architecture_hotspots tests
+    // MARK: - formatArchitectureHotspots tests
 
-    func test_format_architecture_hotspots_shows_all_directories() {
+    func test_formatArchitectureHotspots_shows_all_directories() {
         var critical = HalsteadMetrics(path: "App/Critical.swift")
         critical.n1 = 10
         critical.n2 = 20
@@ -154,7 +154,7 @@ final class ArchitectureHotspotsTests: XCTestCase {
         low.N1 = 50
         low.N2 = 100
 
-        let output = format_architecture_hotspots([critical, high, low])
+        let output = formatArchitectureHotspots([critical, high, low])
 
         XCTAssertTrue(output.contains("ARCHITECTURE HOTSPOTS"))
         XCTAssertTrue(output.contains("App/"))
@@ -162,7 +162,7 @@ final class ArchitectureHotspotsTests: XCTestCase {
         XCTAssertTrue(output.contains("Services/"))
     }
 
-    func test_format_architecture_hotspots_sorts_by_priority() {
+    func test_formatArchitectureHotspots_sorts_by_priority() {
         var critical = HalsteadMetrics(path: "Critical/File.swift")
         critical.n1 = 10
         critical.n2 = 20
@@ -187,7 +187,7 @@ final class ArchitectureHotspotsTests: XCTestCase {
         low.N1 = 50
         low.N2 = 100
 
-        let output = format_architecture_hotspots([critical, high, moderate, low])
+        let output = formatArchitectureHotspots([critical, high, moderate, low])
         let lines = output.split(separator: "\n").map(String.init)
 
         // Find directory lines (those starting with 📁)
@@ -204,7 +204,7 @@ final class ArchitectureHotspotsTests: XCTestCase {
         XCTAssertLessThan(moderateIndex, lowIndex)
     }
 
-    func test_format_architecture_hotspots_shows_priority_indicators() {
+    func test_formatArchitectureHotspots_shows_priority_indicators() {
         var critical = HalsteadMetrics(path: "Critical/File.swift")
         critical.n1 = 10
         critical.n2 = 20
@@ -223,7 +223,7 @@ final class ArchitectureHotspotsTests: XCTestCase {
         low.N1 = 50
         low.N2 = 100
 
-        let output = format_architecture_hotspots([critical, high, low])
+        let output = formatArchitectureHotspots([critical, high, low])
 
         // Check for emojis
         XCTAssertTrue(output.contains("🔴"))  // Critical
@@ -231,7 +231,7 @@ final class ArchitectureHotspotsTests: XCTestCase {
         XCTAssertTrue(output.contains("🟢"))  // Low/Clean
     }
 
-    func test_format_architecture_hotspots_displays_average_risk() {
+    func test_formatArchitectureHotspots_displays_average_risk() {
         var file1 = HalsteadMetrics(path: "App/File1.swift")
         file1.n1 = 10
         file1.n2 = 20
@@ -244,7 +244,7 @@ final class ArchitectureHotspotsTests: XCTestCase {
         file2.N1 = 1000
         file2.N2 = 2000
 
-        let output = format_architecture_hotspots([file1, file2])
+        let output = formatArchitectureHotspots([file1, file2])
         let avgRisk = (file1.riskScore + file2.riskScore) / 2.0
 
         // Output should contain the average risk rounded to 2 decimal places
@@ -252,7 +252,7 @@ final class ArchitectureHotspotsTests: XCTestCase {
         XCTAssertTrue(output.contains(avgRiskStr))
     }
 
-    func test_format_architecture_hotspots_shows_clean_for_low_risk() {
+    func test_formatArchitectureHotspots_shows_clean_for_low_risk() {
         var low1 = HalsteadMetrics(path: "Services/Low1.swift")
         low1.n1 = 5
         low1.n2 = 10
@@ -271,7 +271,7 @@ final class ArchitectureHotspotsTests: XCTestCase {
         low3.N1 = 50
         low3.N2 = 100
 
-        let output = format_architecture_hotspots([low1, low2, low3])
+        let output = formatArchitectureHotspots([low1, low2, low3])
 
         XCTAssertTrue(output.contains("Clean (3 files)"))
     }

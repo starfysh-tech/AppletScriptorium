@@ -221,7 +221,7 @@ final class OutputFormatTests: XCTestCase {
         let low1 = createMetricsWithRisk(path: "low1.swift", targetRisk: 0.8)
 
         let allFiles = [critical1, high1, high2, high3, high4, moderate1, low1]
-        let distribution = format_risk_distribution(allFiles)
+        let distribution = formatRiskDistribution(allFiles)
 
         // Should show counts for each category
         XCTAssertTrue(distribution.contains("Critical (≥5.0)"))
@@ -243,7 +243,7 @@ final class OutputFormatTests: XCTestCase {
         let moderate1 = createMetricsWithRisk(path: "mod1.swift", targetRisk: 1.5)
 
         let allFiles = [critical1, high1, high2, moderate1]
-        let distribution = format_risk_distribution(allFiles)
+        let distribution = formatRiskDistribution(allFiles)
 
         // Focus count = critical + high = 1 + 2 = 3
         XCTAssertTrue(distribution.contains("Focus: 3 files"))
@@ -254,7 +254,7 @@ final class OutputFormatTests: XCTestCase {
         let low1 = createMetricsWithRisk(path: "low1.swift", targetRisk: 0.5)
 
         let allFiles = [critical1, low1]
-        let distribution = format_risk_distribution(allFiles)
+        let distribution = formatRiskDistribution(allFiles)
 
         // Each bar should have consistent width regardless of count
         // Critical (1 file) and Low (1 file) should have same bar length
@@ -281,7 +281,7 @@ final class OutputFormatTests: XCTestCase {
         let lowFiles = (0..<73).map { createMetricsWithRisk(path: "low\($0).swift", targetRisk: 0.5) }
 
         let allFiles = criticalFiles + highFiles + moderateFiles + lowFiles
-        let distribution = format_risk_distribution(allFiles)
+        let distribution = formatRiskDistribution(allFiles)
 
         let lines = distribution.components(separatedBy: "\n")
         let criticalLine = lines.first { $0.contains("Critical") } ?? ""
