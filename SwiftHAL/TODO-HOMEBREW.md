@@ -10,7 +10,7 @@ This document outlines the steps to make SwiftHAL available via Homebrew package
 
 ## Prerequisites
 
-- [ ] SwiftHAL has stable release (v1.0.0 or later)
+- [ ] SwiftHAL has stable release (v2.1.0 or later)
 - [ ] GitHub repository is public
 - [ ] LICENSE file exists (MIT)
 - [ ] All tests passing
@@ -26,15 +26,15 @@ This document outlines the steps to make SwiftHAL available via Homebrew package
 cd /Users/randallnoval/Code/AppletScriptorium/SwiftHAL
 
 # Tag the release
-git tag -a v1.0.0 -m "Release v1.0.0: Staff-level refactoring complete"
-git push origin v1.0.0
+git tag -a v2.1.0 -m "Release v2.1.0: Staff-level refactoring complete"
+git push origin v2.1.0
 ```
 
 ### 1.2 Get Commit SHA
 
 ```bash
 # Get the commit SHA for the tag
-git rev-parse v1.0.0
+git rev-parse v2.1.0
 
 # Save this SHA - you'll need it for the formula
 ```
@@ -44,15 +44,15 @@ git rev-parse v1.0.0
 **Option A: Manual (GitHub Web UI)**
 1. Go to https://github.com/starfysh-tech/AppletScriptorium/releases
 2. Click "Draft a new release"
-3. Select tag: `v1.0.0`
-4. Title: "SwiftHAL v1.0.0"
+3. Select tag: `v2.1.0`
+4. Title: "SwiftHAL v2.1.0"
 5. Description: Copy from release notes
 6. Publish release
 
 **Option B: Automated (gh CLI)**
 ```bash
-gh release create v1.0.0 \
-  --title "SwiftHAL v1.0.0" \
+gh release create v2.1.0 \
+  --title "SwiftHAL v2.1.0" \
   --notes "See CHANGELOG.md for details"
 ```
 
@@ -82,7 +82,7 @@ class Swifthal < Formula
   desc "Swift CLI tool for calculating Halstead complexity metrics"
   homepage "https://github.com/starfysh-tech/AppletScriptorium/tree/main/SwiftHAL"
   url "https://github.com/starfysh-tech/AppletScriptorium.git",
-      tag:      "v1.0.0",
+      tag:      "v2.1.0",
       revision: "REPLACE_WITH_COMMIT_SHA_FROM_STEP_1.2"
   license "MIT"
   head "https://github.com/starfysh-tech/AppletScriptorium.git", branch: "main"
@@ -167,7 +167,7 @@ gh repo create starfysh-tech/homebrew-swifthal --public
 
 # Push tap
 git add .
-git commit -m "Add swifthal formula v1.0.0"
+git commit -m "Add swifthal formula v2.1.0"
 git remote add origin https://github.com/starfysh-tech/homebrew-swifthal.git
 git push -u origin main
 ```

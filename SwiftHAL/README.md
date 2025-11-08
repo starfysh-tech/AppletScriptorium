@@ -54,6 +54,8 @@ swift build -c release
 cp .build/release/SwiftHAL /usr/local/bin/hal
 ```
 
+**Note:** Binary size is approximately 18MB (includes SwiftSyntax parser).
+
 ## Usage
 
 ### Basic Usage

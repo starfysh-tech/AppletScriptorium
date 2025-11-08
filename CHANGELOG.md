@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Summarizer:** improve LLM consistency with debug logging and better prompts
 
 ### Changed
+- Document SwiftHAL v2.1 across repository
 - **Summarizer:** add Patient Reported Outcome sample for evals
 - **CommitCraft:** improve macOS compatibility and uninstall safety
 - backfill CHANGELOG with missing commits
@@ -21,6 +22,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **CommitCraft:** resolve working directory detection in Claude Code
 - **Summarizer:** handle None values in digest rendering
+
+## [4.2.0] - 2025-11-08
+### Added
+- **SwiftHAL:** Halstead complexity metrics analyzer with visual TUI
+- **SwiftHAL:** Risk distribution histogram and architecture hotspots
+- **SwiftHAL:** ArgumentParser CLI with JSON/table/summary formats
+- **SwiftHAL:** Binary release (18MB) with macOS 13+ support
+
+### Changed
+- **SwiftHAL:** Swift tools version 6.2 → 5.9 for CI compatibility
+- **SwiftHAL:** CI runner macos-13 → macos-latest
 
 ## [4.1.0] - 2025-10-24
 ### Added
@@ -173,7 +185,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AppleScript: process-pro-alert.scpt → process-alert.scpt
 - Config file: ~/.pro-alert-env → ~/.alert-env
 
-[unreleased]: https://github.com/starfysh-tech/AppletScriptorium/compare/v4.1.0...HEAD
+[unreleased]: https://github.com/starfysh-tech/AppletScriptorium/compare/v4.2.0...HEAD
+[4.2.0]: https://github.com/starfysh-tech/AppletScriptorium/releases/tag/v4.2.0
 [4.1.0]: https://github.com/starfysh-tech/AppletScriptorium/compare/v4.0.1...v4.1.0
 [4.0.1]: https://github.com/starfysh-tech/AppletScriptorium/compare/v4.0.0...v4.0.1
 [4.0.0]: https://github.com/starfysh-tech/AppletScriptorium/compare/v3.1.0...v4.0.0

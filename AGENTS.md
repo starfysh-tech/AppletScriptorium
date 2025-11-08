@@ -14,6 +14,11 @@ Scans Chrome extensions from local profile, enriches with Chrome Web Store data,
 
 **Tech:** Pure Python (stdlib only), cross-platform, hybrid local/web extraction
 
+### SwiftHAL
+Analyzes Swift code complexity using Halstead metrics. Provides visual TUI with risk distribution, architecture hotspots, and quality scoring.
+
+**Tech:** Swift 5.9+, SwiftSyntax 602.0.0, ArgumentParser, native macOS CLI
+
 ---
 
 Build the simplest solution that works on local macOS—avoid premature abstractions.

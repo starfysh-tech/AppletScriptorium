@@ -50,6 +50,21 @@ SegmentSalmon/segment-salmon 'https://example.com/playlist.m3u8'
 
 ---
 
+### SwiftHAL (🟢 5 minutes)
+Swift CLI tool for Halstead complexity metrics. Analyzes code complexity with visual TUI and architecture insights.
+
+**Use case:** Track code complexity, prioritize refactoring, identify hotspots, enforce quality gates in CI/CD.
+
+**Get started:** Build from source or download binary release:
+```bash
+cd SwiftHAL && swift build -c release
+cp .build/release/SwiftHAL /usr/local/bin/hal
+hal --path Sources
+```
+[Full documentation →](./SwiftHAL/)
+
+---
+
 ### CommitCraft (🟡 10 minutes)
 Development workflow enhancement toolkit. Automated git commits and releases with AI assistance.
 
@@ -160,6 +175,11 @@ Requires LM Studio + Mail.app + SMTP setup.
 ├── SegmentSalmon/                # M3U8/HLS video stream downloader
 │   ├── segment-salmon            # Shell wrapper with dependency management
 │   ├── m3u8_downloader.py        # Main downloader script
+│   └── README.md                 # Usage documentation
+├── SwiftHAL/                     # Halstead complexity metrics analyzer
+│   ├── Sources/                  # Swift source code
+│   ├── Tests/                    # Test suite
+│   ├── Package.swift             # Swift package manifest
 │   └── README.md                 # Usage documentation
 ├── CommitCraft/                  # Development workflow enhancement toolkit
 │   ├── commitcraft-analyze.sh    # Pre-commit analysis script
