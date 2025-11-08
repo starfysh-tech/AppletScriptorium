@@ -291,6 +291,155 @@ func compareValues(_ actual: Double, _ comparator: Comparator, _ expected: Doubl
     }
 }
 
+// MARK: - Architecture Hotspots
+
+struct DirectoryStats {
+    let file_count: Int
+    let avg_risk: Double
+    let critical_count: Int  // risk >= 5.0
+    let high_count: Int      // 2.0 <= risk < 5.0
+    let moderate_count: Int  // 1.0 <= risk < 2.0
+    let low_count: Int       // risk < 1.0
+
+    init(files: [HalsteadMetrics]) {
+        self.file_count = files.count
+        let totalRisk = files.reduce(0.0) { $0 + $1.riskScore }
+        self.avg_risk = file_count > 0 ? totalRisk / Double(file_count) : 0.0
+
+        var critical = 0
+        var high = 0
+        var moderate = 0
+        var low = 0
+
+        for file in files {
+            if file.riskScore >= 5.0 {
+                critical += 1
+            } else if file.riskScore >= 2.0 {
+                high += 1
+            } else if file.riskScore >= 1.0 {
+                moderate += 1
+            } else {
+                low += 1
+            }
+        }
+
+        self.critical_count = critical
+        self.high_count = high
+        self.moderate_count = moderate
+        self.low_count = low
+    }
+}
+
+func group_by_directory(_ fileMetrics: [HalsteadMetrics]) -> [String: [HalsteadMetrics]] {
+    var grouped: [String: [HalsteadMetrics]] = [:]
+
+    for metrics in fileMetrics {
+        let components = metrics.path.split(separator: "/")
+        let directory: String
+
+        // For absolute paths (starting with /), find the last directory component
+        // /Users/foo/Code/project/App/File.swift -> App/
+        // For relative paths:
+        // App/Views/File.swift -> App/
+        // main.swift -> .
+        if metrics.path.hasPrefix("/") {
+            // Absolute path - find project directory (last non-file component)
+            if let lastSlashIndex = metrics.path.lastIndex(of: "/"),
+               let secondLastSlashIndex = metrics.path[..<lastSlashIndex].lastIndex(of: "/") {
+                let startIndex = metrics.path.index(after: secondLastSlashIndex)
+                directory = String(metrics.path[startIndex...lastSlashIndex])
+            } else {
+                directory = "."
+            }
+        } else {
+            // Relative path
+            if components.count > 1 {
+                directory = String(components[0]) + "/"
+            } else {
+                directory = "."
+            }
+        }
+
+        if grouped[directory] == nil {
+            grouped[directory] = []
+        }
+        grouped[directory]?.append(metrics)
+    }
+
+    return grouped
+}
+
+func format_architecture_hotspots(_ fileMetrics: [HalsteadMetrics]) -> String {
+    var output = ""
+
+    output += """
+
+ARCHITECTURE HOTSPOTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"""
+
+    let grouped = group_by_directory(fileMetrics)
+
+    var directoryStats: [(directory: String, stats: DirectoryStats)] = []
+    for (directory, files) in grouped {
+        let stats = DirectoryStats(files: files)
+        directoryStats.append((directory: directory, stats: stats))
+    }
+
+    directoryStats.sort { lhs, rhs in
+        let lhsStats = lhs.stats
+        let rhsStats = rhs.stats
+
+        if lhsStats.critical_count != rhsStats.critical_count {
+            return lhsStats.critical_count > rhsStats.critical_count
+        }
+        if lhsStats.high_count != rhsStats.high_count {
+            return lhsStats.high_count > rhsStats.high_count
+        }
+        if lhsStats.moderate_count != rhsStats.moderate_count {
+            return lhsStats.moderate_count > rhsStats.moderate_count
+        }
+        return lhsStats.avg_risk > rhsStats.avg_risk
+    }
+
+    for (directory, stats) in directoryStats {
+        let emoji: String
+        let priorityText: String
+
+        if stats.critical_count > 0 {
+            emoji = "🔴"
+            priorityText = "\(stats.critical_count) critical"
+        } else if stats.high_count > 0 {
+            emoji = "🟡"
+            priorityText = "\(stats.high_count) high"
+        } else if stats.moderate_count > 0 {
+            emoji = "🟠"
+            priorityText = "\(stats.moderate_count) moderate"
+        } else {
+            emoji = "🟢"
+            priorityText = "Clean (\(stats.file_count) files)"
+        }
+
+        let avgRiskStr = String(format: "%.2f", stats.avg_risk)
+        let warningIndicator = stats.avg_risk >= 2.0 ? "  ⚠️  Priority" : (stats.avg_risk >= 1.0 ? "  ⚠️" : "")
+
+        // Build output line with manual padding
+        func pad(_ s: String, to width: Int) -> String {
+            let paddingNeeded = width - s.count
+            return paddingNeeded > 0 ? s + String(repeating: " ", count: paddingNeeded) : s
+        }
+
+        let directoryCol = pad(directory, to: 13)
+        let priorityCol = pad(priorityText, to: 20)
+        let avgCol = pad(avgRiskStr, to: 6)
+
+        output += "📁 \(directoryCol) \(emoji) \(priorityCol) │ Avg: \(avgCol)\(warningIndicator)\n"
+    }
+
+    return output
+}
+
 // MARK: - Output Formatting
 
 struct OutputSchema: Codable {
@@ -352,11 +501,45 @@ func formatAsTable(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics) ->
                           effort: metrics.effort, time: metrics.timeSeconds, riskScore: metrics.riskScore) + "\n"
     }
 
-    // Totals
-    output += String(repeating: "-", count: 135) + "\n"
-    output += formatRow(path: totals.path, vocab: totals.vocabulary, length: totals.length,
-                      volume: totals.volume, difficulty: totals.difficulty,
-                      effort: totals.effort, time: totals.timeSeconds, riskScore: totals.riskScore) + "\n"
+    return output
+}
+
+func format_risk_distribution(_ fileMetrics: [HalsteadMetrics]) -> String {
+    var output = ""
+
+    // Categorize files
+    let critical = fileMetrics.filter { $0.riskScore >= 5.0 }
+    let high = fileMetrics.filter { $0.riskScore >= 2.0 && $0.riskScore < 5.0 }
+    let moderate = fileMetrics.filter { $0.riskScore >= 1.0 && $0.riskScore < 2.0 }
+    let low = fileMetrics.filter { $0.riskScore < 1.0 }
+
+    let total = fileMetrics.count
+    let focusCount = critical.count + high.count
+
+    // Calculate percentages
+    let criticalPct = total > 0 ? (critical.count * 100) / total : 0
+    let highPct = total > 0 ? (high.count * 100) / total : 0
+    let moderatePct = total > 0 ? (moderate.count * 100) / total : 0
+    let lowPct = total > 0 ? (low.count * 100) / total : 0
+
+    // Fixed bar width (50 chars) - bars proportional to PERCENTAGE
+    func makeBar(_ percentage: Int) -> String {
+        guard percentage > 0 else { return "" }
+        let blocks = Int(round(Double(percentage) * 50.0 / 100.0))
+        return String(repeating: "▓", count: max(1, blocks))
+    }
+
+    // Helper for file count label
+    func fileLabel(_ count: Int) -> String {
+        return count == 1 ? "1 file " : "\(count) files"
+    }
+
+    output += "RISK DISTRIBUTION\n"
+    output += String(repeating: "━", count: 62) + "\n"
+    output += "🔴 Critical (≥5.0)     \(fileLabel(critical.count))  \(makeBar(criticalPct))  \(criticalPct)%  │\n"
+    output += "🟡 High (2.0-5.0)      \(fileLabel(high.count))  \(makeBar(highPct))  \(highPct)%  │ ⚠️  Focus: \(focusCount) files\n"
+    output += "🟠 Moderate (1.0-2.0)  \(fileLabel(moderate.count))  \(makeBar(moderatePct))  \(moderatePct)% │\n"
+    output += "🟢 Low (<1.0)          \(fileLabel(low.count))  \(makeBar(lowPct))  \(lowPct)% │\n"
 
     return output
 }
@@ -366,15 +549,27 @@ func formatAsSummary(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics, 
 
     // Health status
     let healthStatus = getHealthStatus(totals: totals, fileCount: fileMetrics.count)
-    output += """
+    // Files needing attention: risk >= 1.0 (for count), but display only >= 2.0
+    let filesNeedingAttention = fileMetrics.filter { $0.riskScore >= 1.0 }
+    let criticalAndHighFiles = fileMetrics.filter { $0.riskScore >= 2.0 }
+    let needsAttentionCount = filesNeedingAttention.count
+    let needsAttentionText = needsAttentionCount == 1 ? "1 file needs attention" : "\(needsAttentionCount) files need attention"
 
-┌─ Code Health ─────────────────────────────────────────────┐
-│  Status: \(healthStatus)
-│  \(String(format: "%.1f", totals.riskScore)) risk score across \(fileMetrics.count) files
-│  \(fileMetrics.filter { $0.riskScore > 2.0 }.count) files need attention
-└───────────────────────────────────────────────────────────┘
+    output += """
+╔═══════════════════════════════════════════════════════════╗
+║ SwiftHAL - Halstead Complexity Analyzer                   ║
+║ Measures code complexity via operator/operand analysis    ║
+║ Risk score correlates with defect probability             ║
+╚═══════════════════════════════════════════════════════════╝
+
+\(fileMetrics.count) files analyzed │ Project avg: \(String(format: "%.2f", totals.riskScore / Double(fileMetrics.count))) │ \(needsAttentionText)
 
 """
+
+    // Risk distribution
+    output += "\n" + format_risk_distribution(fileMetrics) + "\n"
+    // Architecture hotspots
+    output += format_architecture_hotspots(fileMetrics) + "\n"
 
     if verbose {
         // Show all files
@@ -383,14 +578,20 @@ func formatAsSummary(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics, 
             output += formatFileLine(metrics)
         }
     } else {
-        // Top 5 worst files
-        let topWorst = fileMetrics.sorted(by: { $0.riskScore > $1.riskScore }).prefix(5)
-        if !topWorst.isEmpty {
+        // Calculate project average for comparison
+        let projectAvg = totals.riskScore / Double(fileMetrics.count)
+
+        // ALL critical and high files (risk >= 2.0), no limit
+        let criticalAndHigh = criticalAndHighFiles.sorted(by: { $0.riskScore > $1.riskScore })
+        if !criticalAndHigh.isEmpty {
             output += "⚠️  Files Needing Attention\n\n"
-            for (index, metrics) in topWorst.enumerated() {
-                output += "  \(index + 1). \(shortPath(metrics.path))\n"
-                output += "     \(String(format: "%.2f", metrics.riskScore)) risk • Difficulty \(String(format: "%.1f", metrics.difficulty)) (\(difficultyLabel(metrics.difficulty)))\n"
-                output += "     → \(recommendation(for: metrics))\n\n"
+            for metrics in criticalAndHigh {
+                output += "  \(shortPath(metrics.path))\n"
+
+                let comparison = projectAvg > 0 ? metrics.riskScore / projectAvg : 0
+                let volumeFormatted = format_with_thousands_separator(Int(metrics.volume))
+
+                output += "  Risk: \(String(format: "%.1f", metrics.riskScore))  │  Vol: \(volumeFormatted)  │  Diff: \(String(format: "%.1f", metrics.difficulty))  │  ↑ \(String(format: "%.1f", comparison))× project avg\n\n"
             }
         }
 
@@ -405,12 +606,20 @@ func formatAsSummary(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics, 
         }
     }
 
-    // Totals
+    // Project Summary
+    let avg_risk = totals.riskScore / Double(fileMetrics.count)
+    let median_risk = calculate_median_risk(fileMetrics)
+    let max_risk = calculate_max_risk(fileMetrics)
+    let focus_areas = extract_focus_areas(fileMetrics)
+    let needs_attention_pct = filesNeedingAttention.count * 100 / fileMetrics.count
+
     output += "────────────────────────────────────────────────────────────\n"
-    output += "Totals: \(totals.vocabulary) vocabulary, \(String(format: "%.1f", totals.riskScore)) risk score\n"
-    if !verbose {
-        output += "\nRun `hal --verbose` to see all \(fileMetrics.count) files\n"
-        output += "Run `hal --explain` to understand metrics\n"
+    output += "📊 PROJECT SUMMARY\n\n"
+    output += "  Complexity    \(String(format: "%.2f", avg_risk)) avg  │  \(String(format: "%.2f", median_risk)) median  │  \(String(format: "%.2f", max_risk)) max\n"
+    output += "  Vocabulary    \(String(totals.vocabulary).replacingOccurrences(of: "(\\d)(?=(\\d{3})+$)", with: "$1,", options: .regularExpression)) distinct symbols\n"
+    output += "  Health        \(needsAttentionCount) files need attention (\(needs_attention_pct)% of codebase)\n"
+    if !focus_areas.isEmpty {
+        output += "  Focus Areas   \(focus_areas.joined(separator: ", "))\n"
     }
 
     return output
@@ -418,10 +627,60 @@ func formatAsSummary(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics, 
 
 func getHealthStatus(totals: HalsteadMetrics, fileCount: Int) -> String {
     let avgRisk = totals.riskScore / Double(fileCount)
-    if avgRisk < 0.5 { return "Excellent ✓" }
     if avgRisk < 1.0 { return "Good" }
     if avgRisk < 2.0 { return "Fair" }
-    return "Needs Work"
+    if avgRisk < 5.0 { return "Needs Review" }
+    return "Critical"
+}
+
+func calculate_median_risk(_ fileMetrics: [HalsteadMetrics]) -> Double {
+    guard !fileMetrics.isEmpty else { return 0.0 }
+    let sorted_risks = fileMetrics.map { $0.riskScore }.sorted()
+    let count = sorted_risks.count
+    if count % 2 == 0 {
+        return (sorted_risks[count / 2 - 1] + sorted_risks[count / 2]) / 2.0
+    } else {
+        return sorted_risks[count / 2]
+    }
+}
+
+func calculate_max_risk(_ fileMetrics: [HalsteadMetrics]) -> Double {
+    return fileMetrics.map { $0.riskScore }.max() ?? 0.0
+}
+
+func extract_focus_areas(_ fileMetrics: [HalsteadMetrics]) -> [String] {
+    let high_risk_files = fileMetrics.filter { $0.riskScore >= 2.0 }
+    var directories = Set<String>()
+
+    for metrics in high_risk_files {
+        // Use same logic as group_by_directory to extract directory name
+        let directory: String
+
+        if metrics.path.hasPrefix("/") {
+            // Absolute path - find project directory (last non-file component)
+            if let lastSlashIndex = metrics.path.lastIndex(of: "/"),
+               let secondLastSlashIndex = metrics.path[..<lastSlashIndex].lastIndex(of: "/") {
+                let startIndex = metrics.path.index(after: secondLastSlashIndex)
+                directory = String(metrics.path[startIndex...lastSlashIndex])
+            } else {
+                directory = "."
+            }
+        } else {
+            // Relative path
+            let components = metrics.path.split(separator: "/")
+            if components.count > 1 {
+                directory = String(components[0]) + "/"
+            } else {
+                directory = "."
+            }
+        }
+
+        if directory != "." {
+            directories.insert(directory)
+        }
+    }
+
+    return Array(directories).sorted()
 }
 
 func difficultyLabel(_ difficulty: Double) -> String {
@@ -439,23 +698,30 @@ func shortPath(_ path: String) -> String {
     return path
 }
 
+func format_with_thousands_separator(_ value: Int) -> String {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    formatter.groupingSeparator = ","
+    return formatter.string(from: NSNumber(value: value)) ?? String(value)
+}
+
 func formatFileLine(_ metrics: HalsteadMetrics) -> String {
     return "  \(shortPath(metrics.path))\n" +
            "     Risk: \(String(format: "%.2f", metrics.riskScore)) • " +
            "Difficulty: \(String(format: "%.1f", metrics.difficulty))\n\n"
 }
 
-func recommendation(for metrics: HalsteadMetrics) -> String {
-    if metrics.riskScore > 5.0 {
-        return "Strong refactoring candidate - consider splitting"
+func recommendation(for metrics: HalsteadMetrics) -> String? {
+    if metrics.riskScore >= 5.0 {
+        return "Critical - immediate refactoring needed"
     }
-    if metrics.difficulty > 60 {
-        return "Very complex logic - extra testing recommended"
+    if metrics.riskScore >= 2.0 {
+        return "High - review recommended"
     }
-    if metrics.riskScore > 3.0 {
-        return "Consider extracting sub-components"
+    if metrics.riskScore >= 1.0 {
+        return "Moderate - monitor complexity"
     }
-    return "Review for potential simplification"
+    return nil
 }
 
 // MARK: - CLI Options
@@ -556,7 +822,11 @@ func parse_arguments(_ args: [String]) throws -> CLIOptions {
             i += 1
 
         default:
-            // Unknown flag or positional argument
+            // Treat as positional path argument if it doesn't start with --
+            if !arg.hasPrefix("-") {
+                options.path = arg
+            }
+            // Otherwise ignore unknown flags
             i += 1
         }
     }
@@ -578,14 +848,20 @@ func print_usage() {
         --output <path>           Write output to file instead of stdout
         --include <pattern>       Include glob pattern (e.g., '**/*.swift')
         --exclude <pattern>       Exclude glob pattern (e.g., 'Tests/**')
-        --include-tests           Include Tests directories
+        --include-tests           Include test files (default: excluded)
         --explain                 Show detailed explanation of metrics
         --help, -h                Show this help message
+
+    DEFAULT EXCLUSIONS:
+        - **/Tests/** directories
+        - **/*Tests.swift files
+        - Package.swift (not analyzable code)
 
     EXAMPLES:
         hal --path ./Sources --format json > halstead.json
         hal --path . --format table
         hal --path . --threshold 'volume>800,difficulty>25'
+        hal --include-tests  # Include test files in analysis
         hal --explain
     """)
 }
@@ -663,11 +939,24 @@ struct SwiftHAL {
             let fileManager = FileManager.default
             let rootURL = URL(fileURLWithPath: options.path)
 
-            let swiftFiles = findSwiftFiles(at: rootURL, fileManager: fileManager)
+            // Validate path exists
+            var isDirectory: ObjCBool = false
+            guard fileManager.fileExists(atPath: rootURL.path, isDirectory: &isDirectory) else {
+                print("Error: Path does not exist: \(rootURL.path)")
+                exit(1)
+            }
+
+            // Show what directory we're analyzing
+            let absolutePath = rootURL.standardizedFileURL.path
+            if options.format != .summary {
+                print("Analyzing Swift files in: \(absolutePath)")
+            }
+
+            let swiftFiles = findSwiftFiles(at: rootURL, options: options, fileManager: fileManager)
             let calculator = MetricsCalculator()
 
             if options.format != .summary {
-                print("Analyzing \(swiftFiles.count) Swift files...")
+                print("Found \(swiftFiles.count) Swift files...")
             }
 
             var allResults: [MetricsWithSets] = []
@@ -741,7 +1030,7 @@ struct SwiftHAL {
     }
 
     /// Recursively finds all Swift files in a given directory.
-    static func findSwiftFiles(at rootURL: URL, fileManager: FileManager) -> [URL] {
+    static func findSwiftFiles(at rootURL: URL, options: CLIOptions, fileManager: FileManager) -> [URL] {
         var swiftFiles: [URL] = []
         let enumerator = fileManager.enumerator(at: rootURL,
                                                includingPropertiesForKeys: [.isRegularFileKey],
@@ -756,6 +1045,10 @@ struct SwiftHAL {
             do {
                 let resourceValues = try fileURL.resourceValues(forKeys: [.isRegularFileKey])
                 if resourceValues.isRegularFile == true && fileURL.pathExtension == "swift" {
+                    // Apply exclusion filters
+                    if should_exclude_file(fileURL, options: options) {
+                        continue
+                    }
                     swiftFiles.append(fileURL)
                 }
             } catch {
@@ -763,6 +1056,36 @@ struct SwiftHAL {
             }
         }
         return swiftFiles
+    }
+
+    /// Determines if a file should be excluded based on CLI options.
+    static func should_exclude_file(_ fileURL: URL, options: CLIOptions) -> Bool {
+        let path = fileURL.path
+
+        // Always exclude Package.swift (not analyzable code)
+        if fileURL.lastPathComponent == "Package.swift" {
+            return true
+        }
+
+        // If include_tests is true, don't apply test exclusions
+        if options.include_tests {
+            return false
+        }
+
+        // Default exclusions (when include_tests is false):
+
+        // Exclude files ending in Tests.swift
+        if fileURL.lastPathComponent.hasSuffix("Tests.swift") {
+            return true
+        }
+
+        // Exclude files in any /Tests/ directory
+        let pathComponents = fileURL.pathComponents
+        if pathComponents.contains("Tests") {
+            return true
+        }
+
+        return false
     }
 }
 

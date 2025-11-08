@@ -86,4 +86,20 @@ final class CLIParserTests: XCTestCase {
         let options = try parse_arguments(["hal", "--format", "summary"])
         XCTAssertEqual(options.format, .summary)
     }
+
+    func test_positional_path_argument_parses_correctly() throws {
+        let options = try parse_arguments(["hal", "../../contactripple"])
+        XCTAssertEqual(options.path, "../../contactripple")
+    }
+
+    func test_positional_path_with_flags_parses_correctly() throws {
+        let options = try parse_arguments(["hal", "Sources", "--format", "json"])
+        XCTAssertEqual(options.path, "Sources")
+        XCTAssertEqual(options.format, .json)
+    }
+
+    func test_path_flag_overrides_positional() throws {
+        let options = try parse_arguments(["hal", "Sources", "--path", "Tests"])
+        XCTAssertEqual(options.path, "Tests")
+    }
 }

@@ -1,14 +1,22 @@
-name: CI
+name: SwiftHAL
 
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'SwiftHAL/**'
+      - '.github/workflows/swifthal.yml'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'SwiftHAL/**'
 
 jobs:
   build-and-test:
     runs-on: macos-13
+    defaults:
+      run:
+        working-directory: SwiftHAL
 
     steps:
     - uses: actions/checkout@v4
@@ -29,7 +37,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: halstead-metrics
-        path: halstead.json
+        path: SwiftHAL/halstead.json
 
     - name: Display Metrics
       run: swift run SwiftHAL --path Sources --format table
