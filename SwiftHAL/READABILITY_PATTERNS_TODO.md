@@ -27,8 +27,21 @@ Enhance SwiftHAL with visual code readability patterns from [seeinglogic.com](ht
 4. ✅ **Pattern 3: Grouping (Method Chains)** - Implemented in v2.1
 
 ### 📋 Phase 2: Additional Patterns (Medium Value)
-5. **Pattern 7: Variable Distinction**
-6. **Pattern 2: Novelty Detection**
+
+**⚠️ IMPLEMENTATION ORDER REVISED**: Pattern 2 should be done first (see Critical Analysis below)
+
+5. **Pattern 2: Novelty Detection** ⭐ RECOMMENDED FIRST
+   - **Effort**: Low (4 hours)
+   - **Risk**: Low
+   - **Value**: Educational
+   - Custom operators, advanced Swift features
+
+6. **Pattern 7: Variable Distinction** ⚠️ COMPLEX - DO LATER
+   - **Effort**: High (35-45 hours, not 19 as originally estimated)
+   - **Risk**: High (false positives, performance)
+   - **Value**: High IF implemented well
+   - Shadowing, similar names, single-letter vars
+   - Requires prototype phase and user testing
 
 ### ⏸️ Phase 3: Not Applicable
 - **Pattern 5: Gotos** - Swift doesn't have goto (could flag labeled break/continue)
@@ -447,7 +460,113 @@ Project: Max chain 12 calls │ Avg 2.1 calls │ 7 long chains (>5 calls)
 
 ## Phase 2: Additional Patterns
 
-### 📋 Pattern 7: Variable Distinction
+---
+
+## ⚠️ CRITICAL ANALYSIS: Pattern Implementation Challenges
+
+### Pattern 7 (Variable Distinction) - Identified Issues
+
+**Originally Estimated**: 19 hours
+**Realistic Estimate**: 35-45 hours
+**Status**: Requires research prototype before production implementation
+
+#### Issue #1: Swift Scope Tracking Complexity
+Swift has complex scoping rules that require handling:
+- Pattern binding (`guard let x = foo() else { }` - x available AFTER guard)
+- Conditional scoping (`if let y = bar() { }` - y only in block)
+- Closure captures vs shadowing (captured vars vs local vars)
+- Switch pattern scopes (case-specific bindings)
+- Property shadowing in initializers (`init(name: String) { self.name = name }` - intentional!)
+
+**Impact**: Scope tracking alone is 12-15 hours, not 3 hours as estimated.
+
+#### Issue #2: Performance - Levenshtein O(n²)
+For a file with 200 variables:
+- Comparisons needed: 200 × 200 / 2 = 20,000
+- Operations per comparison: O(name_length²) ≈ 64 for 8-char names
+- Total: 1.28M operations per file
+- For 50-file project: 64M operations
+
+**Impact**: Could cause 2-3× slowdown, not "< 20% overhead" as claimed.
+
+**Mitigation Required**:
+- Compare only within same function (not file-wide)
+- Length bucketing (skip if length diff > 2)
+- Early exit on distance > 2
+
+#### Issue #3: False Positive Explosion
+**Plurals** (90% of similar name pairs):
+```swift
+let item = items.first     // Distance: 1 - INTENTIONAL
+let result = results[0]    // Distance: 1 - INTENTIONAL
+let data = datas.map {}    // Distance: 1 - INTENTIONAL
+```
+
+**Standard Swift Patterns**:
+```swift
+// Initializers - everyone does this
+struct Config {
+    let timeout: Int
+    init(timeout: Int) { self.timeout = timeout }  // FALSE POSITIVE
+}
+
+// Closure parameters
+items.map { item in item.name }  // "item" shadows outer? Common pattern!
+
+// Protocol implementations
+static func == (lhs: Foo, rhs: Foo) -> Bool  // lhs/rhs conventional
+```
+
+**Acceptable Single Letters**:
+```swift
+func transform<T>(_ value: T) -> T  // T is standard
+let color = Color(r: 0.5, g: 0.3, b: 0.8, a: 1.0)  // r,g,b,a conventional
+```
+
+**Impact**: Estimated 60-70% false positive rate without sophisticated filtering.
+
+#### Issue #4: Architecture Mismatch
+Current analyzers are **stateless visitors**. Pattern 7 needs:
+- Global state (all variables in file)
+- Scope stack maintenance
+- Post-processing (Levenshtein comparisons after walk)
+- Complex filtering logic
+
+This is a fundamentally different analyzer architecture.
+
+#### Issue #5: Testing Complexity
+Needs comprehensive tests for:
+- Guard/if/switch scoping edge cases
+- Closure capture vs shadowing
+- Property/initializer patterns
+- Plural false positive filters
+- Generic type parameters
+- Performance on large files
+
+**Impact**: 8-10 hours minimum for proper test coverage.
+
+---
+
+### Recommendation: Do Pattern 2 First
+
+**Pattern 2 (Novelty Detection)** is:
+- ✅ Simple (4 hours vs 40 hours)
+- ✅ Low risk (token matching only)
+- ✅ Predictable (no false positive issues)
+- ✅ Educational value
+- ✅ Fits existing architecture
+
+**Pattern 7** should be:
+- Prototyped separately
+- Tested on real codebases
+- Refined based on user feedback
+- Implemented only if false positives can be controlled
+
+---
+
+## Phase 2: Pattern Implementations
+
+### 📋 Pattern 2: Novelty Detection (RECOMMENDED FIRST)
 
 **What to Detect:**
 - Variable shadowing (inner scope redefines outer variable)
@@ -486,6 +605,22 @@ class DistinctionAnalyzer: SyntaxVisitor {
 }
 ```
 
+**⚠️ COMPLEXITY WARNING**: This pattern requires:
+- Sophisticated scope tracking (12-15 hours)
+- Performance optimization for Levenshtein (avoid O(n²) explosion)
+- Extensive false positive filtering (plurals, initializers, closures)
+- Non-standard analyzer architecture (stateful, post-processing)
+- Comprehensive testing (8-10 hours)
+
+**Total Realistic Effort**: 35-45 hours
+
+**Recommendation**:
+1. Prototype in separate branch
+2. Test on 10+ real-world codebases
+3. Measure false positive rate
+4. Iterate on filtering heuristics
+5. Only merge if FP rate < 20%
+
 **Output Format (TUI):**
 ```
 VARIABLE NAMING
@@ -502,12 +637,18 @@ Project: 3 shadowing issues │ 8 similar name pairs │ 12 single-letter vars
 
 ---
 
-### 📋 Pattern 2: Novelty Detection
+### 📋 Pattern 2: Novelty Detection ⭐ IMPLEMENT FIRST
 
 **What to Detect:**
 - Custom operators
 - Rarely-used Swift features (`rethrows`, `indirect`, `@dynamicMemberLookup`)
-- Advanced generics patterns
+- Advanced attributes
+
+**Why First:**
+- ✅ Simple implementation (4 hours)
+- ✅ Low risk (no false positives)
+- ✅ Fits existing architecture
+- ✅ Educational value
 
 **Technical Approach:**
 
@@ -516,26 +657,77 @@ struct NoveltyMetrics: Codable {
     let customOperatorCount: Int
     let advancedFeatures: [String: Int]  // feature name -> count
     let locations: [NoveltyLocation]
+
+    static var empty: NoveltyMetrics {
+        NoveltyMetrics(
+            customOperatorCount: 0,
+            advancedFeatures: [:],
+            locations: []
+        )
+    }
 }
 
 struct NoveltyLocation: Codable {
     let line: Int
+    let column: Int
     let feature: String
-    let context: String
+    let context: String  // snippet of code
 }
 
 class NoveltyAnalyzer: SyntaxVisitor {
-    private let advancedKeywords: Set<String> = [
-        "rethrows", "indirect", "associatedtype", "inout",
-        "unowned", "weak"
-    ]
+    private var customOperators: [NoveltyLocation] = []
+    private var advancedFeatures: [String: [Int]] = [:]
+    private let converter: SourceLocationConverter
 
     private let advancedAttributes: Set<String> = [
         "dynamicMemberLookup", "dynamicCallable",
         "propertyWrapper", "resultBuilder"
     ]
+
+    init(viewMode: SyntaxTreeViewMode, converter: SourceLocationConverter) {
+        self.converter = converter
+        super.init(viewMode: viewMode)
+    }
+
+    override func visit(_ node: OperatorDeclSyntax) -> SyntaxVisitorContinueKind {
+        let location = converter.location(for: node.position)
+        let snippet = String(node.description.prefix(60))
+
+        customOperators.append(NoveltyLocation(
+            line: location.line,
+            column: location.column,
+            feature: "custom operator",
+            context: snippet
+        ))
+        return .visitChildren
+    }
+
+    override func visit(_ node: AttributeSyntax) -> SyntaxVisitorContinueKind {
+        let attrName = node.attributeName.trimmedDescription
+        if advancedAttributes.contains(attrName) {
+            let location = converter.location(for: node.position)
+            advancedFeatures[attrName, default: []].append(location.line)
+        }
+        return .visitChildren
+    }
+
+    func calculateMetrics() -> NoveltyMetrics {
+        // Sort locations by line
+        let sortedLocations = customOperators.sorted { $0.line < $1.line }
+
+        return NoveltyMetrics(
+            customOperatorCount: customOperators.count,
+            advancedFeatures: advancedFeatures.mapValues { $0.count },
+            locations: Array(sortedLocations.prefix(10))  // Top 10
+        )
+    }
 }
 ```
+
+**Integration Points:**
+- Add `NoveltyMetrics` to `HalsteadMetrics` (optional field)
+- Call in `MetricsCalculator.calculateWithSets()` after other analyzers
+- Add `formatNoveltyAnalysis()` function for TUI
 
 **Output Format (TUI):**
 ```
@@ -545,12 +737,26 @@ Project: 2 custom operators │ 5 advanced features used
 
 Advanced Features:
   • @resultBuilder: 3 occurrences
-  • rethrows: 2 occurrences
+  • @propertyWrapper: 2 occurrences
 
 ⚠️  Custom Operators:
   Sources/Math/Operators.swift:12
   └─ infix operator ⊕ : AdditionPrecedence
+
+💡 Tip: Document custom operators and advanced features for team awareness
 ```
+
+**Implementation Estimate**: 4 hours total
+- Data structures: 30 min
+- Analyzer implementation: 1.5 hours
+- TUI formatting: 1 hour
+- Testing: 1 hour
+
+---
+
+### 📋 Pattern 7: Variable Distinction (DEFER - Complex)
+
+**What to Detect:**
 
 ---
 
@@ -719,15 +925,25 @@ hal --path Sources \
    - ✅ All 4 patterns working
    - ✅ Comprehensive TUI format with visual sections
 
-2. **v2.2** (Future): Add Patterns 7, 2 (Phase 2)
-   - Pattern 7: Variable Distinction
-   - Pattern 2: Novelty Detection
-   - Polish and refinement
+2. **v2.2** (Next Release): Add Pattern 2 (Novelty Detection)
+   - Custom operator detection
+   - Advanced Swift feature tracking
+   - **Estimated**: 4 hours implementation + testing
+   - Low risk, high confidence
 
-3. **v2.3** (Future): Advanced features
+3. **v2.3** (Future): Research Pattern 7 (Variable Distinction)
+   - Prototype in separate branch
+   - Test on real codebases
+   - Measure false positive rates
+   - Refine filtering heuristics
+   - **Estimated**: 35-45 hours (research + implementation)
+   - High risk, requires validation
+
+4. **v2.4+** (Future): Advanced features
    - Custom threshold configuration
    - Trend tracking across commits
    - Auto-fix suggestions
+   - Pattern 7 if prototype successful
 
 ---
 
@@ -818,5 +1034,31 @@ Real-world examples from open source Swift projects
 
 **Status**: Phase 1 Complete ✅
 **Completed**: All 4 Phase 1 patterns implemented and tested
-**Next Action**: Phase 2 (Pattern 7: Variable Distinction, Pattern 2: Novelty Detection)
-**Version**: v2.1 released with Phase 1 patterns
+**Next Action**: Implement Pattern 2 (Novelty Detection) for v2.2
+**Deferred**: Pattern 7 (Variable Distinction) - requires research prototype
+**Current Version**: v2.1 with Phase 1 patterns
+
+---
+
+## Implementation Timeline (Revised)
+
+### v2.1 (CURRENT) ✅
+- All Phase 1 patterns complete
+- Nesting, Conditionals, Liveness, Grouping working
+
+### v2.2 (NEXT - 4 hours)
+- Pattern 2: Novelty Detection
+- Custom operators + advanced features
+- Low risk, quick win
+
+### v2.3 (RESEARCH - 35-45 hours)
+- Pattern 7: Prototype & validate
+- Scope tracking implementation
+- False positive filtering
+- Performance optimization
+- Only merge if successful
+
+### v2.4+ (TBD)
+- Pattern 7 production (if prototype succeeds)
+- Advanced configuration features
+- Trend tracking
