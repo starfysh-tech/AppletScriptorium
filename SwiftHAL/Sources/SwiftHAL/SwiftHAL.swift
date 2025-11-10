@@ -14,6 +14,12 @@ struct HalsteadMetrics: Codable {
     var N1: Int = 0 // Total operators
     var N2: Int = 0 // Total operands
 
+    // Readability patterns (Phase 1)
+    var nesting: NestingMetrics?
+    var conditionals: ConditionalMetrics?
+    var liveness: LivenessMetrics?
+    var grouping: GroupingMetrics?
+
     // Calculated metrics
     var vocabulary: Int { n1 + n2 }
     var length: Int { N1 + N2 }
@@ -42,6 +48,7 @@ struct HalsteadMetrics: Codable {
     enum CodingKeys: String, CodingKey {
         case path, n1, n2, N1, N2
         case vocabulary, length, estimatedLength, volume, difficulty, effort, timeSeconds, riskScore
+        case nesting, conditionals, liveness, grouping
     }
 
     func encode(to encoder: Encoder) throws {
@@ -59,6 +66,10 @@ struct HalsteadMetrics: Codable {
         try container.encode(effort, forKey: .effort)
         try container.encode(timeSeconds, forKey: .timeSeconds)
         try container.encode(riskScore, forKey: .riskScore)
+        try container.encodeIfPresent(nesting, forKey: .nesting)
+        try container.encodeIfPresent(conditionals, forKey: .conditionals)
+        try container.encodeIfPresent(liveness, forKey: .liveness)
+        try container.encodeIfPresent(grouping, forKey: .grouping)
     }
 
     init(from decoder: Decoder) throws {
@@ -68,7 +79,475 @@ struct HalsteadMetrics: Codable {
         n2 = try container.decode(Int.self, forKey: .n2)
         N1 = try container.decode(Int.self, forKey: .N1)
         N2 = try container.decode(Int.self, forKey: .N2)
+        nesting = try container.decodeIfPresent(NestingMetrics.self, forKey: .nesting)
+        conditionals = try container.decodeIfPresent(ConditionalMetrics.self, forKey: .conditionals)
+        liveness = try container.decodeIfPresent(LivenessMetrics.self, forKey: .liveness)
+        grouping = try container.decodeIfPresent(GroupingMetrics.self, forKey: .grouping)
         // Computed properties are automatically calculated from stored properties
+    }
+}
+
+// MARK: - Readability Pattern: Nesting Depth
+
+struct NestingLocation: Codable {
+    let line: Int
+    let column: Int
+    let depth: Int
+    let context: String
+}
+
+struct NestingMetrics: Codable {
+    let maxDepth: Int
+    let avgDepth: Double
+    let deeplyNestedCount: Int  // blocks with depth > 3
+    let locations: [NestingLocation]
+
+    static var empty: NestingMetrics {
+        NestingMetrics(maxDepth: 0, avgDepth: 0.0, deeplyNestedCount: 0, locations: [])
+    }
+}
+
+class NestingAnalyzer: SyntaxVisitor {
+    private var currentDepth = 0
+    private var maxDepth = 0
+    private var depthSamples: [Int] = []
+    private var locations: [NestingLocation] = []
+
+    override func visit(_ node: CodeBlockSyntax) -> SyntaxVisitorContinueKind {
+        currentDepth += 1
+        maxDepth = max(maxDepth, currentDepth)
+        depthSamples.append(currentDepth)
+
+        if currentDepth > 3 {
+            let position = node.position
+            locations.append(NestingLocation(
+                line: position.line,
+                column: position.column,
+                depth: currentDepth,
+                context: extractContext(node)
+            ))
+        }
+
+        return .visitChildren
+    }
+
+    override func visitPost(_ node: CodeBlockSyntax) {
+        currentDepth -= 1
+    }
+
+    private func extractContext(_ node: CodeBlockSyntax) -> String {
+        // Walk up the tree to find context
+        var contexts: [String] = []
+        var current: Syntax? = Syntax(node)
+
+        while let parent = current?.parent {
+            if let funcDecl = parent.as(FunctionDeclSyntax.self) {
+                contexts.append("func")
+            } else if parent.is(IfExprSyntax.self) {
+                contexts.append("if")
+            } else if parent.is(ForStmtSyntax.self) {
+                contexts.append("for")
+            } else if parent.is(WhileStmtSyntax.self) {
+                contexts.append("while")
+            } else if parent.is(SwitchExprSyntax.self) {
+                contexts.append("switch")
+            } else if parent.is(GuardStmtSyntax.self) {
+                contexts.append("guard")
+            } else if parent.is(ClosureExprSyntax.self) {
+                contexts.append("closure")
+            }
+            current = parent
+        }
+
+        return contexts.reversed().joined(separator: "→")
+    }
+
+    func calculateMetrics() -> NestingMetrics {
+        let avgDepth = depthSamples.isEmpty ? 0.0 : Double(depthSamples.reduce(0, +)) / Double(depthSamples.count)
+        let deeplyNested = locations.count
+
+        // Sort by depth descending, then by line
+        let sortedLocations = locations.sorted { lhs, rhs in
+            if lhs.depth != rhs.depth {
+                return lhs.depth > rhs.depth
+            }
+            return lhs.line < rhs.line
+        }
+
+        // Keep only top 10 worst locations
+        let topLocations = Array(sortedLocations.prefix(10))
+
+        return NestingMetrics(
+            maxDepth: maxDepth,
+            avgDepth: avgDepth,
+            deeplyNestedCount: deeplyNested,
+            locations: topLocations
+        )
+    }
+}
+
+// MARK: - Readability Pattern: Conditional Simplicity
+
+struct ConditionalLocation: Codable {
+    let line: Int
+    let column: Int
+    let operatorCount: Int
+    let hasMixedOperators: Bool
+    let snippet: String
+}
+
+struct ConditionalMetrics: Codable {
+    let totalConditionals: Int
+    let complexConditionalsCount: Int  // > 6 operators
+    let avgOperatorsPerCondition: Double
+    let mixedOperatorCount: Int
+    let locations: [ConditionalLocation]
+
+    static var empty: ConditionalMetrics {
+        ConditionalMetrics(
+            totalConditionals: 0,
+            complexConditionalsCount: 0,
+            avgOperatorsPerCondition: 0.0,
+            mixedOperatorCount: 0,
+            locations: []
+        )
+    }
+}
+
+class ConditionalAnalyzer: SyntaxVisitor {
+    private var conditionals: [ConditionalLocation] = []
+
+    override func visit(_ node: IfExprSyntax) -> SyntaxVisitorContinueKind {
+        analyzeConditions(node.conditions, context: "if", position: node.position)
+        return .visitChildren
+    }
+
+    override func visit(_ node: GuardStmtSyntax) -> SyntaxVisitorContinueKind {
+        analyzeConditions(node.conditions, context: "guard", position: node.position)
+        return .visitChildren
+    }
+
+    override func visit(_ node: WhileStmtSyntax) -> SyntaxVisitorContinueKind {
+        analyzeConditions(node.conditions, context: "while", position: node.position)
+        return .visitChildren
+    }
+
+    private func analyzeConditions(_ conditions: ConditionElementListSyntax, context: String, position: AbsolutePosition) {
+        var operatorCount = 0
+        var hasAnd = false
+        var hasOr = false
+
+        // Count operators in the condition
+        for token in conditions.tokens(viewMode: .sourceAccurate) {
+            switch token.tokenKind {
+            case .binaryOperator(let op):
+                if op == "&&" {
+                    operatorCount += 1
+                    hasAnd = true
+                } else if op == "||" {
+                    operatorCount += 1
+                    hasOr = true
+                } else {
+                    operatorCount += 1
+                }
+            case .exclamationMark, .leftAngle, .rightAngle, .equal:
+                operatorCount += 1
+            default:
+                break
+            }
+        }
+
+        // Record if it's complex (> 3 operators) or has mixed operators
+        if operatorCount > 3 || (hasAnd && hasOr) {
+            let snippet = String(conditions.description.prefix(60))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            conditionals.append(ConditionalLocation(
+                line: position.line,
+                column: position.column,
+                operatorCount: operatorCount,
+                hasMixedOperators: hasAnd && hasOr,
+                snippet: snippet
+            ))
+        }
+    }
+
+    func calculateMetrics() -> ConditionalMetrics {
+        let totalCount = conditionals.count
+        let complexCount = conditionals.filter { $0.operatorCount > 6 }.count
+        let mixedCount = conditionals.filter { $0.hasMixedOperators }.count
+
+        let avgOperators = totalCount > 0
+            ? Double(conditionals.map { $0.operatorCount }.reduce(0, +)) / Double(totalCount)
+            : 0.0
+
+        // Sort by operator count descending
+        let sortedLocations = conditionals.sorted { lhs, rhs in
+            if lhs.operatorCount != rhs.operatorCount {
+                return lhs.operatorCount > rhs.operatorCount
+            }
+            return lhs.line < rhs.line
+        }
+
+        // Keep top 10
+        let topLocations = Array(sortedLocations.prefix(10))
+
+        return ConditionalMetrics(
+            totalConditionals: totalCount,
+            complexConditionalsCount: complexCount,
+            avgOperatorsPerCondition: avgOperators,
+            mixedOperatorCount: mixedCount,
+            locations: topLocations
+        )
+    }
+}
+
+// MARK: - Readability Pattern: Variable Liveness
+
+struct LivenessLocation: Codable {
+    let variableName: String
+    let declLine: Int
+    let lastUseLine: Int
+    let lifespan: Int
+}
+
+struct LivenessMetrics: Codable {
+    let avgLifespan: Double
+    let maxLifespan: Int
+    let longLivedCount: Int  // variables with lifespan > 20 lines
+    let locations: [LivenessLocation]
+
+    static var empty: LivenessMetrics {
+        LivenessMetrics(
+            avgLifespan: 0.0,
+            maxLifespan: 0,
+            longLivedCount: 0,
+            locations: []
+        )
+    }
+}
+
+class LivenessAnalyzer: SyntaxVisitor {
+    private struct VariableInfo {
+        var declLine: Int
+        var lastUseLine: Int
+    }
+
+    private var variables: [String: VariableInfo] = [:]
+    private var functionDepth = 0  // Track if we're inside a function
+
+    override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
+        functionDepth += 1
+        return .visitChildren
+    }
+
+    override func visitPost(_ node: FunctionDeclSyntax) {
+        functionDepth -= 1
+    }
+
+    override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
+        // Only track variables inside functions
+        guard functionDepth > 0 else { return .visitChildren }
+
+        for binding in node.bindings {
+            if let identifier = binding.pattern.as(IdentifierPatternSyntax.self) {
+                let varName = identifier.identifier.text
+                let line = node.position.line
+
+                // Record or update declaration
+                if variables[varName] == nil {
+                    variables[varName] = VariableInfo(declLine: line, lastUseLine: line)
+                }
+            }
+        }
+        return .visitChildren
+    }
+
+    override func visit(_ node: DeclReferenceExprSyntax) -> SyntaxVisitorContinueKind {
+        // Track variable usage
+        guard functionDepth > 0 else { return .visitChildren }
+
+        let varName = node.baseName.text
+        if variables[varName] != nil {
+            variables[varName]?.lastUseLine = node.position.line
+        }
+
+        return .visitChildren
+    }
+
+    func calculateMetrics() -> LivenessMetrics {
+        var lifespans: [Int] = []
+        var locations: [LivenessLocation] = []
+
+        for (name, info) in variables {
+            let lifespan = info.lastUseLine - info.declLine
+            lifespans.append(lifespan)
+
+            if lifespan > 20 {
+                locations.append(LivenessLocation(
+                    variableName: name,
+                    declLine: info.declLine,
+                    lastUseLine: info.lastUseLine,
+                    lifespan: lifespan
+                ))
+            }
+        }
+
+        let avgLifespan = lifespans.isEmpty ? 0.0 : Double(lifespans.reduce(0, +)) / Double(lifespans.count)
+        let maxLifespan = lifespans.max() ?? 0
+
+        // Sort by lifespan descending
+        let sortedLocations = locations.sorted { $0.lifespan > $1.lifespan }
+
+        // Keep top 10
+        let topLocations = Array(sortedLocations.prefix(10))
+
+        return LivenessMetrics(
+            avgLifespan: avgLifespan,
+            maxLifespan: maxLifespan,
+            longLivedCount: locations.count,
+            locations: topLocations
+        )
+    }
+}
+
+// MARK: - Readability Pattern: Grouping (Method Chains)
+
+struct ChainLocation: Codable {
+    let line: Int
+    let column: Int
+    let chainLength: Int
+    let snippet: String
+}
+
+struct GroupingMetrics: Codable {
+    let maxChainLength: Int
+    let avgChainLength: Double
+    let longChainsCount: Int  // chains > 5 calls
+    let maxClosureDepth: Int
+    let locations: [ChainLocation]
+
+    static var empty: GroupingMetrics {
+        GroupingMetrics(
+            maxChainLength: 0,
+            avgChainLength: 0.0,
+            longChainsCount: 0,
+            maxClosureDepth: 0,
+            locations: []
+        )
+    }
+}
+
+class GroupingAnalyzer: SyntaxVisitor {
+    private var chains: [ChainLocation] = []
+    private var closureDepth = 0
+    private var maxClosureDepth = 0
+    private var processedRoots: Set<Int> = []  // Track already-processed chain roots
+
+    override func visit(_ node: MemberAccessExprSyntax) -> SyntaxVisitorContinueKind {
+        // Only count from the root of the chain (to avoid counting each link)
+        guard !isPartOfLongerChain(node) else { return .visitChildren }
+
+        // Count chain length by walking up the tree
+        let chainLength = countChainLength(node)
+
+        if chainLength > 3 {
+            let rootLine = node.position.line
+            let rootIdentifier = abs(node.position.utf8Offset)
+
+            // Avoid duplicate counting
+            guard !processedRoots.contains(rootIdentifier) else { return .visitChildren }
+            processedRoots.insert(rootIdentifier)
+
+            let snippet = String(node.description.prefix(60))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            chains.append(ChainLocation(
+                line: rootLine,
+                column: node.position.column,
+                chainLength: chainLength,
+                snippet: snippet
+            ))
+        }
+
+        return .visitChildren
+    }
+
+    override func visit(_ node: ClosureExprSyntax) -> SyntaxVisitorContinueKind {
+        closureDepth += 1
+        maxClosureDepth = max(maxClosureDepth, closureDepth)
+        return .visitChildren
+    }
+
+    override func visitPost(_ node: ClosureExprSyntax) {
+        closureDepth -= 1
+    }
+
+    private func isPartOfLongerChain(_ node: MemberAccessExprSyntax) -> Bool {
+        // Check if this node's parent is also a member access (indicating we're in the middle of a chain)
+        var current: Syntax? = Syntax(node).parent
+        while let parent = current {
+            if parent.is(MemberAccessExprSyntax.self) {
+                return true
+            }
+            // Stop at expression boundaries
+            if parent.is(FunctionCallExprSyntax.self) {
+                current = parent.parent
+            } else {
+                break
+            }
+        }
+        return false
+    }
+
+    private func countChainLength(_ node: MemberAccessExprSyntax) -> Int {
+        var count = 1
+        var current: Syntax? = Syntax(node)
+
+        // Count member accesses and function calls
+        while let syntax = current {
+            if syntax.is(MemberAccessExprSyntax.self) {
+                count += 1
+            } else if syntax.is(FunctionCallExprSyntax.self) {
+                count += 1
+            }
+
+            // Check if base is another chained expression
+            if let memberAccess = syntax.as(MemberAccessExprSyntax.self) {
+                current = Syntax(memberAccess.base)
+            } else if let functionCall = syntax.as(FunctionCallExprSyntax.self) {
+                current = Syntax(functionCall.calledExpression)
+            } else {
+                break
+            }
+        }
+
+        return count
+    }
+
+    func calculateMetrics() -> GroupingMetrics {
+        let maxChain = chains.map { $0.chainLength }.max() ?? 0
+        let avgChain = chains.isEmpty ? 0.0 : Double(chains.map { $0.chainLength }.reduce(0, +)) / Double(chains.count)
+        let longChains = chains.filter { $0.chainLength > 5 }.count
+
+        // Sort by chain length descending
+        let sortedLocations = chains.sorted { lhs, rhs in
+            if lhs.chainLength != rhs.chainLength {
+                return lhs.chainLength > rhs.chainLength
+            }
+            return lhs.line < rhs.line
+        }
+
+        // Keep top 10
+        let topLocations = Array(sortedLocations.prefix(10))
+
+        return GroupingMetrics(
+            maxChainLength: maxChain,
+            avgChainLength: avgChain,
+            longChainsCount: longChains,
+            maxClosureDepth: maxClosureDepth,
+            locations: topLocations
+        )
     }
 }
 
@@ -216,6 +695,23 @@ class MetricsCalculator {
 
         metrics.n1 = distinctOperators.count
         metrics.n2 = distinctOperands.count
+
+        // Run readability pattern analyzers
+        let nestingAnalyzer = NestingAnalyzer(viewMode: .sourceAccurate)
+        tree.walk(nestingAnalyzer)
+        metrics.nesting = nestingAnalyzer.calculateMetrics()
+
+        let conditionalAnalyzer = ConditionalAnalyzer(viewMode: .sourceAccurate)
+        tree.walk(conditionalAnalyzer)
+        metrics.conditionals = conditionalAnalyzer.calculateMetrics()
+
+        let livenessAnalyzer = LivenessAnalyzer(viewMode: .sourceAccurate)
+        tree.walk(livenessAnalyzer)
+        metrics.liveness = livenessAnalyzer.calculateMetrics()
+
+        let groupingAnalyzer = GroupingAnalyzer(viewMode: .sourceAccurate)
+        tree.walk(groupingAnalyzer)
+        metrics.grouping = groupingAnalyzer.calculateMetrics()
 
         return MetricsWithSets(
             metrics: metrics,
@@ -653,6 +1149,209 @@ func formatWellFactoredFiles(_ fileMetrics: [HalsteadMetrics]) -> String {
     return output
 }
 
+func formatNestingAnalysis(_ fileMetrics: [HalsteadMetrics]) -> String {
+    // Aggregate nesting stats across all files
+    let filesWithNesting = fileMetrics.compactMap { $0.nesting }
+    guard !filesWithNesting.isEmpty else { return "" }
+
+    let maxDepthOverall = filesWithNesting.map { $0.maxDepth }.max() ?? 0
+    let avgDepthOverall = filesWithNesting.map { $0.avgDepth }.reduce(0.0, +) / Double(filesWithNesting.count)
+    let deeplyNestedTotal = filesWithNesting.map { $0.deeplyNestedCount }.reduce(0, +)
+
+    // Categorize files by max depth
+    let critical = filesWithNesting.filter { $0.maxDepth >= 8 }.count
+    let high = filesWithNesting.filter { $0.maxDepth >= 6 && $0.maxDepth < 8 }.count
+    let moderate = filesWithNesting.filter { $0.maxDepth >= 4 && $0.maxDepth < 6 }.count
+    let low = filesWithNesting.filter { $0.maxDepth < 4 }.count
+
+    var output = "\nNESTING COMPLEXITY\n"
+    output += String(repeating: "━", count: 62) + "\n"
+    output += "Project: Max depth \(maxDepthOverall) │ Avg \(String(format: "%.1f", avgDepthOverall)) │ \(deeplyNestedTotal) deeply nested blocks\n\n"
+
+    // File categories
+    if critical > 0 {
+        output += "🔴 Critical (≥8): \(critical) file\(critical == 1 ? "" : "s")\n"
+    }
+    if high > 0 {
+        output += "🟡 High (6-7): \(high) file\(high == 1 ? "" : "s")\n"
+    }
+    if moderate > 0 {
+        output += "🟠 Moderate (4-5): \(moderate) file\(moderate == 1 ? "" : "s")\n"
+    }
+    if low > 0 {
+        output += "🟢 Low (≤3): \(low) file\(low == 1 ? "" : "s")\n"
+    }
+
+    // Show worst files with deep nesting
+    let worstFiles = fileMetrics
+        .filter { ($0.nesting?.deeplyNestedCount ?? 0) > 0 }
+        .sorted { ($0.nesting?.maxDepth ?? 0) > ($1.nesting?.maxDepth ?? 0) }
+        .prefix(5)
+
+    if !worstFiles.isEmpty {
+        output += "\n⚠️  Files with Deep Nesting:\n"
+        for metrics in worstFiles {
+            guard let nesting = metrics.nesting else { continue }
+            output += "  \(shortPath(metrics.path))\n"
+            output += "  └─ Max depth: \(nesting.maxDepth) │ Avg: \(String(format: "%.1f", nesting.avgDepth)) │ \(nesting.deeplyNestedCount) deep blocks\n"
+
+            // Show top 3 worst locations in this file
+            for location in nesting.locations.prefix(3) {
+                output += "     Line \(location.line): \(location.depth) levels (\(location.context))\n"
+            }
+            output += "\n"
+        }
+    }
+
+    return output
+}
+
+func formatConditionalAnalysis(_ fileMetrics: [HalsteadMetrics]) -> String {
+    // Aggregate conditional stats across all files
+    let filesWithConditionals = fileMetrics.compactMap { $0.conditionals }
+    guard !filesWithConditionals.isEmpty else { return "" }
+
+    let totalConditionals = filesWithConditionals.map { $0.totalConditionals }.reduce(0, +)
+    let complexTotal = filesWithConditionals.map { $0.complexConditionalsCount }.reduce(0, +)
+    let mixedTotal = filesWithConditionals.map { $0.mixedOperatorCount }.reduce(0, +)
+
+    let avgOperators = totalConditionals > 0
+        ? filesWithConditionals.map { $0.avgOperatorsPerCondition * Double($0.totalConditionals) }.reduce(0.0, +) / Double(totalConditionals)
+        : 0.0
+
+    var output = "\nCONDITIONAL COMPLEXITY\n"
+    output += String(repeating: "━", count: 62) + "\n"
+    output += "Project: \(totalConditionals) conditionals │ Avg \(String(format: "%.1f", avgOperators)) operators │ \(complexTotal) complex (>6 ops)\n"
+
+    if mixedTotal > 0 {
+        output += "⚠️  \(mixedTotal) conditional\(mixedTotal == 1 ? "" : "s") with mixed &&/|| operators\n"
+    }
+
+    // Show worst files with complex conditionals
+    let worstFiles = fileMetrics
+        .filter { ($0.conditionals?.complexConditionalsCount ?? 0) > 0 || ($0.conditionals?.mixedOperatorCount ?? 0) > 0 }
+        .sorted { lhs, rhs in
+            let lhsWorst = lhs.conditionals?.locations.first?.operatorCount ?? 0
+            let rhsWorst = rhs.conditionals?.locations.first?.operatorCount ?? 0
+            return lhsWorst > rhsWorst
+        }
+        .prefix(5)
+
+    if !worstFiles.isEmpty {
+        output += "\n⚠️  Complex Conditionals:\n"
+        for metrics in worstFiles {
+            guard let conditionals = metrics.conditionals else { continue }
+
+            output += "  \(shortPath(metrics.path))\n"
+
+            // Show top 3 worst conditionals in this file
+            for location in conditionals.locations.prefix(3) {
+                let mixedWarning = location.hasMixedOperators ? " ⚠️ mixed &&/||" : ""
+                output += "  └─ Line \(location.line): \(location.operatorCount) operators\(mixedWarning)\n"
+                output += "     \(location.snippet)\n"
+            }
+            output += "\n"
+        }
+    }
+
+    return output
+}
+
+func formatLivenessAnalysis(_ fileMetrics: [HalsteadMetrics]) -> String {
+    // Aggregate liveness stats across all files
+    let filesWithLiveness = fileMetrics.compactMap { $0.liveness }
+    guard !filesWithLiveness.isEmpty else { return "" }
+
+    let avgLifespanOverall = filesWithLiveness.map { $0.avgLifespan }.reduce(0.0, +) / Double(filesWithLiveness.count)
+    let maxLifespanOverall = filesWithLiveness.map { $0.maxLifespan }.max() ?? 0
+    let longLivedTotal = filesWithLiveness.map { $0.longLivedCount }.reduce(0, +)
+
+    guard longLivedTotal > 0 else { return "" }  // Only show if there are long-lived variables
+
+    var output = "\nVARIABLE LIVENESS\n"
+    output += String(repeating: "━", count: 62) + "\n"
+    output += "Project: Max span \(maxLifespanOverall) lines │ Avg \(String(format: "%.1f", avgLifespanOverall)) lines │ \(longLivedTotal) long-lived (>20 lines)\n"
+
+    // Show files with long-lived variables
+    let worstFiles = fileMetrics
+        .filter { ($0.liveness?.longLivedCount ?? 0) > 0 }
+        .sorted { ($0.liveness?.maxLifespan ?? 0) > ($1.liveness?.maxLifespan ?? 0) }
+        .prefix(5)
+
+    if !worstFiles.isEmpty {
+        output += "\n⚠️  Long-Lived Variables:\n"
+        for metrics in worstFiles {
+            guard let liveness = metrics.liveness else { continue }
+
+            output += "  \(shortPath(metrics.path))\n"
+
+            // Show top 3 worst variables in this file
+            for location in liveness.locations.prefix(3) {
+                output += "  └─ '\(location.variableName)' (lines \(location.declLine)-\(location.lastUseLine)): \(location.lifespan) lines\n"
+            }
+            output += "\n"
+        }
+
+        output += "  💡 Tip: Move variable declarations closer to first use\n"
+    }
+
+    return output
+}
+
+func formatGroupingAnalysis(_ fileMetrics: [HalsteadMetrics]) -> String {
+    // Aggregate grouping stats across all files
+    let filesWithGrouping = fileMetrics.compactMap { $0.grouping }
+    guard !filesWithGrouping.isEmpty else { return "" }
+
+    let maxChainOverall = filesWithGrouping.map { $0.maxChainLength }.max() ?? 0
+    let avgChainOverall = filesWithGrouping.map { $0.avgChainLength * Double($0.longChainsCount > 0 ? 1 : 0) }.reduce(0.0, +) / Double(filesWithGrouping.filter { $0.longChainsCount > 0 }.count.clamped(to: 1...Int.max))
+    let longChainsTotal = filesWithGrouping.map { $0.longChainsCount }.reduce(0, +)
+    let maxClosureDepth = filesWithGrouping.map { $0.maxClosureDepth }.max() ?? 0
+
+    guard longChainsTotal > 0 || maxClosureDepth > 2 else { return "" }  // Only show if there are issues
+
+    var output = "\nMETHOD CHAINING & GROUPING\n"
+    output += String(repeating: "━", count: 62) + "\n"
+    output += "Project: Max chain \(maxChainOverall) calls │ \(longChainsTotal) long chains (>5 calls)"
+
+    if maxClosureDepth > 2 {
+        output += " │ Max closure depth \(maxClosureDepth)"
+    }
+    output += "\n"
+
+    // Show files with long chains
+    let worstFiles = fileMetrics
+        .filter { ($0.grouping?.longChainsCount ?? 0) > 0 }
+        .sorted { ($0.grouping?.maxChainLength ?? 0) > ($1.grouping?.maxChainLength ?? 0) }
+        .prefix(5)
+
+    if !worstFiles.isEmpty {
+        output += "\n⚠️  Long Method Chains:\n"
+        for metrics in worstFiles {
+            guard let grouping = metrics.grouping else { continue }
+
+            output += "  \(shortPath(metrics.path))\n"
+
+            // Show top 3 longest chains in this file
+            for location in grouping.locations.prefix(3) {
+                output += "  └─ Line \(location.line): \(location.chainLength) chained calls\n"
+                output += "     \(location.snippet)...\n"
+            }
+            output += "\n"
+        }
+
+        output += "  💡 Tip: Break long chains with intermediate variables\n"
+    }
+
+    return output
+}
+
+extension Int {
+    func clamped(to range: ClosedRange<Int>) -> Int {
+        return min(max(self, range.lowerBound), range.upperBound)
+    }
+}
+
 func formatProjectSummary(avgRisk: Double, medianRisk: Double, maxRisk: Double, vocabulary: Int, needsAttentionCount: Int, needsAttentionPct: Int, focusAreas: [String]) -> String {
     var output = "────────────────────────────────────────────────────────────\n"
     output += "📊 PROJECT SUMMARY\n\n"
@@ -681,6 +1380,12 @@ func formatAsSummary(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics, 
     // Risk distribution and architecture hotspots
     output += "\n" + formatRiskDistribution(fileMetrics) + "\n"
     output += formatArchitectureHotspots(fileMetrics) + "\n"
+
+    // Readability patterns
+    output += formatNestingAnalysis(fileMetrics)
+    output += formatConditionalAnalysis(fileMetrics)
+    output += formatLivenessAnalysis(fileMetrics)
+    output += formatGroupingAnalysis(fileMetrics)
 
     if verbose {
         // Show all files
