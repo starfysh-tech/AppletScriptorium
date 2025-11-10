@@ -112,6 +112,12 @@ class NestingAnalyzer: SyntaxVisitor {
     private var maxDepth = 0
     private var depthSamples: [Int] = []
     private var locations: [NestingLocation] = []
+    private let converter: SourceLocationConverter
+
+    init(viewMode: SyntaxTreeViewMode, converter: SourceLocationConverter) {
+        self.converter = converter
+        super.init(viewMode: viewMode)
+    }
 
     override func visit(_ node: CodeBlockSyntax) -> SyntaxVisitorContinueKind {
         currentDepth += 1
@@ -119,10 +125,10 @@ class NestingAnalyzer: SyntaxVisitor {
         depthSamples.append(currentDepth)
 
         if currentDepth > 3 {
-            let position = node.position
+            let location = converter.location(for: node.position)
             locations.append(NestingLocation(
-                line: position.line,
-                column: position.column,
+                line: location.line,
+                column: location.column,
                 depth: currentDepth,
                 context: extractContext(node)
             ))
@@ -141,7 +147,7 @@ class NestingAnalyzer: SyntaxVisitor {
         var current: Syntax? = Syntax(node)
 
         while let parent = current?.parent {
-            if let funcDecl = parent.as(FunctionDeclSyntax.self) {
+            if parent.is(FunctionDeclSyntax.self) {
                 contexts.append("func")
             } else if parent.is(IfExprSyntax.self) {
                 contexts.append("if")
@@ -216,6 +222,12 @@ struct ConditionalMetrics: Codable {
 
 class ConditionalAnalyzer: SyntaxVisitor {
     private var conditionals: [ConditionalLocation] = []
+    private let converter: SourceLocationConverter
+
+    init(viewMode: SyntaxTreeViewMode, converter: SourceLocationConverter) {
+        self.converter = converter
+        super.init(viewMode: viewMode)
+    }
 
     override func visit(_ node: IfExprSyntax) -> SyntaxVisitorContinueKind {
         analyzeConditions(node.conditions, context: "if", position: node.position)
@@ -262,9 +274,10 @@ class ConditionalAnalyzer: SyntaxVisitor {
             let snippet = String(conditions.description.prefix(60))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
+            let location = converter.location(for: position)
             conditionals.append(ConditionalLocation(
-                line: position.line,
-                column: position.column,
+                line: location.line,
+                column: location.column,
                 operatorCount: operatorCount,
                 hasMixedOperators: hasAnd && hasOr,
                 snippet: snippet
@@ -335,6 +348,12 @@ class LivenessAnalyzer: SyntaxVisitor {
 
     private var variables: [String: VariableInfo] = [:]
     private var functionDepth = 0  // Track if we're inside a function
+    private let converter: SourceLocationConverter
+
+    init(viewMode: SyntaxTreeViewMode, converter: SourceLocationConverter) {
+        self.converter = converter
+        super.init(viewMode: viewMode)
+    }
 
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
         functionDepth += 1
@@ -352,7 +371,8 @@ class LivenessAnalyzer: SyntaxVisitor {
         for binding in node.bindings {
             if let identifier = binding.pattern.as(IdentifierPatternSyntax.self) {
                 let varName = identifier.identifier.text
-                let line = node.position.line
+                let location = converter.location(for: node.position)
+                let line = location.line
 
                 // Record or update declaration
                 if variables[varName] == nil {
@@ -369,7 +389,8 @@ class LivenessAnalyzer: SyntaxVisitor {
 
         let varName = node.baseName.text
         if variables[varName] != nil {
-            variables[varName]?.lastUseLine = node.position.line
+            let location = converter.location(for: node.position)
+            variables[varName]?.lastUseLine = location.line
         }
 
         return .visitChildren
@@ -443,6 +464,12 @@ class GroupingAnalyzer: SyntaxVisitor {
     private var closureDepth = 0
     private var maxClosureDepth = 0
     private var processedRoots: Set<Int> = []  // Track already-processed chain roots
+    private let converter: SourceLocationConverter
+
+    init(viewMode: SyntaxTreeViewMode, converter: SourceLocationConverter) {
+        self.converter = converter
+        super.init(viewMode: viewMode)
+    }
 
     override func visit(_ node: MemberAccessExprSyntax) -> SyntaxVisitorContinueKind {
         // Only count from the root of the chain (to avoid counting each link)
@@ -452,7 +479,8 @@ class GroupingAnalyzer: SyntaxVisitor {
         let chainLength = countChainLength(node)
 
         if chainLength > 3 {
-            let rootLine = node.position.line
+            let location = converter.location(for: node.position)
+            let rootLine = location.line
             let rootIdentifier = abs(node.position.utf8Offset)
 
             // Avoid duplicate counting
@@ -464,7 +492,7 @@ class GroupingAnalyzer: SyntaxVisitor {
 
             chains.append(ChainLocation(
                 line: rootLine,
-                column: node.position.column,
+                column: location.column,
                 chainLength: chainLength,
                 snippet: snippet
             ))
@@ -696,21 +724,24 @@ class MetricsCalculator {
         metrics.n1 = distinctOperators.count
         metrics.n2 = distinctOperands.count
 
+        // Create source location converter for line/column information
+        let converter = SourceLocationConverter(fileName: fileURL.path, tree: tree)
+
         // Run readability pattern analyzers
-        let nestingAnalyzer = NestingAnalyzer(viewMode: .sourceAccurate)
-        tree.walk(nestingAnalyzer)
+        let nestingAnalyzer = NestingAnalyzer(viewMode: .sourceAccurate, converter: converter)
+        nestingAnalyzer.walk(tree)
         metrics.nesting = nestingAnalyzer.calculateMetrics()
 
-        let conditionalAnalyzer = ConditionalAnalyzer(viewMode: .sourceAccurate)
-        tree.walk(conditionalAnalyzer)
+        let conditionalAnalyzer = ConditionalAnalyzer(viewMode: .sourceAccurate, converter: converter)
+        conditionalAnalyzer.walk(tree)
         metrics.conditionals = conditionalAnalyzer.calculateMetrics()
 
-        let livenessAnalyzer = LivenessAnalyzer(viewMode: .sourceAccurate)
-        tree.walk(livenessAnalyzer)
+        let livenessAnalyzer = LivenessAnalyzer(viewMode: .sourceAccurate, converter: converter)
+        livenessAnalyzer.walk(tree)
         metrics.liveness = livenessAnalyzer.calculateMetrics()
 
-        let groupingAnalyzer = GroupingAnalyzer(viewMode: .sourceAccurate)
-        tree.walk(groupingAnalyzer)
+        let groupingAnalyzer = GroupingAnalyzer(viewMode: .sourceAccurate, converter: converter)
+        groupingAnalyzer.walk(tree)
         metrics.grouping = groupingAnalyzer.calculateMetrics()
 
         return MetricsWithSets(
@@ -1304,7 +1335,6 @@ func formatGroupingAnalysis(_ fileMetrics: [HalsteadMetrics]) -> String {
     guard !filesWithGrouping.isEmpty else { return "" }
 
     let maxChainOverall = filesWithGrouping.map { $0.maxChainLength }.max() ?? 0
-    let avgChainOverall = filesWithGrouping.map { $0.avgChainLength * Double($0.longChainsCount > 0 ? 1 : 0) }.reduce(0.0, +) / Double(filesWithGrouping.filter { $0.longChainsCount > 0 }.count.clamped(to: 1...Int.max))
     let longChainsTotal = filesWithGrouping.map { $0.longChainsCount }.reduce(0, +)
     let maxClosureDepth = filesWithGrouping.map { $0.maxClosureDepth }.max() ?? 0
 
@@ -1348,7 +1378,7 @@ func formatGroupingAnalysis(_ fileMetrics: [HalsteadMetrics]) -> String {
 
 extension Int {
     func clamped(to range: ClosedRange<Int>) -> Int {
-        return min(max(self, range.lowerBound), range.upperBound)
+        return Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
     }
 }
 
