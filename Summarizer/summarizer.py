@@ -258,6 +258,101 @@ def _attempt_ollama_restart() -> bool:
     return False
 
 
+def _get_loaded_models(base_url: str) -> list[str]:
+    """Get list of currently loaded model IDs from LM Studio.
+
+    Returns empty list if cannot connect or no models loaded.
+    """
+    try:
+        with httpx.Client(timeout=LMSTUDIO_HEALTH_TIMEOUT) as client:
+            response = client.get(f"{base_url}/v1/models")
+            if response.status_code == 200:
+                data = response.json()
+                return [model["id"] for model in data.get("data", [])]
+    except Exception:
+        pass
+    return []
+
+
+def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool, str]:
+    """Ensure ONLY the target model is loaded in LM Studio.
+
+    If other models are loaded or target is not loaded, unloads all models
+    and loads only the target model.
+
+    Args:
+        base_url: LM Studio API base URL
+        target_model: Model identifier to load (from LMSTUDIO_MODEL)
+
+    Returns:
+        (success: bool, message: str)
+    """
+    import time
+
+    loaded = _get_loaded_models(base_url)
+
+    # Perfect state: Only target model loaded
+    if loaded == [target_model]:
+        logger.info("[lmstudio] Correct model already loaded: %s", target_model)
+        return True, f"Using {target_model}"
+
+    # Wrong state: Other models loaded or target not loaded
+    if loaded:
+        logger.info(
+            "[lmstudio] Incorrect models loaded: %s, switching to: %s",
+            loaded, target_model
+        )
+        # Unload all models first
+        try:
+            result = subprocess.run(
+                ["lms", "unload", "--all"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            if result.returncode != 0:
+                return False, f"Failed to unload models: {result.stderr[:100]}"
+            logger.info("[lmstudio] Unloaded all models")
+            time.sleep(1)  # Brief wait for unload to complete
+        except subprocess.TimeoutExpired:
+            return False, "Unload timed out"
+        except Exception as e:
+            return False, f"Unload error: {e}"
+    else:
+        logger.info("[lmstudio] No models loaded, loading: %s", target_model)
+
+    # Load target model
+    try:
+        result = subprocess.run(
+            ["lms", "load", target_model],
+            capture_output=True,
+            text=True,
+            timeout=90
+        )
+
+        if result.returncode != 0:
+            stderr = result.stderr.strip()
+            if "not found" in stderr.lower() or "no model" in stderr.lower():
+                return False, f"Model '{target_model}' not found - check .env LMSTUDIO_MODEL"
+            return False, f"Load failed: {stderr[:200]}"
+
+        # Verify load succeeded
+        time.sleep(2)
+        loaded = _get_loaded_models(base_url)
+        if loaded == [target_model]:
+            logger.info("[lmstudio] Successfully loaded: %s", target_model)
+            return True, f"Loaded {target_model}"
+        else:
+            return False, f"Load succeeded but wrong models loaded: {loaded}"
+
+    except subprocess.TimeoutExpired:
+        return False, f"Loading '{target_model}' timed out (>90s)"
+    except FileNotFoundError:
+        return False, "'lms' CLI not found - install LM Studio CLI"
+    except Exception as e:
+        return False, f"Load error: {e}"
+
+
 def _test_lmstudio_availability(base_url: str) -> bool:
     """Fast health check to verify LM Studio is responsive.
 
@@ -290,17 +385,20 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig) -> str:
     if not LMSTUDIO_BASE_URL:
         raise SummarizerError("LMSTUDIO_BASE_URL not configured in .env")
 
-    # Fast health check before attempting request
-    logger.debug("[lmstudio] Running health check")
-    if not _test_lmstudio_availability(LMSTUDIO_BASE_URL):
-        raise SummarizerError(
-            f"LM Studio not available at {LMSTUDIO_BASE_URL} "
-            f"(check server is running and network is accessible)"
-        )
+    target_model = cfg.model or LMSTUDIO_MODEL
+    if not target_model:
+        raise SummarizerError("No model specified in config or .env LMSTUDIO_MODEL")
+
+    # Ensure correct model is loaded (auto-load if needed, unload others)
+    success, message = _ensure_correct_model_loaded(LMSTUDIO_BASE_URL, target_model)
+    if not success:
+        raise SummarizerError(f"Model setup failed: {message}")
+
+    logger.debug("[lmstudio] %s", message)
 
     url = f"{LMSTUDIO_BASE_URL}/v1/chat/completions"
     payload = {
-        "model": cfg.model or LMSTUDIO_MODEL,  # Use cfg.model if provided, else env var
+        "model": target_model,  # Use the verified loaded model
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": MAX_TOKENS,
         "temperature": cfg.temperature,

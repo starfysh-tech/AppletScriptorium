@@ -506,6 +506,19 @@ def run_pipeline(args: argparse.Namespace) -> Path:
         fetch_cfg = FetchConfig()
         sum_cfg = SummarizerConfig(model=args.model)
 
+        # Pre-flight check: Ensure LM Studio model is ready before fetching articles
+        if LMSTUDIO_BASE_URL and LMSTUDIO_MODEL:
+            from .summarizer import _ensure_correct_model_loaded
+            logging.info("[preflight] Verifying LM Studio model is loaded...")
+            success, message = _ensure_correct_model_loaded(LMSTUDIO_BASE_URL, sum_cfg.model or LMSTUDIO_MODEL)
+            if not success:
+                logging.error("[preflight] Model setup failed: %s", message)
+                if not OLLAMA_ENABLED:
+                    raise RuntimeError(f"Cannot proceed: {message}")
+                logging.info("[preflight] Will attempt Ollama fallback")
+            else:
+                logging.info("[preflight] %s", message)
+
         summaries, failures = process_articles(links, output_dir, fetch_cfg, sum_cfg, max_articles=args.max_articles)
         summaries_count = len(summaries)
         fetched_count = summaries_count + len(failures)  # Total articles that were attempted

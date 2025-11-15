@@ -1,11 +1,15 @@
 using terms from application "Mail"
 	on perform mail action with messages theMessages for rule theRule
+		-- Log execution for debugging
+		set homePath to POSIX path of (path to home folder)
+		set logFile to homePath & "Code/AppletScriptorium/runs/mail-rule-execution.log"
+		do shell script "echo \"$(date '+%Y-%m-%d %H:%M:%S') - Mail rule triggered\" >> " & quoted form of logFile
+
 		-- Generate timestamp for output directory
 		set timestamp to do shell script "date +%Y%m%d-%H%M%S"
-		set outputDir to (POSIX path of (path to home folder)) & "Code/AppletScriptorium/runs/alert-" & timestamp
+		set outputDir to homePath & "Code/AppletScriptorium/runs/alert-" & timestamp
 
-		-- Get absolute path to home directory
-		set homePath to POSIX path of (path to home folder)
+		-- Get absolute path to repository
 		set repoPath to homePath & "Code/AppletScriptorium"
 
 		-- Get recipient (customize this as needed)
@@ -30,13 +34,24 @@ using terms from application "Mail"
 
 			-- Run pipeline with --smtp-send flag to send digest via SMTP
 			-- Topic extraction now handled by Python (reads from alert.eml)
-			set pythonCmd to "cd " & quoted form of repoPath & " && " & pythonPath & " -m Summarizer.cli run --output-dir " & quoted form of outputDir & " --email-digest " & quoted form of digestRecipient & " --smtp-send 2>&1"
+			set pythonCmd to "cd " & quoted form of repoPath & " && PYTHONPATH=" & quoted form of repoPath & " " & pythonPath & " -m Summarizer.cli run --output-dir " & quoted form of outputDir & " --email-digest " & quoted form of digestRecipient & " --smtp-send 2>&1"
 			do shell script pythonCmd
 
 			-- Notify success
 			display notification "Google Alert digest sent to " & digestRecipient with title "Google Alert Intelligence" sound name "Glass"
 		on error errMsg
-			display notification "Pipeline failed: " & errMsg with title "Google Alert Intelligence"
+			-- Parse common error messages for better user feedback
+			set errorSummary to errMsg
+			if errMsg contains "not found - check .env" then
+				set errorSummary to "LM Studio model not found - check .env LMSTUDIO_MODEL"
+			else if errMsg contains "lms' CLI not found" then
+				set errorSummary to "LM Studio CLI not installed"
+			else if errMsg contains "Model setup failed" then
+				set errorSummary to "Failed to load LM Studio model"
+			else if length of errMsg > 100 then
+				set errorSummary to (text 1 thru 100 of errMsg) & "..."
+			end if
+			display notification errorSummary with title "Google Alert Intelligence" subtitle "Setup Required"
 			return
 		end try
 
