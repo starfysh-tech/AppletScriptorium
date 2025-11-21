@@ -15,6 +15,7 @@ import logging
 import re
 import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, List, Literal, Optional
 
 import httpx
@@ -35,6 +36,9 @@ from .config import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Full path to LM Studio CLI (not in PATH when run from Mail.app)
+LMS_CLI = Path.home() / ".lmstudio" / "bin" / "lms"
 
 
 class SummarizerError(RuntimeError):
@@ -291,21 +295,19 @@ def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool
 
     loaded = _get_loaded_models(base_url)
 
-    # Perfect state: Only target model loaded
-    if loaded == [target_model]:
-        logger.info("[lmstudio] Correct model already loaded: %s", target_model)
+    # Model already available - no action needed
+    if target_model in loaded:
+        logger.info("[lmstudio] Model already available: %s", target_model)
         return True, f"Using {target_model}"
 
-    # Wrong state: Other models loaded or target not loaded
-    if loaded:
-        logger.info(
-            "[lmstudio] Incorrect models loaded: %s, switching to: %s",
-            loaded, target_model
-        )
-        # Unload all models first
+    # Model not available - load it (no need to unload others)
+    logger.info("[lmstudio] Model %s not in available list, loading...", target_model)
+
+    # Skip unload - LM Studio can have multiple models available
+    if False:  # Disabled: was causing issues with multi-model LM Studio setups
         try:
             result = subprocess.run(
-                ["lms", "unload", "--all"],
+                [str(LMS_CLI), "unload", "--all"],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -324,7 +326,7 @@ def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool
     # Load target model
     try:
         result = subprocess.run(
-            ["lms", "load", target_model],
+            [str(LMS_CLI), "load", "--yes", target_model],
             capture_output=True,
             text=True,
             timeout=90
@@ -339,11 +341,11 @@ def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool
         # Verify load succeeded
         time.sleep(2)
         loaded = _get_loaded_models(base_url)
-        if loaded == [target_model]:
+        if target_model in loaded:
             logger.info("[lmstudio] Successfully loaded: %s", target_model)
             return True, f"Loaded {target_model}"
         else:
-            return False, f"Load succeeded but wrong models loaded: {loaded}"
+            return False, f"Load succeeded but model not in list: {loaded}"
 
     except subprocess.TimeoutExpired:
         return False, f"Loading '{target_model}' timed out (>90s)"

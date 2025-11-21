@@ -32,7 +32,7 @@ from .article_fetcher import (
     fetch_article,
     get_last_fetch_outcome,
 )
-from .config import DEFAULT_MODEL, MAX_WORKERS
+from .config import DEFAULT_MODEL, LMSTUDIO_BASE_URL, LMSTUDIO_MODEL, MAX_WORKERS, OLLAMA_ENABLED
 from .content_cleaner import extract_content
 from .digest_renderer import render_digest_html, render_digest_text
 from .link_extractor import extract_links_from_eml
@@ -428,7 +428,7 @@ def parse_args(argv=None) -> argparse.Namespace:
 
     run_parser = subparsers.add_parser("run", help="Fetch latest alert and generate digest")
     run_parser.add_argument("--output-dir", required=True, help="Directory to write artifacts")
-    run_parser.add_argument("--model", default=DEFAULT_MODEL, help="Ollama model name (default: qwen3:latest)")
+    run_parser.add_argument("--model", help="Override LLM model name (uses LMSTUDIO_MODEL or OLLAMA_MODEL from .env by default)")
     run_parser.add_argument("--max-articles", type=int, help="Optional cap on number of articles processed")
     run_parser.add_argument(
         "--subject-filter",

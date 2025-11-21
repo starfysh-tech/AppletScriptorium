@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Summarizer:** relax validation and remove prompt examples
 
 ### Fixed
+- **Summarizer:** fix Mail rule execution errors (missing imports, lms CLI path, model validation)
 - **CommitCraft:** resolve working directory detection in Claude Code
 - **Summarizer:** handle None values in digest rendering
 
