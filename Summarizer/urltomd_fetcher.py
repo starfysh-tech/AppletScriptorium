@@ -1,6 +1,8 @@
 """url-to-md CLI wrapper used for Markdown fallbacks."""
 from __future__ import annotations
 
+import os
+import signal
 import subprocess
 from dataclasses import dataclass
 from typing import Sequence
@@ -39,26 +41,60 @@ def fetch_with_urltomd(url: str, config: UrlToMdConfig | None = None) -> str:
     if cfg.clean_content:
         cmd.append("--clean-content")
 
+    proc = None
     try:
-        result = subprocess.run(
+        # Use Popen with process group for clean subprocess tree termination
+        # start_new_session=True creates new process group, allowing us to kill
+        # Chrome children spawned by Puppeteer when url-to-md times out
+        proc = subprocess.Popen(
             cmd,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=cfg.timeout + 5,
-            check=False,
+            start_new_session=True,
         )
-    except subprocess.TimeoutExpired as exc:
-        raise UrlToMdError(url, f"timeout after {cfg.timeout}s") from exc
+
+        stdout, stderr = proc.communicate(timeout=cfg.timeout + 5)
+
+    except subprocess.TimeoutExpired:
+        # Kill entire process group (Chrome children included)
+        if proc is not None:
+            try:
+                pgid = os.getpgid(proc.pid)
+                os.killpg(pgid, signal.SIGTERM)
+                proc.wait(timeout=2)
+            except (ProcessLookupError, OSError):
+                pass
+            except subprocess.TimeoutExpired:
+                # Force kill if SIGTERM didn't work
+                try:
+                    os.killpg(pgid, signal.SIGKILL)
+                except (ProcessLookupError, OSError):
+                    pass
+            finally:
+                try:
+                    proc.kill()
+                    proc.wait(timeout=1)
+                except Exception:
+                    pass
+        raise UrlToMdError(url, f"timeout after {cfg.timeout}s")
     except FileNotFoundError as exc:
         raise UrlToMdError(url, "url-to-md binary not found") from exc
     except Exception as exc:
+        # Clean up process on any error
+        if proc is not None:
+            try:
+                proc.kill()
+                proc.wait(timeout=1)
+            except Exception:
+                pass
         raise UrlToMdError(url, str(exc)) from exc
 
-    if result.returncode != 0:
-        message = result.stderr.strip() or f"exit code {result.returncode}"
+    if proc.returncode != 0:
+        message = stderr.strip() or f"exit code {proc.returncode}"
         raise UrlToMdError(url, message)
 
-    markdown = result.stdout.strip()
+    markdown = stdout.strip()
     if not markdown:
         raise UrlToMdError(url, "no content returned")
 

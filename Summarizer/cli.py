@@ -32,8 +32,8 @@ from .article_fetcher import (
     fetch_article,
     get_last_fetch_outcome,
 )
-from .config import DEFAULT_MODEL, LMSTUDIO_BASE_URL, LMSTUDIO_MODEL, MAX_WORKERS, OLLAMA_ENABLED
-from .content_cleaner import extract_content
+from .config import DEFAULT_MODEL, DIGEST_SUBJECT_TEMPLATE, LMSTUDIO_BASE_URL, LMSTUDIO_MODEL, MAX_WORKERS, OLLAMA_ENABLED
+from .content_cleaner import extract_content, strip_cruft
 from .digest_renderer import render_digest_html, render_digest_text
 from .link_extractor import extract_links_from_eml
 from .markdown_cleanup import validate_markdown_content
@@ -153,6 +153,69 @@ def extract_topic_from_alert_eml(eml_path: Path) -> str:
     return ''
 
 
+def _is_extraction_failure(content: str) -> Tuple[bool, str]:
+    """Check if extracted content appears to be UI elements or references-only.
+
+    Args:
+        content: Extracted markdown content
+
+    Returns:
+        Tuple of (is_failure, reason). If is_failure is True, reason contains
+        description of what failed.
+    """
+    lines = content.split('\n')
+    non_empty_lines = [line.strip() for line in lines if line.strip()]
+
+    if not non_empty_lines:
+        return False, ""
+
+    # Check for paywall indicators (early exit - no point continuing)
+    paywall_indicators = [
+        'Get Access',
+        'Purchase this article',
+        'Get Institutional Access',
+        'full access to this article',
+        'subscription options',
+        'Already a subscriber',
+        'purchase options',
+    ]
+
+    content_lower = content.lower()
+    paywall_count = sum(1 for indicator in paywall_indicators if indicator.lower() in content_lower)
+    if paywall_count >= 2:
+        return True, "content behind paywall"
+
+    # Check for UI indicators
+    ui_indicators = [
+        'Please choose',
+        'Sign in',
+        'Register',
+        'Subscribe',
+        'Select your specialty',
+        "I'm not a medical professional",
+        'Log in to continue',
+        'Create account',
+    ]
+
+    ui_count = sum(1 for indicator in ui_indicators if indicator in content)
+    if ui_count >= 2:
+        return True, "content appears to be UI elements"
+
+    # Check for references-only pattern
+    # Pattern matches: "1. Smith, A" or "23. Jones, B." etc.
+    import re
+    reference_pattern = re.compile(r'^\d+\.\s+[A-Z][a-z]+,?\s+[A-Z]')
+
+    reference_lines = sum(1 for line in non_empty_lines if reference_pattern.match(line))
+
+    if len(non_empty_lines) > 10:
+        reference_ratio = reference_lines / len(non_empty_lines)
+        if reference_ratio > 0.7:
+            return True, "content appears to be references section only"
+
+    return False, ""
+
+
 def _fetch_and_extract_article(
     idx: int,
     link: dict,
@@ -227,6 +290,9 @@ def _fetch_and_extract_article(
             logging.error("[clean][ERROR] %s -> empty markdown content", url)
             return None, {"url": url, "reason": "clean failed: empty markdown"}
 
+    # Apply cruft removal to both HTML and Markdown paths
+    content_text = strip_cruft(content_text)
+
     content_path.write_text(content_text, encoding="utf-8")
 
     # Validate extracted content length to catch extraction failures
@@ -236,6 +302,53 @@ def _fetch_and_extract_article(
         return None, {"url": url, "reason": f"only {word_count} words extracted (likely extraction failure)"}
     elif word_count < 200:
         logging.warning("[clean][WARN] %s -> short content (%d words), summary quality may be poor", url, word_count)
+
+    # Check for extraction failures (UI-only or references-only content)
+    is_failure, failure_reason = _is_extraction_failure(content_text)
+    if is_failure:
+        # If HTML extraction failed, try Markdown fallback before giving up
+        if outcome.format == "html":
+            logging.warning("[clean][RETRY] %s -> %s, trying markdown fallback", url, failure_reason)
+            try:
+                from .article_fetcher import _fetch_markdown_fallback
+                fallback_outcome = _fetch_markdown_fallback(url, allow_cache=False)
+                content_text = strip_cruft(fallback_outcome.content)
+
+                # Update tracking
+                with counter_lock:
+                    strategy_counter[fallback_outcome.strategy] += 1
+
+                # Write fallback content
+                fallback_md_path.write_text(fallback_outcome.content, encoding="utf-8")
+                content_path.write_text(content_text, encoding="utf-8")
+
+                logging.info(
+                    "[fetch][RETRY][strategy=%s][format=%s][duration=%.2fs] %s",
+                    fallback_outcome.strategy,
+                    fallback_outcome.format,
+                    fallback_outcome.duration,
+                    url,
+                )
+
+                # Re-check quality after fallback
+                is_failure, failure_reason = _is_extraction_failure(content_text)
+                if is_failure:
+                    logging.error("[clean][ERROR] %s -> %s (after fallback)", url, failure_reason)
+                    return None, {"url": url, "reason": failure_reason}
+
+                # Re-check word count
+                word_count = len(content_text.split())
+                if word_count < 100:
+                    logging.error("[clean][ERROR] %s -> insufficient content after fallback (%d words)", url, word_count)
+                    return None, {"url": url, "reason": f"only {word_count} words extracted (after fallback)"}
+
+            except FetchError as exc:
+                logging.error("[clean][ERROR] %s -> %s (fallback failed: %s)", url, failure_reason, exc)
+                return None, {"url": url, "reason": failure_reason}
+        else:
+            # Already using Markdown, no fallback available
+            logging.error("[clean][ERROR] %s -> %s", url, failure_reason)
+            return None, {"url": url, "reason": failure_reason}
 
     # Return article data for Phase 2 summarization
     article_data = {
@@ -379,7 +492,8 @@ def write_status_log(
     digest_created: bool,
     smtp_sent: bool,
     status: str,
-    error_msg: str = ""
+    error_msg: str = "",
+    failures: Optional[List[dict]] = None
 ) -> None:
     """Append one line to runs/summarizer-status.log with run metrics.
 
@@ -393,6 +507,7 @@ def write_status_log(
         smtp_sent: Whether SMTP send succeeded
         status: Status string (SUCCESS or FAILED - reason)
         error_msg: Optional error message to append to FAILED status
+        failures: Optional list of failure dicts with 'url' and 'reason' keys
     """
     status_log = REPO_ROOT / "runs" / "summarizer-status.log"
     status_log.parent.mkdir(parents=True, exist_ok=True)
@@ -409,10 +524,11 @@ def write_status_log(
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     digest_str = "Yes" if digest_created else "No"
     smtp_str = "Yes" if smtp_sent else "No"
+    failed_count = len(failures) if failures else 0
 
     log_entry = (
         f'{timestamp} | From: {from_addr} | Subject: "{display_subject}" | '
-        f'Links: {links_count} | Fetched: {fetched_count} | Summaries: {summaries_count} | '
+        f'Links: {links_count} | Fetched: {fetched_count} | Summaries: {summaries_count} | Failed: {failed_count} | '
         f'Digest: {digest_str} | SMTP: {smtp_str} | Status: {status_str}\n'
     )
 
@@ -453,6 +569,29 @@ def parse_args(argv=None) -> argparse.Namespace:
         help="Alert topic to include in email subject (e.g., 'Patient reported outcomes')",
     )
 
+    # Evaluation subcommand
+    eval_parser = subparsers.add_parser("eval", help="Evaluate LLM models on summarization task")
+    eval_parser.add_argument(
+        "--models",
+        default="all",
+        help="Comma-separated list of model IDs to evaluate, or 'all' to evaluate all available models (default: all)",
+    )
+    eval_parser.add_argument(
+        "--runs",
+        type=int,
+        default=3,
+        help="Number of runs per article for consistency testing (default: 3)",
+    )
+    eval_parser.add_argument(
+        "--output",
+        default="eval_report.md",
+        help="Output path for evaluation report (default: eval_report.md)",
+    )
+    eval_parser.add_argument(
+        "--articles-dir",
+        help="Directory containing article content files (defaults to most recent runs/alert-* directory)",
+    )
+
     return parser.parse_args(argv)
 
 
@@ -479,6 +618,7 @@ def run_pipeline(args: argparse.Namespace) -> Path:
     links_count = 0
     fetched_count = 0
     summaries_count = 0
+    failures: List[dict] = []
     digest_created = False
     smtp_sent = False
     status = "SUCCESS"
@@ -581,7 +721,7 @@ def run_pipeline(args: argparse.Namespace) -> Path:
                     sender_address = env_sender.strip() or None
 
             # Create .eml file (may not be created if no summaries generated)
-            send_digest_email(output_dir, recipients, sender_address, topic=topic)
+            send_digest_email(output_dir, recipients, sender_address, topic=topic, article_count=summaries_count)
 
             # If --smtp-send flag is set, send via SMTP instead of UI automation
             if args.smtp_send:
@@ -623,9 +763,106 @@ def run_pipeline(args: argparse.Namespace) -> Path:
             smtp_sent=smtp_sent,
             status=status,
             error_msg=error_msg,
+            failures=failures,
         )
 
     return output_dir
+
+
+def run_eval(args: argparse.Namespace) -> int:
+    """Run model evaluation on gold standard articles.
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        Exit code (0 on success)
+    """
+    from .evals import ModelEvaluator, GOLD_ANNOTATIONS
+    from .evals.report import generate_markdown_report, save_report
+
+    # Setup logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(asctime)s] %(message)s",
+        handlers=[logging.StreamHandler()],
+        force=True,
+    )
+
+    # Initialize evaluator
+    try:
+        evaluator = ModelEvaluator()
+    except ValueError as exc:
+        logging.error("Failed to initialize evaluator: %s", exc)
+        return 1
+
+    # Determine which models to evaluate
+    if args.models == "all":
+        models = evaluator.get_available_models()
+        if not models:
+            logging.error("No models available in LM Studio")
+            return 1
+        logging.info("Found %d models to evaluate", len(models))
+    else:
+        models = [m.strip() for m in args.models.split(",")]
+        logging.info("Evaluating %d specified models", len(models))
+
+    # Load test articles
+    from .evals.load_articles import load_articles_from_directory, load_articles_from_runs
+
+    if args.articles_dir:
+        articles_dir = Path(args.articles_dir)
+        articles = load_articles_from_directory(articles_dir)
+    else:
+        articles = load_articles_from_runs()
+
+    if not articles:
+        logging.error("No articles loaded for evaluation")
+        return 1
+
+    logging.info("Loaded %d articles for evaluation", len(articles))
+
+    # Run evaluation
+    results = {}
+    for model in models:
+        logging.info("=" * 80)
+        logging.info("Evaluating model: %s", model)
+        logging.info("=" * 80)
+
+        try:
+            model_results = evaluator.evaluate_model(model, articles, runs=args.runs)
+            results[model] = model_results
+        except Exception as exc:
+            logging.error("Failed to evaluate model %s: %s", model, exc)
+            import traceback
+            traceback.print_exc()
+
+    if not results:
+        logging.error("No evaluation results generated")
+        return 1
+
+    # Generate and save report
+    report = generate_markdown_report(results)
+    save_report(results, args.output)
+
+    # Print summary to console
+    print("\n" + "=" * 80)
+    print("EVALUATION COMPLETE")
+    print("=" * 80)
+    print(f"\nReport saved to: {args.output}")
+    print(f"\nEvaluated {len(results)} models on {len(articles)} articles")
+    print("\nTop 3 Models by Accuracy:")
+
+    sorted_models = sorted(
+        results.items(),
+        key=lambda x: x[1].avg_accuracy,
+        reverse=True,
+    )[:3]
+
+    for rank, (model, model_results) in enumerate(sorted_models, 1):
+        print(f"  {rank}. {model}: {model_results.avg_accuracy:.1%}")
+
+    return 0
 
 
 def main(argv=None) -> int:
@@ -633,6 +870,8 @@ def main(argv=None) -> int:
     if args.command == "run":
         run_pipeline(args)
         return 0
+    elif args.command == "eval":
+        return run_eval(args)
     return 1
 
 
@@ -724,7 +963,7 @@ def send_digest_via_smtp(eml_path: Path, recipient: str) -> None:
         raise smtplib.SMTPException(f"SMTP error: {exc}")
 
 
-def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[str], topic: Optional[str] = None) -> None:
+def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[str], topic: Optional[str] = None, article_count: int = 0) -> None:
     """Create MIME .eml file with HTML digest for Mail rule automation.
 
     The Mail rule AppleScript will open this .eml file, copy rendered HTML,
@@ -735,6 +974,7 @@ def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[
         recipients: Non-empty list of email addresses (at least one required)
         sender: Optional sender address
         topic: Optional alert topic to include in subject line
+        article_count: Number of articles in the digest
 
     Raises:
         ValueError: If recipients list is empty
@@ -757,8 +997,13 @@ def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[
 
     # Create MIME multipart message with HTML
     msg = MIMEMultipart('alternative')
-    topic_text = f": {topic}" if topic else ""
-    msg['Subject'] = f"Google Alert Intelligence{topic_text} — {datetime.now().strftime('%B %d, %Y')}"
+    # Format subject using template from config
+    subject = DIGEST_SUBJECT_TEMPLATE.format(
+        topic=topic or "Alert",
+        count=article_count,
+        date=datetime.now().strftime('%B %d, %Y')
+    )
+    msg['Subject'] = subject
     msg['From'] = sender if sender else recipient
     msg['To'] = recipient
 

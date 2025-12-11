@@ -11,46 +11,80 @@ logger = logging.getLogger(__name__)
 
 
 def generate_executive_summary(articles: Iterable[dict]) -> list[str]:
-    """Generate ultra-concise one-line summaries for each article.
+    """Generate ultra-concise one-line summaries for each article, sorted by actionability.
 
-    Extracts KEY FINDING from each article as a metric-focused one-liner (10-15 words).
+    Extracts KEY FINDING from each article, sorts by actionability priority
+    (🎯 ACT NOW → ⚠️ MONITOR → 🔍 RESEARCH NEEDED → ℹ️ CONTEXT ONLY),
+    and prefixes each with the original article number for reference.
     """
+    # Define actionability priority (lower = higher priority)
+    actionability_priority = {
+        '🎯': 0, 'ACT NOW': 0,
+        '⚠️': 1, 'MONITOR': 1,
+        '🔍': 2, 'RESEARCH NEEDED': 2, 'RESEARCH': 2,
+        'ℹ️': 3, 'CONTEXT ONLY': 3, 'CONTEXT': 3,
+    }
+
+    def get_priority(article: dict) -> int:
+        """Extract actionability priority from article summary bullets."""
+        # First check if actionability is stored as a field
+        actionability = article.get("actionability", "")
+        if actionability:
+            for key, priority in actionability_priority.items():
+                if key in actionability.upper():
+                    return priority
+
+        # Fallback: look for ACTIONABILITY in summary bullets
+        bullets = article.get("summary", [])
+        for bullet in bullets:
+            text = bullet.get("text", "")
+            # Look for ACTIONABILITY line
+            if "ACTIONABILITY" in text.upper():
+                # Check for each priority tag
+                for key, priority in actionability_priority.items():
+                    if key in text.upper():
+                        return priority
+        return 4  # Unknown/missing actionability
+
+    # Convert to list and preserve original indices
+    article_list = list(articles)
+    indexed_articles = [(idx, article) for idx, article in enumerate(article_list, 1)]
+
+    # Sort by actionability priority (but keep original index)
+    sorted_articles = sorted(indexed_articles, key=lambda x: get_priority(x[1]))
+
     summaries = []
-    for article in articles:
+    for original_idx, article in sorted_articles:
         bullets = article.get("summary", [])
 
-        # Find KEY FINDING bullet
+        # Find first bullet (KEY FINDING, KEY DEVELOPMENT, ANNOUNCEMENT, or THESIS)
+        first_bullet_labels = [
+            "**KEY FINDING**:", "**KEY DEVELOPMENT**:", "**ANNOUNCEMENT**:", "**THESIS**:"
+        ]
         key_finding = None
         for bullet in bullets:
             text = bullet.get("text", "")
-            if text.startswith("**KEY FINDING**:") or "KEY FINDING" in text[:30]:
-                # Remove label
-                key_finding = re.sub(r'\*\*KEY FINDING\*\*:\s*', '', text, flags=re.IGNORECASE)
+            if any(label in text[:50] for label in first_bullet_labels):
+                # Remove label prefix for cleaner summary
+                key_finding = re.sub(r'\*\*[A-Z_ ]+\*\*:\s*', '', text)
                 break
 
         if not key_finding and bullets:
             # Fallback to first bullet
             key_finding = bullets[0].get("text", "")
+            # Remove any bold label prefix
+            key_finding = re.sub(r'\*\*[A-Z_ ]+\*\*:\s*', '', key_finding)
 
         if key_finding:
-            # Extract first sentence, allowing up to 40 words for complete findings
-            # Split on sentence boundaries (period, semicolon, exclamation, question mark)
-            # Use negative lookbehind/lookahead to preserve decimals (e.g., "11.2 months", "Scale 2.0")
-            sentences = re.split(r'(?<!\d)[.;!?](?!\s*\d)', key_finding)
-            first_sentence = sentences[0].strip() if sentences else key_finding
-
-            # Only truncate if extremely long (>40 words)
-            words = first_sentence.split()
-            if len(words) > 40:
-                # Truncate at sentence boundary if possible
-                truncated = " ".join(words[:40])
-                # Add ellipsis to indicate truncation
-                summary = truncated.rstrip('.,;:') + '...'
+            # Word-only truncation at 50 words max (avoids splitting on abbreviations like "Inc.")
+            words = key_finding.split()
+            if len(words) > 50:
+                summary = " ".join(words[:50]) + '...'
             else:
-                # Use full first sentence
-                summary = first_sentence.rstrip('.,;:')
+                summary = key_finding.rstrip('.,;:')
 
-            summaries.append(summary)
+            # Prefix with original article number
+            summaries.append(f"[{original_idx}] {summary}")
 
     return summaries
 
@@ -63,10 +97,54 @@ def generate_cross_article_insights(articles: list[dict]) -> list[str]:
 
     Falls back gracefully if LLM unavailable - insights are optional enhancement.
     """
+    from urllib.parse import urlparse
+
     insights = []
     article_list = list(articles)
 
     if len(article_list) < 2:
+        return insights
+
+    # Import config constants
+    try:
+        from .config import (
+            CROSS_ARTICLE_INSIGHTS_PROMPT,
+            CROSS_ARTICLE_MIN_ARTICLES,
+            CROSS_ARTICLE_MIN_SOURCES,
+            LMSTUDIO_MODEL,
+            TEMPERATURE,
+        )
+    except ImportError as exc:
+        logger.warning("[insights] Could not import config: %s", exc)
+        return []
+
+    # Apply quality gates
+    if len(article_list) < CROSS_ARTICLE_MIN_ARTICLES:
+        logger.info(
+            "[insights] Skipping insights: only %d articles (minimum: %d)",
+            len(article_list),
+            CROSS_ARTICLE_MIN_ARTICLES
+        )
+        return insights
+
+    # Extract unique source domains
+    unique_sources = set()
+    for article in article_list:
+        url = article.get("url", "")
+        if url:
+            parsed = urlparse(url)
+            domain = parsed.netloc.lower()
+            # Strip www. prefix for normalization
+            if domain.startswith("www."):
+                domain = domain[4:]
+            unique_sources.add(domain)
+
+    if len(unique_sources) < CROSS_ARTICLE_MIN_SOURCES:
+        logger.info(
+            "[insights] Skipping insights: only %d unique sources (minimum: %d)",
+            len(unique_sources),
+            CROSS_ARTICLE_MIN_SOURCES
+        )
         return insights
 
     # Build compact summaries (title + KEY FINDING only for token efficiency)
@@ -85,7 +163,6 @@ def generate_cross_article_insights(articles: list[dict]) -> list[str]:
 
     # Import LLM infrastructure (done inside function to avoid circular imports)
     try:
-        from .config import CROSS_ARTICLE_INSIGHTS_PROMPT, TEMPERATURE
         from .summarizer import SummarizerConfig, SummarizerError, _run_with_lmstudio
 
         prompt = CROSS_ARTICLE_INSIGHTS_PROMPT.format(
@@ -94,7 +171,8 @@ def generate_cross_article_insights(articles: list[dict]) -> list[str]:
         )
 
         # Use higher temperature than summarization for creative pattern-finding
-        cfg = SummarizerConfig(temperature=0.3, max_tokens=1024)
+        # Must explicitly set model to use LM Studio model (not default Ollama model)
+        cfg = SummarizerConfig(model=LMSTUDIO_MODEL, temperature=0.3, max_tokens=1024)
 
         logger.info("[insights] Generating cross-article insights for %d articles", len(article_list))
 
@@ -218,11 +296,19 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
         lines_html = "\n".join(lines)
         meta_line = " • ".join(filter(None, [publisher, snippet]))
         meta_html = f"<p class=\"meta\">{meta_line}</p>" if meta_line else ""
+
+        # Add actionability indicator if present
+        actionability = article.get("actionability", "")
+        actionability_html = ""
+        if actionability:
+            actionability_html = f"  <p class=\"actionability\">{html.escape(actionability)}</p>\n"
+
         article_blocks.append(
             f"<article>\n"
             f"  <h2><a href=\"{html.escape(url)}\">{title_html}</a>{source_html}</h2>\n"
             f"  {meta_html}\n"
             f"  <ul>\n{lines_html}\n  </ul>\n"
+            f"{actionability_html}"
             f"</article>"
         )
 
@@ -259,6 +345,7 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
         "    article ul { margin-top: 0.5rem; }\n"
         "    article li b { color: #0066cc; font-weight: bold; }\n"
         "    .meta { color: #666; font-size: 0.9rem; margin: 0; }\n"
+        "    .actionability { color: #333; font-weight: bold; font-size: 0.95rem; margin-top: 0.5rem; margin-bottom: 0; padding: 0.5rem; background: #e8f4f8; border-left: 3px solid #0066cc; }\n"
         "  </style>\n"
         "</head>\n"
         "<body>\n"
@@ -321,6 +408,12 @@ def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | Non
             text = block.get("text", "")
             if text:
                 lines.append(f"    - {text}")
+
+        # Add actionability indicator if present
+        actionability = article.get("actionability", "")
+        if actionability:
+            lines.append(f"    ACTIONABILITY: {actionability}")
+
         lines.append("")
     if missing:
         lines.append("Missing articles")

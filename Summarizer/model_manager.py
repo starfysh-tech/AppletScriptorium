@@ -182,6 +182,24 @@ def unload_lmstudio_model(model_name: str) -> None:
     logger.info(f"Model unloaded: {result.stdout.strip()}")
 
 
+def unload_all_lmstudio_models() -> None:
+    """
+    Unload all loaded LM Studio models via `lms unload --all`.
+
+    Raises:
+        subprocess.CalledProcessError: If unload command fails
+    """
+    logger.info("Unloading all LM Studio models")
+    result = subprocess.run(
+        ["lms", "unload", "--all"],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=60
+    )
+    logger.info(f"All models unloaded: {result.stdout.strip()}")
+
+
 def get_available_models(backends: List[Backend] = None) -> List[ModelInfo]:
     """
     Discover models across specified backends.

@@ -21,9 +21,12 @@ from typing import Any, Callable, List, Literal, Optional
 import httpx
 
 from .config import (
+    ARTICLE_TYPE_PROMPT,
+    ARTICLE_TYPES,
     DEFAULT_MODEL,
     TEMPERATURE,
     MAX_TOKENS,
+    MAX_CONTENT_CHARS,
     OLLAMA_BASE_URL,
     OLLAMA_ENABLED,
     OLLAMA_MODEL,
@@ -33,6 +36,8 @@ from .config import (
     LMSTUDIO_TIMEOUT,
     LMSTUDIO_HEALTH_TIMEOUT,
     SUMMARY_PROMPT_TEMPLATE,
+    SUMMARY_PROMPTS,
+    SUMMARY_JSON_SCHEMA,
 )
 
 logger = logging.getLogger(__name__)
@@ -93,8 +98,13 @@ def summarize_article(
     # This would allow better control over each bullet's focus and reduce format confusion.
 
     cfg = config or SummarizerConfig()
-    prompt = _build_prompt(article)
     url = article.get('url', 'unknown')
+
+    # Classify article type to select appropriate prompt
+    article_type = classify_article_type(article, config=cfg)
+    logger.info("[classify] Article type for %s: %s", url, article_type)
+
+    prompt = _build_prompt(article, article_type=article_type)
 
     # Retry loop for validation failures
     max_attempts = 2
@@ -181,11 +191,16 @@ def summarize_article(
             logger.error("[%s] No bullets parsed from response for %s", backend_used, url)
             raise SummarizerError(f"No summary bullets returned by {backend_used}")
 
+        # Parse actionability indicator
+        actionability = _parse_actionability(raw_output)
+        if actionability:
+            logger.debug("[%s][debug] Parsed actionability: %s", backend_used, actionability)
+
         # Validate bullet structure
         is_valid, validation_error = _validate_bullet_structure(bullets, raw_output)
         if is_valid:
             logger.info("[%s] Successfully summarized %s", backend_used, url)
-            return {
+            result = {
                 "title": article.get("title", ""),
                 "url": url,
                 "publisher": article.get("publisher", ""),
@@ -193,6 +208,9 @@ def summarize_article(
                 "summary": [{"type": "bullet", "text": bullet} for bullet in bullets],
                 "model": model_name,
             }
+            if actionability:
+                result["actionability"] = actionability
+            return result
 
         # Validation failed
         last_validation_error = validation_error
@@ -205,7 +223,89 @@ def summarize_article(
     raise SummarizerError(f"Summary validation failed after {max_attempts} attempts: {last_validation_error}")
 
 
-def _build_prompt(article: ArticleDict) -> str:
+def classify_article_type(article: ArticleDict, *, config: SummarizerConfig | None = None) -> str:
+    """Classify article type using LM Studio to select appropriate summarization prompt.
+
+    Args:
+        article: Article dictionary with content
+        config: Optional SummarizerConfig
+
+    Returns:
+        One of: "RESEARCH", "NEWS", "OPINION", "PRESS_RELEASE"
+        Falls back to "NEWS" if classification fails or LM Studio unavailable
+    """
+    cfg = config or SummarizerConfig()
+
+    # Extract first ~500 words to save tokens
+    content = article.get("content", "")
+    if isinstance(content, list):
+        # Handle legacy format
+        fragments: List[str] = []
+        for block in content:
+            text = block.get("text") or ""
+            if text:
+                fragments.append(text)
+        content_text = "\n".join(fragments)
+    else:
+        content_text = str(content)
+
+    # Truncate to ~500 words (rough: 4 chars per word)
+    truncated = content_text[:2000]
+
+    prompt = ARTICLE_TYPE_PROMPT.format(content=truncated)
+
+    try:
+        # Use LM Studio for classification
+        raw_output = _run_with_lmstudio(prompt, cfg)
+        detected_type = raw_output.strip().upper()
+
+        # Validate response
+        if detected_type in ARTICLE_TYPES:
+            logger.info("[classify] Detected article type: %s", detected_type)
+            return detected_type
+        else:
+            logger.warning("[classify] Invalid type '%s', falling back to NEWS", detected_type)
+            return "NEWS"
+
+    except Exception as exc:
+        logger.warning("[classify] Classification failed: %s - falling back to NEWS", exc)
+        return "NEWS"
+
+
+def _truncate_content(content: str, max_chars: int) -> str:
+    """Truncate content to fit within context window, preserving sentence boundaries.
+
+    Args:
+        content: Article content text
+        max_chars: Maximum characters allowed
+
+    Returns:
+        Original content if under limit, otherwise truncated at sentence boundary
+        with "[Content truncated...]" marker appended.
+
+    Tries to end at sentence boundary (". ") while keeping at least 80% of max_chars.
+    """
+    if len(content) <= max_chars:
+        return content
+
+    # Try to find sentence boundary in last 20% of allowed content
+    min_length = int(max_chars * 0.8)
+    truncated = content[:max_chars]
+
+    # Search for last sentence boundary between min_length and max_chars
+    last_period = truncated.rfind(". ", min_length)
+
+    if last_period > 0:
+        # Found a sentence boundary in the acceptable range
+        result = truncated[:last_period + 1]  # Include the period
+    else:
+        # No sentence boundary found, use hard cutoff
+        result = truncated
+
+    return result + "\n\n[Content truncated to fit context window]"
+
+
+def _build_prompt(article: ArticleDict, article_type: str | None = None) -> str:
     content = article.get("content", "")
     if isinstance(content, list):  # backward compatibility
         fragments: List[str] = []
@@ -220,8 +320,18 @@ def _build_prompt(article: ArticleDict) -> str:
     else:
         content_text = str(content)
 
+    # Truncate content to fit context window
+    content_text = _truncate_content(content_text, MAX_CONTENT_CHARS)
+
     title = article.get("title", "")
-    return f"Title: {title}\n\nArticle content:\n{content_text}\n\n{SUMMARY_PROMPT_TEMPLATE}"
+
+    # Select prompt based on article type
+    if article_type and article_type in SUMMARY_PROMPTS:
+        prompt_template = SUMMARY_PROMPTS[article_type]
+    else:
+        prompt_template = SUMMARY_PROMPT_TEMPLATE
+
+    return f"Title: {title}\n\nArticle content:\n{content_text}\n\n{prompt_template}"
 
 
 def _attempt_ollama_restart() -> bool:
@@ -404,6 +514,7 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig) -> str:
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": MAX_TOKENS,
         "temperature": cfg.temperature,
+        "response_format": SUMMARY_JSON_SCHEMA,
     }
 
     # Log prompt size for debugging oversized payloads
@@ -527,6 +638,31 @@ def _validate_bullet_structure(bullets: List[str], raw_output: str) -> tuple[boo
         return (False, f"Expected 3-4 bullets with required labels, got {len(bullets)} bullets with missing labels: {', '.join(missing_labels)}")
 
 
+def _parse_actionability(raw_output: str) -> str:
+    """Parse actionability from LLM output, trying JSON first then text fallback."""
+    try:
+        data = json.loads(raw_output)
+        if "actionability" in data:
+            act = data["actionability"]
+            return f"{act['emoji']} {act['label']}"
+    except (json.JSONDecodeError, KeyError, TypeError):
+        pass
+    # Fall back to text-based parsing
+    return _parse_actionability_text(raw_output)
+
+
+def _parse_actionability_text(raw_output: str) -> str:
+    """Extract actionability indicator from text-formatted LLM output (legacy fallback).
+
+    Looks for pattern: **ACTIONABILITY**: <emoji> <label>
+    Returns the full actionability string if found, empty string otherwise.
+    """
+    actionability_match = re.search(r'\*\*ACTIONABILITY\*\*:\s*([^\n]+)', raw_output)
+    if actionability_match:
+        return actionability_match.group(1).strip()
+    return ""
+
+
 def _normalize_bullet_tags(bullet: str) -> str:
     """Normalize tag formatting in bullets to ensure consistency.
 
@@ -577,7 +713,20 @@ def _normalize_bullet_tags(bullet: str) -> str:
     return result
 
 
-def _parse_bullets(output: str) -> List[str]:
+def _parse_bullets(raw_output: str) -> List[str]:
+    """Parse bullets from LLM output, trying JSON first then text fallback."""
+    try:
+        data = json.loads(raw_output)
+        if "bullets" in data:
+            return [f"**{b['label']}**: {b['text']}" for b in data["bullets"]]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        pass
+    # Fall back to text-based parsing
+    return _parse_bullets_text(raw_output)
+
+
+def _parse_bullets_text(output: str) -> List[str]:
+    """Parse bullets from text-formatted LLM output (legacy fallback)."""
     lines = [line.strip() for line in output.splitlines() if line.strip()]
     bullets: List[str] = []
     for line in lines:
