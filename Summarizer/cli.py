@@ -295,60 +295,67 @@ def _fetch_and_extract_article(
 
     content_path.write_text(content_text, encoding="utf-8")
 
-    # Validate extracted content length to catch extraction failures
+    # Check if extraction failed and needs fallback retry
     word_count = len(content_text.split())
-    if word_count < 100:
-        logging.error("[clean][ERROR] %s -> insufficient content (%d words)", url, word_count)
-        return None, {"url": url, "reason": f"only {word_count} words extracted (likely extraction failure)"}
-    elif word_count < 200:
-        logging.warning("[clean][WARN] %s -> short content (%d words), summary quality may be poor", url, word_count)
-
-    # Check for extraction failures (UI-only or references-only content)
     is_failure, failure_reason = _is_extraction_failure(content_text)
+
+    # Determine if we should retry with Markdown fallback
+    # Both low word count and quality failures indicate readability extraction failed
+    should_retry = False
+    retry_reason = None
+
+    if word_count < 100:
+        should_retry = True
+        retry_reason = f"insufficient content ({word_count} words)"
+    elif is_failure:
+        should_retry = True
+        retry_reason = failure_reason
+
+    # Attempt fallback if HTML extraction failed
+    if should_retry and outcome.format == "html":
+        logging.warning("[clean][RETRY] %s -> %s, trying markdown fallback", url, retry_reason)
+        try:
+            from .article_fetcher import _fetch_markdown_fallback
+            fallback_outcome = _fetch_markdown_fallback(url, allow_cache=False)
+            content_text = strip_cruft(fallback_outcome.content)
+
+            # Update tracking
+            with counter_lock:
+                strategy_counter[fallback_outcome.strategy] += 1
+
+            # Write fallback content
+            fallback_md_path.write_text(fallback_outcome.content, encoding="utf-8")
+            content_path.write_text(content_text, encoding="utf-8")
+
+            logging.info(
+                "[fetch][RETRY][strategy=%s][format=%s][duration=%.2fs] %s",
+                fallback_outcome.strategy,
+                fallback_outcome.format,
+                fallback_outcome.duration,
+                url,
+            )
+
+            # Re-check after fallback
+            word_count = len(content_text.split())
+            is_failure, failure_reason = _is_extraction_failure(content_text)
+
+        except FetchError as exc:
+            logging.error("[clean][ERROR] %s -> %s (fallback failed: %s)", url, retry_reason, exc)
+            return None, {"url": url, "reason": retry_reason}
+
+    # Final validation (after potential retry)
+    suffix = " (after fallback)" if should_retry and outcome.format == "html" else ""
+
+    if word_count < 100:
+        logging.error("[clean][ERROR] %s -> insufficient content%s (%d words)", url, suffix, word_count)
+        return None, {"url": url, "reason": f"only {word_count} words extracted{suffix}"}
+
     if is_failure:
-        # If HTML extraction failed, try Markdown fallback before giving up
-        if outcome.format == "html":
-            logging.warning("[clean][RETRY] %s -> %s, trying markdown fallback", url, failure_reason)
-            try:
-                from .article_fetcher import _fetch_markdown_fallback
-                fallback_outcome = _fetch_markdown_fallback(url, allow_cache=False)
-                content_text = strip_cruft(fallback_outcome.content)
+        logging.error("[clean][ERROR] %s -> %s%s", url, failure_reason, suffix)
+        return None, {"url": url, "reason": failure_reason}
 
-                # Update tracking
-                with counter_lock:
-                    strategy_counter[fallback_outcome.strategy] += 1
-
-                # Write fallback content
-                fallback_md_path.write_text(fallback_outcome.content, encoding="utf-8")
-                content_path.write_text(content_text, encoding="utf-8")
-
-                logging.info(
-                    "[fetch][RETRY][strategy=%s][format=%s][duration=%.2fs] %s",
-                    fallback_outcome.strategy,
-                    fallback_outcome.format,
-                    fallback_outcome.duration,
-                    url,
-                )
-
-                # Re-check quality after fallback
-                is_failure, failure_reason = _is_extraction_failure(content_text)
-                if is_failure:
-                    logging.error("[clean][ERROR] %s -> %s (after fallback)", url, failure_reason)
-                    return None, {"url": url, "reason": failure_reason}
-
-                # Re-check word count
-                word_count = len(content_text.split())
-                if word_count < 100:
-                    logging.error("[clean][ERROR] %s -> insufficient content after fallback (%d words)", url, word_count)
-                    return None, {"url": url, "reason": f"only {word_count} words extracted (after fallback)"}
-
-            except FetchError as exc:
-                logging.error("[clean][ERROR] %s -> %s (fallback failed: %s)", url, failure_reason, exc)
-                return None, {"url": url, "reason": failure_reason}
-        else:
-            # Already using Markdown, no fallback available
-            logging.error("[clean][ERROR] %s -> %s", url, failure_reason)
-            return None, {"url": url, "reason": failure_reason}
+    if word_count < 200:
+        logging.warning("[clean][WARN] %s -> short content (%d words), summary quality may be poor", url, word_count)
 
     # Return article data for Phase 2 summarization
     article_data = {
@@ -665,23 +672,19 @@ def run_pipeline(args: argparse.Namespace) -> Path:
 
         # Check for failure condition: 0 summaries generated
         if summaries_count == 0:
+            separator = "=" * 80
             logging.warning(
-                "\n"
-                "=" * 80 + "\n"
-                "WARNING: NO SUMMARIES GENERATED\n"
-                "=" * 80 + "\n"
-                "From: %s\n"
-                "Subject: %s\n"
-                "Links extracted: %d\n"
-                "Articles fetched: %d\n"
-                "Summaries generated: 0\n"
-                "\n"
-                "This is a FAILURE condition. Pipeline completed but produced no output.\n"
-                "=" * 80,
-                from_addr,
-                subject,
-                links_count,
-                fetched_count,
+                f"\n{separator}\n"
+                f"WARNING: NO SUMMARIES GENERATED\n"
+                f"{separator}\n"
+                f"From: {from_addr}\n"
+                f"Subject: {subject}\n"
+                f"Links extracted: {links_count}\n"
+                f"Articles fetched: {fetched_count}\n"
+                f"Summaries generated: 0\n"
+                f"\n"
+                f"This is a FAILURE condition. Pipeline completed but produced no output.\n"
+                f"{separator}"
             )
             status = "FAILED"
             if links_count == 0:

@@ -39,8 +39,9 @@ TEMPERATURE = 0.1  # Lower = more focused, higher = more creative (0.0-1.0)
 MAX_TOKENS = 16384  # Maximum response length from LLM
 
 # Content truncation to fit model context window
-# 40,000 chars ≈ 10,000 tokens, leaves ~6,000 tokens for prompt + response
-MAX_CONTENT_CHARS = int(os.environ.get("MAX_CONTENT_CHARS", "40000"))
+# 32,000 chars ≈ 8,000 tokens, leaves ~8,000 tokens for prompt template + response
+# Lowered from 40000 to prevent context overflow on 16K models
+MAX_CONTENT_CHARS = int(os.environ.get("MAX_CONTENT_CHARS", "32000"))
 
 
 # =============================================================================

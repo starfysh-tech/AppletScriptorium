@@ -1,6 +1,8 @@
 """Jina AI Reader API wrapper used as final Markdown fallback."""
 from __future__ import annotations
 
+import json
+import logging
 import os
 from dataclasses import dataclass
 
@@ -22,14 +24,21 @@ class JinaConfig:
 
 
 def fetch_with_jina(url: str, config: JinaConfig | None = None) -> str:
-    """Fetch URL using Jina Reader API and return Markdown."""
+    """Fetch URL using Jina Reader API and return clean article content.
+
+    Uses JSON response mode to get structured output with main content only,
+    excluding navigation menus, footers, and other page cruft.
+    """
     cfg = config or JinaConfig()
     api_key = cfg.api_key or os.environ.get("JINA_API_KEY")
     if not api_key:
         raise JinaFetchError(url, "JINA_API_KEY not configured")
 
     jina_url = f"https://r.jina.ai/{url}"
-    headers = {"Authorization": f"Bearer {api_key}"}
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json",  # Request structured JSON response
+    }
 
     try:
         response = httpx.get(jina_url, headers=headers, timeout=cfg.timeout)
@@ -42,11 +51,26 @@ def fetch_with_jina(url: str, config: JinaConfig | None = None) -> str:
     except Exception as exc:
         raise JinaFetchError(url, str(exc)) from exc
 
-    markdown = response.text.strip()
-    if not markdown:
+    # Parse JSON response to extract clean content
+    try:
+        data = response.json()
+        content = data.get("data", {}).get("content", "")
+        if not content:
+            # Fallback: try top-level content field
+            content = data.get("content", "")
+        if not content:
+            # Final fallback: use raw response text
+            logging.warning("[jina] JSON response missing 'content' field, using raw text")
+            content = response.text.strip()
+    except json.JSONDecodeError:
+        # If JSON parsing fails, fall back to raw text
+        logging.warning("[jina] Failed to parse JSON response, using raw text")
+        content = response.text.strip()
+
+    if not content:
         raise JinaFetchError(url, "empty response")
 
-    return markdown
+    return content
 
 
 __all__ = [
