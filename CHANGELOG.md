@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **Summarizer:** add trafilatura extractor with shared quality module
 - **Summarizer:** multi-model eval system with corpus caching
 - **CommitCraft:** CHANGELOG automation in /commitcraft-push workflow
 - **Summarizer:** improve LLM consistency with debug logging and better prompts

@@ -1,11 +1,16 @@
 """Convert article HTML into Markdown-friendly plaintext."""
 from __future__ import annotations
 
+import logging
 import re
 from typing import Iterable
 
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
+
+from .quality_checks import is_low_quality
+
+logger = logging.getLogger(__name__)
 
 try:
     from readability import Document  # type: ignore
@@ -68,15 +73,40 @@ def strip_cruft(markdown: str) -> str:
     return "\n".join(kept_lines)
 
 
-def extract_content(html: str) -> str:
-    """Return a cleaned Markdown string for the article body."""
-    # TODO: Investigate why medrxiv.org domain extracts metadata (author names, DOI)
-    # instead of article content. May need domain-specific extraction rules or
-    # better readability configuration for preprint servers.
+def extract_content(html: str, url: str = "") -> str:
+    """Return cleaned Markdown for the article body.
 
-    # Sanitize HTML before passing to readability to prevent lxml errors
+    Uses trafilatura as primary extractor (better UI element handling),
+    falls back to readability-lxml if trafilatura fails or returns insufficient content.
+    """
+    # Sanitize HTML before passing to extractors to prevent lxml errors
     html = _sanitize_html(html)
 
+    # Try trafilatura first (handles UI elements better than readability-lxml)
+    try:
+        import trafilatura
+        content = trafilatura.extract(
+            html,
+            url=url,
+            include_links=False,
+            include_images=False,
+            include_tables=True,
+            output_format="markdown",
+            favor_recall=True,
+        )
+        word_count = len(content.split()) if content else 0
+
+        # Accept trafilatura if sufficient content and passes quality check
+        if word_count >= 100 and not is_low_quality(content):
+            logger.debug("[extract] trafilatura succeeded (%d words)", word_count)
+            return _clean_extracted_text(content)
+        else:
+            reason = "insufficient" if word_count < 100 else "low quality"
+            logger.debug("[extract] trafilatura rejected (%s, %d words), trying readability", reason, word_count)
+    except Exception as exc:
+        logger.debug("[extract] trafilatura failed (%s), trying readability", exc)
+
+    # Fallback: readability-lxml (original implementation)
     main_html = html
     if Document is not None:
         try:
@@ -94,7 +124,14 @@ def extract_content(html: str) -> str:
         strip=_STRIP_TAGS,
         heading_style="ATX",
     )
-    lines = [line.rstrip() for line in markdown.splitlines()]
+    result = _clean_extracted_text(markdown)
+    logger.debug("[extract] readability-lxml returned (%d words)", len(result.split()))
+    return result
+
+
+def _clean_extracted_text(text: str) -> str:
+    """Clean up extracted text (shared by both extractors)."""
+    lines = [line.rstrip() for line in text.splitlines()]
     filtered = [line for line in lines if line.strip()]
     return "\n".join(filtered)
 

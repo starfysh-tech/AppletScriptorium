@@ -163,57 +163,9 @@ def _is_extraction_failure(content: str) -> Tuple[bool, str]:
         Tuple of (is_failure, reason). If is_failure is True, reason contains
         description of what failed.
     """
-    lines = content.split('\n')
-    non_empty_lines = [line.strip() for line in lines if line.strip()]
-
-    if not non_empty_lines:
-        return False, ""
-
-    # Check for paywall indicators (early exit - no point continuing)
-    paywall_indicators = [
-        'Get Access',
-        'Purchase this article',
-        'Get Institutional Access',
-        'full access to this article',
-        'subscription options',
-        'Already a subscriber',
-        'purchase options',
-    ]
-
-    content_lower = content.lower()
-    paywall_count = sum(1 for indicator in paywall_indicators if indicator.lower() in content_lower)
-    if paywall_count >= 2:
-        return True, "content behind paywall"
-
-    # Check for UI indicators
-    ui_indicators = [
-        'Please choose',
-        'Sign in',
-        'Register',
-        'Subscribe',
-        'Select your specialty',
-        "I'm not a medical professional",
-        'Log in to continue',
-        'Create account',
-    ]
-
-    ui_count = sum(1 for indicator in ui_indicators if indicator in content)
-    if ui_count >= 2:
-        return True, "content appears to be UI elements"
-
-    # Check for references-only pattern
-    # Pattern matches: "1. Smith, A" or "23. Jones, B." etc.
-    import re
-    reference_pattern = re.compile(r'^\d+\.\s+[A-Z][a-z]+,?\s+[A-Z]')
-
-    reference_lines = sum(1 for line in non_empty_lines if reference_pattern.match(line))
-
-    if len(non_empty_lines) > 10:
-        reference_ratio = reference_lines / len(non_empty_lines)
-        if reference_ratio > 0.7:
-            return True, "content appears to be references section only"
-
-    return False, ""
+    from .quality_checks import check_content_quality
+    result = check_content_quality(content)
+    return result.is_failure, result.reason
 
 
 def _fetch_and_extract_article(
@@ -273,7 +225,7 @@ def _fetch_and_extract_article(
         fallback_md_path.unlink(missing_ok=True)
         html_path.write_text(content, encoding="utf-8")
         try:
-            content_text = extract_content(content)
+            content_text = extract_content(content, url=url)
             if not content_text.strip():
                 raise ValueError("no content extracted")
         except Exception as exc:  # pragma: no cover - upstream failures
