@@ -62,8 +62,125 @@ def extract_links_from_html(html: str) -> List[LinkRecord]:
     Handles both direct Google Alerts and forwarded alert emails by searching
     for Google redirect links throughout the entire HTML, including within
     forwarded message sections (gmail_quote divs, etc.).
+
+    Prioritizes JSON metadata embedded in Google Alert emails (most reliable),
+    with fallback to DOM traversal for older email formats.
     """
     soup = BeautifulSoup(html, "html.parser")
+
+    # Try JSON metadata first (most reliable for Google Alerts)
+    json_records = _extract_from_json_metadata(soup)
+    if json_records:
+        return json_records
+
+    # Fallback to DOM traversal
+    return _extract_from_dom(soup)
+
+
+def _extract_from_json_metadata(soup: BeautifulSoup) -> List[LinkRecord]:
+    """Extract article metadata from embedded JSON in Google Alert emails.
+
+    Google Alerts include structured metadata in a <script type="application/json">
+    tag with article titles, descriptions, and URLs in cards[].widgets[].
+
+    Publisher info is extracted from title suffix first, with DOM fallback for
+    alerts that don't include publisher in the title.
+    """
+    script = soup.select_one('script[type="application/json"][data-scope="inboxmarkup"]')
+    if not script or not script.string:
+        return []
+
+    try:
+        data = json.loads(script.string)
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+    # Build URL->publisher mapping from DOM for fallback
+    url_to_publisher = _build_url_publisher_map(soup)
+
+    records: List[LinkRecord] = []
+    seen_urls: set[str] = set()
+
+    # Navigate to widgets in cards
+    cards = data.get("cards", [])
+    for card in cards:
+        widgets = card.get("widgets", [])
+        for widget in widgets:
+            if widget.get("type") != "LINK":
+                continue
+
+            title = widget.get("title", "")
+            description = widget.get("description", "")
+            google_url = widget.get("url", "")
+
+            # Extract canonical URL from Google redirect
+            canonical_url = _extract_canonical_url(google_url)
+            if not canonical_url or canonical_url in seen_urls:
+                continue
+
+            # Extract publisher: try title suffix first, then DOM fallback
+            publisher = _extract_publisher_from_title(title)
+            if not publisher:
+                publisher = url_to_publisher.get(canonical_url)
+
+            records.append(LinkRecord(
+                title=title,
+                url=canonical_url,
+                publisher=publisher,
+                snippet=description
+            ))
+            seen_urls.add(canonical_url)
+
+    return records
+
+
+def _build_url_publisher_map(soup: BeautifulSoup) -> dict[str, str]:
+    """Build mapping from article URLs to publisher names from DOM.
+
+    Scans anchor tags with Google redirect URLs and extracts publisher info
+    from nearby itemprop="publisher" elements.
+    """
+    url_to_publisher: dict[str, str] = {}
+
+    for anchor in soup.select('a[href*="google.com/url"]'):
+        href = anchor.get("href", "")
+        canonical_url = _extract_canonical_url(href)
+        if not canonical_url:
+            continue
+
+        # Search parent containers for publisher info
+        container = anchor.find_parent('td') or anchor.find_parent('div') or anchor
+        publisher = _extract_publisher(container)
+        if publisher:
+            url_to_publisher[canonical_url] = publisher
+
+    return url_to_publisher
+
+
+def _extract_canonical_url(google_url: str) -> Optional[str]:
+    """Extract the real article URL from a Google redirect URL."""
+    parsed = urlparse(google_url)
+    if parsed.netloc != "www.google.com" or parsed.path != "/url":
+        return None
+
+    params = parse_qs(parsed.query)
+    target = params.get("url") or params.get("q") or params.get("u")
+    return target[0] if target else None
+
+
+def _extract_publisher_from_title(title: str) -> Optional[str]:
+    """Extract publisher name from title suffix patterns like 'Article | Publisher'."""
+    # Common patterns: " - Publisher", " | Publisher", " – Publisher"
+    for sep in (" | ", " - ", " – ", " — "):
+        if sep in title:
+            parts = title.rsplit(sep, 1)
+            if len(parts) == 2 and parts[1].strip():
+                return parts[1].strip()
+    return None
+
+
+def _extract_from_dom(soup: BeautifulSoup) -> List[LinkRecord]:
+    """Fallback: Extract article metadata by traversing DOM structure."""
     records: List[LinkRecord] = []
     seen_urls: set[str] = set()
 

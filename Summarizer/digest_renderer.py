@@ -210,6 +210,7 @@ def _split_title_and_source(title: str) -> tuple[str, str]:
     # Patterns for common source suffixes (order matters - most specific first)
     patterns = [
         r'(\s+\|[^|]+?(?:PhD|MD|MBA|MSc|BSc).* - LinkedIn)$',  # | Author Name, Credentials - LinkedIn
+        r'(\s+\|\s*[A-Za-z0-9\s]+)$',  # Generic " | Publisher" pattern
         r'(\s+- medRxiv)$',
         r'(\s+- ASCO Publications)$',
         r'(\s+- PubMed)$',
@@ -230,25 +231,48 @@ def _split_title_and_source(title: str) -> tuple[str, str]:
     return (title, "")
 
 
+def _format_header_stats(articles: list[dict]) -> str:
+    """Format article count and source diversity for header."""
+    count = len(articles)
+    if count == 0:
+        return ""
+
+    # Count unique publishers/sources
+    sources = set()
+    for article in articles:
+        publisher = article.get("publisher", "")
+        if publisher:
+            sources.add(publisher.lower())
+
+    source_count = len(sources) or 1  # At least 1 source if we have articles
+
+    article_word = "article" if count == 1 else "articles"
+    source_word = "source" if source_count == 1 else "sources"
+
+    return f" • {count} {article_word} from {source_count} {source_word}"
+
+
 def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None, topic: str | None = None) -> str:
     generated_at = generated_at or datetime.now()
     missing = missing or []
     article_list = list(articles)
     topic_text = f": {topic}" if topic else ""
+    header_stats = _format_header_stats(article_list)
 
-    # Generate executive summary section
-    exec_summaries = generate_executive_summary(article_list)
+    # Generate executive summary section (skip for single articles - redundant)
     exec_block = ""
-    if exec_summaries:
-        exec_items = "\n".join(f"    <li>{html.escape(summary)}</li>" for summary in exec_summaries)
-        exec_block = (
-            "<section class=\"summary\">\n"
-            "  <h2>Summary of today's articles</h2>\n"
-            "  <ul>\n"
-            f"{exec_items}\n"
-            "  </ul>\n"
-            "</section>\n"
-        )
+    if len(article_list) >= 2:
+        exec_summaries = generate_executive_summary(article_list)
+        if exec_summaries:
+            exec_items = "\n".join(f"    <li>{html.escape(summary)}</li>" for summary in exec_summaries)
+            exec_block = (
+                "<section class=\"summary\">\n"
+                "  <h2>Summary of today's articles</h2>\n"
+                "  <ul>\n"
+                f"{exec_items}\n"
+                "  </ul>\n"
+                "</section>\n"
+            )
 
     # Generate cross-article insights section
     insights = generate_cross_article_insights(article_list)
@@ -349,7 +373,7 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
         "  </style>\n"
         "</head>\n"
         "<body>\n"
-        f"<header><h1>Google Alert Intelligence{topic_text}</h1><p>{generated_at:%B %d, %Y}</p></header>\n"
+        f"<header><h1>Google Alert Intelligence{topic_text}</h1><p>{generated_at:%B %d, %Y}{header_stats}</p></header>\n"
         f"{exec_block}\n"
         f"{insights_block}\n"
         f"{inner}\n"
@@ -364,16 +388,18 @@ def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | Non
     missing = missing or []
     article_list = list(articles)
     topic_text = f": {topic}" if topic else ""
+    header_stats = _format_header_stats(article_list)
 
-    lines = [f"Google Alert Intelligence{topic_text} — {generated_at:%B %d, %Y}", ""]
+    lines = [f"Google Alert Intelligence{topic_text} — {generated_at:%B %d, %Y}{header_stats}", ""]
 
-    # Add executive summary
-    exec_summaries = generate_executive_summary(article_list)
-    if exec_summaries:
-        lines.append("Summary of today's articles:")
-        for summary in exec_summaries:
-            lines.append(f"- {summary}")
-        lines.append("")
+    # Add executive summary (skip for single articles - redundant)
+    if len(article_list) >= 2:
+        exec_summaries = generate_executive_summary(article_list)
+        if exec_summaries:
+            lines.append("Summary of today's articles:")
+            for summary in exec_summaries:
+                lines.append(f"- {summary}")
+            lines.append("")
 
     # Add cross-article insights
     insights = generate_cross_article_insights(article_list)

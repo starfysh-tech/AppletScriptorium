@@ -21,8 +21,10 @@ def test_render_digest_html(tmp_path: Path):
     html_output = render_digest_html([SAMPLE_SUMMARY])
     assert "Google Alert Intelligence" in html_output
     assert "ASCO Daily News" in html_output
-    # Executive summary adds 1 bullet, plus 3 article bullets = 4 total
-    assert html_output.count("<li>bullet") == 4
+    # Single article: no executive summary section (3 article bullets only)
+    assert html_output.count("<li>bullet") == 3
+    # Header shows article count
+    assert "1 article from 1 source" in html_output
 
 
 def test_render_digest_text():
