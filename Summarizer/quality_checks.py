@@ -8,6 +8,16 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+# Indicators that content is behind a Cloudflare protection challenge
+CLOUDFLARE_INDICATORS = [
+    'Just a moment',
+    'checking your browser',
+    'Cloudflare',
+    'Ray ID',
+    'enable JavaScript',
+    'challenge passed',
+]
+
 # Indicators that content is behind a paywall
 PAYWALL_INDICATORS = [
     'Get Access',
@@ -67,6 +77,14 @@ def check_content_quality(content: str) -> QualityResult:
         return QualityResult(is_failure=True, reason="empty content")
 
     content_lower = content.lower()
+
+    # Check for Cloudflare protection challenge
+    cloudflare_count = sum(
+        1 for ind in CLOUDFLARE_INDICATORS
+        if ind.lower() in content_lower
+    )
+    if cloudflare_count >= 2:
+        return QualityResult(is_failure=True, reason="Cloudflare protection blocked content access")
 
     # Check for paywall indicators
     paywall_count = sum(

@@ -63,18 +63,65 @@ def extract_links_from_html(html: str) -> List[LinkRecord]:
     for Google redirect links throughout the entire HTML, including within
     forwarded message sections (gmail_quote divs, etc.).
 
-    Prioritizes JSON metadata embedded in Google Alert emails (most reliable),
-    with fallback to DOM traversal for older email formats.
+    Prioritizes schema.org Article containers (finds ALL articles with proper titles),
+    with fallback to JSON metadata and DOM traversal for older email formats.
     """
     soup = BeautifulSoup(html, "html.parser")
 
-    # Try JSON metadata first (most reliable for Google Alerts)
+    # Try schema.org Article containers first (finds ALL articles with proper titles)
+    records = _extract_from_schema_articles(soup)
+    if records:
+        return records
+
+    # Fallback to JSON metadata (older format, limited to highlighted articles)
     json_records = _extract_from_json_metadata(soup)
     if json_records:
         return json_records
 
-    # Fallback to DOM traversal
+    # Final fallback to DOM traversal
     return _extract_from_dom(soup)
+
+
+def _extract_from_schema_articles(soup: BeautifulSoup) -> List[LinkRecord]:
+    """Extract articles from schema.org Article containers.
+
+    Google Alerts structure each article as: <tr itemtype="http://schema.org/Article">
+    This method finds ALL articles with proper titles from itemprop="name", avoiding
+    the empty-title bug in DOM extraction where image-wrapping anchors have no text.
+    """
+    records: List[LinkRecord] = []
+    seen_urls: set[str] = set()
+
+    for article in soup.select('tr[itemtype="http://schema.org/Article"]'):
+        # Get title from itemprop="name" (most reliable)
+        name_elem = article.select_one('[itemprop="name"]')
+        title = name_elem.get_text(" ", strip=True) if name_elem else ""
+
+        # Get URL from any anchor with Google redirect
+        url = None
+        for anchor in article.select('a[href*="google.com/url"]'):
+            url = _extract_canonical_url(anchor.get("href", ""))
+            if url:
+                break
+
+        if not url or url in seen_urls:
+            continue
+
+        # Fallback: get title from anchor text if itemprop missing
+        if not title:
+            for anchor in article.select('a[href*="google.com/url"]'):
+                anchor_text = anchor.get_text(" ", strip=True)
+                if anchor_text:
+                    title = anchor_text
+                    break
+
+        publisher = _extract_publisher(article)
+        snippet = _extract_snippet(article)
+
+        records.append(LinkRecord(title=title, url=url, publisher=publisher, snippet=snippet))
+        seen_urls.add(url)
+
+    return records
 
 
 def _extract_from_json_metadata(soup: BeautifulSoup) -> List[LinkRecord]:

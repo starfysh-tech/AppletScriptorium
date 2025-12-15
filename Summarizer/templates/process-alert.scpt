@@ -20,6 +20,19 @@ using terms from application "Mail"
 			do shell script "mkdir -p " & quoted form of outputDir
 			set alertEmlPath to outputDir & "/alert.eml"
 			set triggerMessage to item 1 of theMessages
+
+			-- Log email details for debugging
+			set msgSubject to subject of triggerMessage
+			set msgSender to sender of triggerMessage
+			set logEntry to "$(date '+%Y-%m-%d %H:%M:%S') - Subject: " & quoted form of msgSubject & " | From: " & quoted form of msgSender
+			do shell script "echo " & quoted form of logEntry & " >> " & quoted form of logFile
+
+			-- Validate it's actually a Google Alert
+			if msgSubject does not contain "Google Alert" then
+				set warningEntry to "$(date '+%Y-%m-%d %H:%M:%S') - WARNING: Non-Google Alert email captured! Subject: " & quoted form of msgSubject
+				do shell script "echo " & quoted form of warningEntry & " >> " & quoted form of logFile
+			end if
+
 			set messageSource to source of triggerMessage
 			my write_text_to_file(messageSource, alertEmlPath)
 		on error errMsg
