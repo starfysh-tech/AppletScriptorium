@@ -153,6 +153,36 @@ def extract_topic_from_alert_eml(eml_path: Path) -> str:
     return ''
 
 
+def resolve_recipients_for_topic(topic: str) -> Optional[List[str]]:
+    """Look up routing recipients for a given topic in topic-routing.json.
+
+    Args:
+        topic: Alert topic string (case-insensitive lookup)
+
+    Returns:
+        List of recipient addresses if topic matches, None if no match,
+        file missing, or invalid JSON.
+    """
+    routing_path = PACKAGE_ROOT / "topic-routing.json"
+    if not routing_path.exists():
+        return None
+
+    try:
+        routing = json.loads(routing_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        logging.warning("[routing] Invalid JSON in topic-routing.json: %s", exc)
+        return None
+
+    topic_lower = topic.lower()
+    for key, value in routing.items():
+        if key.lower() == topic_lower:
+            if isinstance(value, str):
+                return [value]
+            if isinstance(value, list):
+                return value
+    return None
+
+
 def _is_extraction_failure(content: str) -> Tuple[bool, str]:
     """Check if extracted content appears to be UI elements or references-only.
 
@@ -666,6 +696,12 @@ def run_pipeline(args: argparse.Namespace) -> Path:
                 if address:
                     recipients.append(address)
 
+        if topic:
+            routed = resolve_recipients_for_topic(topic)
+            if routed:
+                logging.info("[routing] Topic '%s' routed to: %s", topic, ", ".join(routed))
+                recipients = routed
+
         if recipients:
             sender_address: Optional[str] = None
             if args.email_sender:
@@ -682,10 +718,9 @@ def run_pipeline(args: argparse.Namespace) -> Path:
             if args.smtp_send:
                 eml_path = output_dir / "digest.eml"
                 if eml_path.exists():
-                    recipient = recipients[0]
                     try:
-                        send_digest_via_smtp(eml_path, recipient)
-                        logging.info("[smtp] Digest sent to %s", recipient)
+                        send_digest_via_smtp(eml_path, recipients)
+                        logging.info("[smtp] Digest sent to %s", ", ".join(recipients))
                         smtp_sent = True
                     except (ValueError, FileNotFoundError, smtplib.SMTPException, ConnectionError) as exc:
                         logging.error("[smtp][ERROR] Failed to send digest: %s", exc)
@@ -830,7 +865,7 @@ def main(argv=None) -> int:
     return 1
 
 
-def send_digest_via_smtp(eml_path: Path, recipient: str) -> None:
+def send_digest_via_smtp(eml_path: Path, recipients: List[str]) -> None:
     """Send digest email via SMTP instead of UI automation.
 
     Loads SMTP credentials from environment variables and sends the
@@ -838,7 +873,7 @@ def send_digest_via_smtp(eml_path: Path, recipient: str) -> None:
 
     Args:
         eml_path: Path to digest.eml file
-        recipient: Email recipient address
+        recipients: List of email recipient addresses
 
     Environment Variables:
         SMTP_USERNAME: SMTP username (e.g., user@gmail.com)
@@ -885,7 +920,11 @@ def send_digest_via_smtp(eml_path: Path, recipient: str) -> None:
         raise ValueError(f"Failed to parse .eml file: {exc}")
 
     from_addr = msg.get("From", smtp_user)
-    to_addr = recipient
+
+    # Update To header to reflect all recipients
+    if 'To' in msg:
+        del msg['To']
+    msg['To'] = ", ".join(recipients)
 
     logging.info("[smtp] Connecting to %s:%s", smtp_host, smtp_port)
 
@@ -905,8 +944,8 @@ def send_digest_via_smtp(eml_path: Path, recipient: str) -> None:
                     error_msg += f": {exc.smtp_error.decode()}"
                 raise smtplib.SMTPAuthenticationError(exc.smtp_code, error_msg)
 
-            logging.info("[smtp] Sending email to: %s", to_addr)
-            server.sendmail(from_addr, [to_addr], msg.as_string())
+            logging.info("[smtp] Sending email to: %s", ", ".join(recipients))
+            server.sendmail(from_addr, recipients, msg.as_string())
 
             logging.info("[smtp] Email sent successfully!")
 
@@ -947,9 +986,6 @@ def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[
 
     html_content = html_path.read_text(encoding="utf-8")
 
-    # Use first recipient for To: field (Mail rule will handle actual sending)
-    recipient = recipients[0]
-
     # Create MIME multipart message with HTML
     msg = MIMEMultipart('alternative')
     # Format subject using template from config
@@ -959,8 +995,8 @@ def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[
         date=datetime.now().strftime('%B %d, %Y')
     )
     msg['Subject'] = subject
-    msg['From'] = sender if sender else recipient
-    msg['To'] = recipient
+    msg['From'] = sender if sender else recipients[0]
+    msg['To'] = ", ".join(recipients)
 
     # Attach HTML part
     html_part = MIMEText(html_content, 'html')

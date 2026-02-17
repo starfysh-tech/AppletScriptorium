@@ -32,3 +32,6 @@ Summarizer/evals/
 debug-*.scpt
 *-debug.log
 extensions.csv
+
+# Summarizer topic routing config (contains email addresses)
+Summarizer/topic-routing.json

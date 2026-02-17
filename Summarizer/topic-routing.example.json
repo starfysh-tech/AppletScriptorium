@@ -1,0 +1,4 @@
+{
+  "Patient reported outcome": ["doctor@example.com"],
+  "AI safety": ["researcher@example.com", "team@example.com"]
+}

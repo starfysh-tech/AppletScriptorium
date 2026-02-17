@@ -49,7 +49,7 @@ def test_cli_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sampl
 
     sent = {}
 
-    def fake_send(output_dir, recipients, sender, topic=None):
+    def fake_send(output_dir, recipients, sender, topic=None, article_count=0):
         sent["output_dir"] = output_dir
         sent["recipients"] = recipients
         sent["sender"] = sender
@@ -59,6 +59,7 @@ def test_cli_run_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sampl
     monkeypatch.setattr(cli, "load_links", fake_load_links)
     monkeypatch.setattr(cli, "process_articles", fake_process)
     monkeypatch.setattr(cli, "send_digest_email", fake_send)
+    monkeypatch.setattr(cli, "LMSTUDIO_BASE_URL", "")
     monkeypatch.delenv("ALERT_DIGEST_EMAIL", raising=False)
 
     args = argparse.Namespace(
@@ -108,7 +109,7 @@ def test_cli_run_pipeline_env_recipients(tmp_path: Path, monkeypatch: pytest.Mon
 
     sent = {}
 
-    def fake_send(output_dir, recipients, sender, topic=None):
+    def fake_send(output_dir, recipients, sender, topic=None, article_count=0):
         sent["recipients"] = recipients
         sent["sender"] = sender
         sent["topic"] = topic
@@ -117,6 +118,7 @@ def test_cli_run_pipeline_env_recipients(tmp_path: Path, monkeypatch: pytest.Mon
     monkeypatch.setattr(cli, "load_links", fake_load_links)
     monkeypatch.setattr(cli, "process_articles", fake_process)
     monkeypatch.setattr(cli, "send_digest_email", fake_send)
+    monkeypatch.setattr(cli, "LMSTUDIO_BASE_URL", "")
     monkeypatch.setenv("ALERT_DIGEST_EMAIL", "one@example.com, two@example.com")
 
     args = argparse.Namespace(
@@ -309,3 +311,101 @@ def test_workflow_log_includes_summary(tmp_path: Path, monkeypatch: pytest.Monke
     joined_logs = "\n".join(record.getMessage() for record in caplog.records)
     assert "strategy=httpx" in joined_logs
     assert "Fetch summary: httpx=1" in joined_logs
+
+
+def test_run_pipeline_routes_topic_to_configured_recipients(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sample_summary: dict
+):
+    output_dir = tmp_path / "output"
+    routing_dir = tmp_path / "routing"
+    routing_dir.mkdir()
+    routing_file = routing_dir / "topic-routing.json"
+    routing_file.write_text(
+        json.dumps({"Patient reported outcome": ["doctor@example.com"]}),
+        encoding="utf-8",
+    )
+
+    def fake_capture(path: Path, subject_filter=None) -> None:
+        path.write_text("dummy", encoding="utf-8")
+
+    def fake_load_links(path: Path) -> List[dict]:
+        return [{"title": "T", "url": "https://example.com/a"}]
+
+    def fake_process(links, output_dir, fetch_cfg, sum_cfg, max_articles=None):
+        (output_dir / "articles").mkdir(exist_ok=True)
+        return [sample_summary], []
+
+    sent = {}
+
+    def fake_send(output_dir, recipients, sender, topic=None, article_count=0):
+        sent["recipients"] = recipients
+
+    monkeypatch.setattr(cli, "PACKAGE_ROOT", routing_dir)
+    monkeypatch.setattr(cli, "LMSTUDIO_BASE_URL", "")
+    monkeypatch.setattr(cli, "capture_alert", fake_capture)
+    monkeypatch.setattr(cli, "load_links", fake_load_links)
+    monkeypatch.setattr(cli, "process_articles", fake_process)
+    monkeypatch.setattr(cli, "send_digest_email", fake_send)
+    monkeypatch.delenv("ALERT_DIGEST_EMAIL", raising=False)
+
+    args = argparse.Namespace(
+        command="run",
+        output_dir=str(output_dir),
+        model="test-model",
+        max_articles=None,
+        subject_filter=None,
+        email_digest=["cli@example.com"],
+        email_sender=None,
+        smtp_send=False,
+        topic="Patient reported outcome",
+    )
+
+    cli.run_pipeline(args)
+
+    assert sent["recipients"] == ["doctor@example.com"]
+
+
+def test_run_pipeline_falls_back_when_topic_not_routed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, sample_summary: dict
+):
+    output_dir = tmp_path / "output"
+    # No topic-routing.json in tmp_path — routing returns None
+
+    def fake_capture(path: Path, subject_filter=None) -> None:
+        path.write_text("dummy", encoding="utf-8")
+
+    def fake_load_links(path: Path) -> List[dict]:
+        return [{"title": "T", "url": "https://example.com/a"}]
+
+    def fake_process(links, output_dir, fetch_cfg, sum_cfg, max_articles=None):
+        (output_dir / "articles").mkdir(exist_ok=True)
+        return [sample_summary], []
+
+    sent = {}
+
+    def fake_send(output_dir, recipients, sender, topic=None, article_count=0):
+        sent["recipients"] = recipients
+
+    monkeypatch.setattr(cli, "PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(cli, "LMSTUDIO_BASE_URL", "")
+    monkeypatch.setattr(cli, "capture_alert", fake_capture)
+    monkeypatch.setattr(cli, "load_links", fake_load_links)
+    monkeypatch.setattr(cli, "process_articles", fake_process)
+    monkeypatch.setattr(cli, "send_digest_email", fake_send)
+    monkeypatch.delenv("ALERT_DIGEST_EMAIL", raising=False)
+
+    args = argparse.Namespace(
+        command="run",
+        output_dir=str(output_dir),
+        model="test-model",
+        max_articles=None,
+        subject_filter=None,
+        email_digest=["cli@example.com"],
+        email_sender=None,
+        smtp_send=False,
+        topic="Some unknown topic",
+    )
+
+    cli.run_pipeline(args)
+
+    assert sent["recipients"] == ["cli@example.com"]
