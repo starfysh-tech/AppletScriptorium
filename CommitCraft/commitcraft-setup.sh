@@ -1006,7 +1006,7 @@ setup_release_please() {
     log_success "Created .github/workflows/release-please.yml"
 
     # Create config file
-    sed "s/RELEASE_TYPE_PLACEHOLDER/$user_type/" "$TEMPLATES_DIR/release-please-config.json" > "$REPO_ROOT/release-please-config.json"
+    sed "s/RELEASE_TYPE_PLACEHOLDER/$release_type/" "$TEMPLATES_DIR/release-please-config.json" > "$REPO_ROOT/release-please-config.json"
     log_success "Created release-please-config.json"
 
     # Create manifest file
