@@ -116,9 +116,9 @@ while IFS= read -r commit_hash; do
 done < <(git log ${LATEST_TAG}..HEAD --format=%H)
 
 # Count by commit type (from subject line) - precise conventional commit matching
-FEAT_COUNT=$(echo "$COMMITS_SINCE" | grep -cE '^[a-f0-9]+ feat(\(|:)' || echo 0)
-FIX_COUNT=$(echo "$COMMITS_SINCE" | grep -cE '^[a-f0-9]+ fix(\(|:)' || echo 0)
-DOCS_COUNT=$(echo "$COMMITS_SINCE" | grep -cE '^[a-f0-9]+ docs(\(|:)' || echo 0)
+FEAT_COUNT=$(echo "$COMMITS_SINCE" | grep -cE '^[a-f0-9]+ feat(\(|:)' || true)
+FIX_COUNT=$(echo "$COMMITS_SINCE" | grep -cE '^[a-f0-9]+ fix(\(|:)' || true)
+DOCS_COUNT=$(echo "$COMMITS_SINCE" | grep -cE '^[a-f0-9]+ docs(\(|:)' || true)
 OTHER_COUNT=$((COMMIT_COUNT - FEAT_COUNT - FIX_COUNT - DOCS_COUNT))
 
 # Display categorization
