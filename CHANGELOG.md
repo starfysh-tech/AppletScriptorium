@@ -9,22 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Summarizer:** add trafilatura extractor with shared quality module
 - **Summarizer:** multi-model eval system with corpus caching
-- **CommitCraft:** CHANGELOG automation in /commitcraft-push workflow
 - **Summarizer:** improve LLM consistency with debug logging and better prompts
+- **CommitCraft:** Skill-based architecture with 6 workflows (commit, push, pr, release, setup, check)
+- **CommitCraft:** GitHub issue validation with branch-based tracking
+- **CommitCraft:** PR creation workflow with issue linking and draft support
+- **CommitCraft:** Interactive 7-component tooling setup (commitlint, gitleaks, pre-commit, signing, release-please, CI, branch protection)
+- **CommitCraft:** 7 configuration templates for tooling setup
 
 ### Changed
 - Document SwiftHAL v2.1 across repository
 - **Summarizer:** add Patient Reported Outcome sample for evals
-- **CommitCraft:** improve macOS compatibility and uninstall safety
 - backfill CHANGELOG with missing commits
 - **Summarizer:** convert tag format to emoji-only
 - **Summarizer:** relax validation and remove prompt examples
+- **CommitCraft:** Migrate to skill architecture (BREAKING: re-run `./commitcraft-install.sh`)
+- **CommitCraft:** Install location → `~/.claude/skills/commitcraft/`
+- **CommitCraft:** Invocation → `/commitcraft [commit|push|pr|release|setup|check]`
+- **CommitCraft:** Remove emoji prefixes and attribution footers from commits
+- **CommitCraft:** Individual `git add` per file instead of `git add -A`
 
 ### Fixed
 - **Summarizer:** fix digest email UX issues (missing titles, header stats, skip single-article summary)
 - **Summarizer:** fix Mail rule execution errors (missing imports, lms CLI path, model validation)
-- **CommitCraft:** resolve working directory detection in Claude Code
 - **Summarizer:** handle None values in digest rendering
+
+### Removed
+- **CommitCraft:** `commitcraft-analyze.sh`, old command .md files, shell-aliases, gitignore-snippet, docs/
 
 ## [4.2.0] - 2025-11-08
 ### Added

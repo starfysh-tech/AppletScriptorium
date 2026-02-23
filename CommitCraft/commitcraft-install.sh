@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# CommitCraft - Intelligent Installer
+# CommitCraft v5 - Intelligent Installer
 #
 # Automatically detects current state and presents appropriate options:
 # - Not installed: Offers to install
+# - Legacy detected: Shows old files, cleans up and installs
 # - Updates available: Shows what changed, offers to update
 # - Up to date: Offers to reinstall or uninstall
 #
@@ -20,22 +21,60 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-# Script directory
+# Script directory (source files live here)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Files managed by this installer (relative to SCRIPT_DIR)
-# Using parallel arrays for Bash 3.2 compatibility (macOS default)
-DEST_PATHS=(
-    "~/.claude/scripts/commitcraft-analyze.sh"
-    "~/.claude/scripts/commitcraft-release-analyze.sh"
-    "~/.claude/commands/commitcraft-push.md"
-    "~/.claude/commands/commitcraft-release.md"
-)
+# Install destination
+INSTALL_DIR="$HOME/.claude/skills/commitcraft"
+
+# File manifest: parallel arrays for Bash 3.2 compatibility (macOS default)
+# SRC_FILES: paths relative to SCRIPT_DIR
+# DEST_NAMES: paths relative to INSTALL_DIR
 SRC_FILES=(
-    "commitcraft-analyze.sh"
+    "SKILL.md"
+    "commitcraft-setup.sh"
+    "commitcraft-issues.sh"
     "commitcraft-release-analyze.sh"
-    "commitcraft-push.md"
-    "commitcraft-release.md"
+    "workflows/commit.md"
+    "workflows/push.md"
+    "workflows/pr.md"
+    "workflows/release.md"
+    "workflows/setup.md"
+    "workflows/check.md"
+    "templates/commitlint.config.js"
+    "templates/.commitlintrc.yml"
+    "templates/.gitleaks.toml"
+    "templates/.pre-commit-config.yaml"
+    "templates/commitlint-ci.yml"
+    "templates/release-please-config.json"
+    "templates/release-please.yml"
+)
+DEST_NAMES=(
+    "SKILL.md"
+    "commitcraft-setup.sh"
+    "commitcraft-issues.sh"
+    "commitcraft-release-analyze.sh"
+    "workflows/commit.md"
+    "workflows/push.md"
+    "workflows/pr.md"
+    "workflows/release.md"
+    "workflows/setup.md"
+    "workflows/check.md"
+    "templates/commitlint.config.js"
+    "templates/.commitlintrc.yml"
+    "templates/.gitleaks.toml"
+    "templates/.pre-commit-config.yaml"
+    "templates/commitlint-ci.yml"
+    "templates/release-please-config.json"
+    "templates/release-please.yml"
+)
+
+# Legacy files from v4.x (may exist on other users' machines)
+LEGACY_FILES=(
+    "$HOME/.claude/scripts/commitcraft-analyze.sh"
+    "$HOME/.claude/scripts/commitcraft-release-analyze.sh"
+    "$HOME/.claude/commands/commitcraft-push.md"
+    "$HOME/.claude/commands/commitcraft-release.md"
 )
 
 # ============================================================================
@@ -49,7 +88,6 @@ get_hash() {
         echo "missing"
         return
     fi
-
     if command -v md5 >/dev/null 2>&1; then
         md5 -q "$file" 2>/dev/null || echo "error"
     elif command -v md5sum >/dev/null 2>&1; then
@@ -57,12 +95,6 @@ get_hash() {
     else
         echo "error"
     fi
-}
-
-# Expand tilde in paths
-expand_path() {
-    local path="$1"
-    echo "${path/#\~/$HOME}"
 }
 
 # Draw box header
@@ -75,20 +107,84 @@ draw_header() {
 }
 
 # ============================================================================
+# Legacy Detection & Cleanup
+# ============================================================================
+
+has_legacy_files() {
+    for f in "${LEGACY_FILES[@]}"; do
+        if [ -f "$f" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+cleanup_legacy() {
+    local found=0
+    for f in "${LEGACY_FILES[@]}"; do
+        if [ -f "$f" ]; then
+            rm "$f"
+            echo -e "  ${CYAN}↻${NC} Removed legacy: $(basename "$f")"
+            found=1
+        fi
+    done
+
+    # Clean up empty scripts/ dir (only if empty — no other tools)
+    if [ -d "$HOME/.claude/scripts" ] && [ -z "$(ls -A "$HOME/.claude/scripts")" ]; then
+        rmdir "$HOME/.claude/scripts"
+        echo -e "  ${CYAN}↻${NC} Removed empty scripts/ directory"
+    fi
+
+    # Do NOT touch commands/ — contains non-CommitCraft files
+
+    # Remove shell aliases added by old installer (other users)
+    for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
+        if [ -f "$rc" ] && grep -q "alias commitcraft-init=" "$rc" 2>/dev/null; then
+            sed -i.bak '/# CommitCraft alias/d' "$rc"
+            sed -i.bak '/alias commitcraft-init=/d' "$rc"
+            echo -e "  ${CYAN}↻${NC} Removed commitcraft-init alias from $(basename "$rc")"
+        fi
+    done
+
+    # Remove git template hook (from very old installs)
+    if [ -f "$HOME/.git-templates/hooks/post-checkout" ]; then
+        rm "$HOME/.git-templates/hooks/post-checkout"
+        echo -e "  ${CYAN}↻${NC} Removed git template hook"
+    fi
+    if git config --global --get init.templatedir >/dev/null 2>&1; then
+        git config --global --unset init.templatedir
+        echo -e "  ${CYAN}↻${NC} Removed git templatedir config"
+    fi
+
+    if [ $found -eq 1 ]; then
+        echo ""
+    fi
+}
+
+# ============================================================================
 # State Detection
 # ============================================================================
 
 detect_state() {
+    # Check for legacy files first (can coexist with new install)
+    if has_legacy_files; then
+        echo "legacy_detected"
+        return
+    fi
+
+    # Check if install dir exists
+    if [ ! -d "$INSTALL_DIR" ]; then
+        echo "not_installed"
+        return
+    fi
+
     local missing=0
     local outdated=0
-    local current=0
-    local total=${#DEST_PATHS[@]}
+    local total=${#SRC_FILES[@]}
 
     for ((i=0; i<total; i++)); do
-        local dest="${DEST_PATHS[$i]}"
-        local src_file="${SRC_FILES[$i]}"
-        local src_path="$SCRIPT_DIR/$src_file"
-        local dst_path=$(expand_path "$dest")
+        local src_path="$SCRIPT_DIR/${SRC_FILES[$i]}"
+        local dst_path="$INSTALL_DIR/${DEST_NAMES[$i]}"
 
         local src_hash=$(get_hash "$src_path")
         local dst_hash=$(get_hash "$dst_path")
@@ -97,12 +193,9 @@ detect_state() {
             missing=$((missing + 1))
         elif [ "$src_hash" != "$dst_hash" ]; then
             outdated=$((outdated + 1))
-        else
-            current=$((current + 1))
         fi
     done
 
-    # Determine overall state
     if [ $missing -eq $total ]; then
         echo "not_installed"
     elif [ $outdated -gt 0 ] || [ $missing -gt 0 ]; then
@@ -113,18 +206,78 @@ detect_state() {
 }
 
 # ============================================================================
-# Display Functions
+# Display Functions — Grouped TUI
 # ============================================================================
+
+# Compute aggregate status for a group of file indices
+# Prints: "current", "update", or "missing"
+group_status() {
+    local -a indices=("$@")
+    local has_missing=0
+    local has_outdated=0
+
+    for i in "${indices[@]}"; do
+        local src_path="$SCRIPT_DIR/${SRC_FILES[$i]}"
+        local dst_path="$INSTALL_DIR/${DEST_NAMES[$i]}"
+        local src_hash=$(get_hash "$src_path")
+        local dst_hash=$(get_hash "$dst_path")
+
+        if [ "$dst_hash" = "missing" ]; then
+            has_missing=1
+        elif [ "$src_hash" != "$dst_hash" ]; then
+            has_outdated=1
+        fi
+    done
+
+    if [ $has_missing -eq 1 ]; then
+        echo "missing"
+    elif [ $has_outdated -eq 1 ]; then
+        echo "update"
+    else
+        echo "current"
+    fi
+}
+
+# Print a grouped status line
+print_group_line() {
+    local label="$1"
+    local status="$2"
+    case "$status" in
+        current)  echo -e "  ${GREEN}✓${NC} $label ${GREEN}(current)${NC}" ;;
+        update)   echo -e "  ${YELLOW}↻${NC} $label ${CYAN}(update available)${NC}" ;;
+        missing)  echo -e "  ${RED}○${NC} $label ${YELLOW}(not installed)${NC}" ;;
+    esac
+}
 
 show_file_status() {
     echo ""
-    local total=${#DEST_PATHS[@]}
+    # SKILL.md — index 0
+    local skill_status=$(group_status 0)
+    print_group_line "SKILL.md" "$skill_status"
+
+    # scripts (3) — indices 1 2 3
+    local scripts_status=$(group_status 1 2 3)
+    print_group_line "scripts (3)" "$scripts_status"
+
+    # workflows/ (6) — indices 4 5 6 7 8 9
+    local wf_status=$(group_status 4 5 6 7 8 9)
+    print_group_line "workflows/ (6)" "$wf_status"
+
+    # templates/ (7) — indices 10 11 12 13 14 15 16
+    local tmpl_status=$(group_status 10 11 12 13 14 15 16)
+    print_group_line "templates/ (7)" "$tmpl_status"
+
+    echo ""
+}
+
+# Show individual file details for updates/diffs
+show_file_details() {
+    echo ""
+    local total=${#SRC_FILES[@]}
     for ((i=0; i<total; i++)); do
-        local dest="${DEST_PATHS[$i]}"
-        local src_file="${SRC_FILES[$i]}"
-        local src_path="$SCRIPT_DIR/$src_file"
-        local dst_path=$(expand_path "$dest")
-        local display_name=$(basename "$dst_path")
+        local src_path="$SCRIPT_DIR/${SRC_FILES[$i]}"
+        local dst_path="$INSTALL_DIR/${DEST_NAMES[$i]}"
+        local display_name="${DEST_NAMES[$i]}"
 
         local src_hash=$(get_hash "$src_path")
         local dst_hash=$(get_hash "$dst_path")
@@ -133,8 +286,6 @@ show_file_status() {
             echo -e "  ${RED}○${NC} $display_name ${YELLOW}(not installed)${NC}"
         elif [ "$src_hash" != "$dst_hash" ]; then
             echo -e "  ${YELLOW}↻${NC} $display_name ${CYAN}(update available)${NC}"
-        else
-            echo -e "  ${GREEN}✓${NC} $display_name ${GREEN}(current)${NC}"
         fi
     done
     echo ""
@@ -142,13 +293,17 @@ show_file_status() {
 
 show_not_installed() {
     clear 2>/dev/null || printf '\n\n\n'
-    draw_header "CommitCraft - Not Installed"
+    draw_header "CommitCraft v5 — Not Installed"
     echo ""
     echo -e "Status: ${RED}○${NC} Not installed"
     echo ""
-    echo "This will install:"
-    echo "  • ~/.claude/scripts/ (2 scripts)"
-    echo "  • ~/.claude/commands/ (2 commands)"
+    echo "This will install to: ~/.claude/skills/commitcraft/"
+    echo "  • SKILL.md (skill definition)"
+    echo "  • scripts (3 — setup, issues, release-analyze)"
+    echo "  • workflows/ (6 — commit, push, pr, release, setup, check)"
+    echo "  • templates/ (7 — commitlint, gitleaks, pre-commit, CI)"
+    echo ""
+    echo "Invocation: /commitcraft [commit|push|pr|release|setup|check]"
     echo ""
     echo "Options:"
     echo -e "  ${BOLD}1.${NC} Install"
@@ -156,23 +311,39 @@ show_not_installed() {
     echo ""
 }
 
+show_legacy_detected() {
+    clear 2>/dev/null || printf '\n\n\n'
+    draw_header "CommitCraft v5 — Legacy Install Detected"
+    echo ""
+    echo -e "Status: ${YELLOW}●${NC} Legacy v4.x files found"
+    echo ""
+    echo "Legacy files to remove:"
+    for f in "${LEGACY_FILES[@]}"; do
+        if [ -f "$f" ]; then
+            echo -e "  ${YELLOW}↻${NC} $f"
+        fi
+    done
+    echo ""
+    echo "Then install to: ~/.claude/skills/commitcraft/"
+    echo ""
+    echo "Options:"
+    echo -e "  ${BOLD}1.${NC} Clean up legacy + install v5"
+    echo -e "  ${BOLD}2.${NC} Exit"
+    echo ""
+}
+
 show_updates_available() {
     clear 2>/dev/null || printf '\n\n\n'
-    draw_header "CommitCraft - Updates Available"
+    draw_header "CommitCraft v5 — Updates Available"
     echo ""
 
-    # Count updates
     local update_count=0
-    local total=${#DEST_PATHS[@]}
+    local total=${#SRC_FILES[@]}
     for ((i=0; i<total; i++)); do
-        local dest="${DEST_PATHS[$i]}"
-        local src_file="${SRC_FILES[$i]}"
-        local src_path="$SCRIPT_DIR/$src_file"
-        local dst_path=$(expand_path "$dest")
-
+        local src_path="$SCRIPT_DIR/${SRC_FILES[$i]}"
+        local dst_path="$INSTALL_DIR/${DEST_NAMES[$i]}"
         local src_hash=$(get_hash "$src_path")
         local dst_hash=$(get_hash "$dst_path")
-
         if [ "$dst_hash" = "missing" ] || [ "$src_hash" != "$dst_hash" ]; then
             update_count=$((update_count + 1))
         fi
@@ -182,16 +353,17 @@ show_updates_available() {
     show_file_status
     echo "Options:"
     echo -e "  ${BOLD}1.${NC} Update ($update_count files)"
-    echo -e "  ${BOLD}2.${NC} Show diffs"
-    echo -e "  ${BOLD}3.${NC} Reinstall all (force)"
-    echo -e "  ${BOLD}4.${NC} Uninstall"
-    echo -e "  ${BOLD}5.${NC} Exit"
+    echo -e "  ${BOLD}2.${NC} Show changed files"
+    echo -e "  ${BOLD}3.${NC} Show diffs"
+    echo -e "  ${BOLD}4.${NC} Reinstall all (force)"
+    echo -e "  ${BOLD}5.${NC} Uninstall"
+    echo -e "  ${BOLD}6.${NC} Exit"
     echo ""
 }
 
 show_up_to_date() {
     clear 2>/dev/null || printf '\n\n\n'
-    draw_header "CommitCraft - Up to Date"
+    draw_header "CommitCraft v5 — Up to Date"
     echo ""
     echo -e "Status: ${GREEN}✓${NC} Installed (all files current)"
     show_file_status
@@ -214,17 +386,14 @@ install_or_update() {
     echo ""
 
     # Create directories
-    mkdir -p ~/.claude/scripts
-    mkdir -p ~/.claude/commands
+    mkdir -p "$INSTALL_DIR/workflows"
+    mkdir -p "$INSTALL_DIR/templates"
 
-    # Copy files
-    local total=${#DEST_PATHS[@]}
+    local total=${#SRC_FILES[@]}
     for ((i=0; i<total; i++)); do
-        local dest="${DEST_PATHS[$i]}"
-        local src_file="${SRC_FILES[$i]}"
-        local src_path="$SCRIPT_DIR/$src_file"
-        local dst_path=$(expand_path "$dest")
-        local display_name=$(basename "$dst_path")
+        local src_path="$SCRIPT_DIR/${SRC_FILES[$i]}"
+        local dst_path="$INSTALL_DIR/${DEST_NAMES[$i]}"
+        local display_name="${DEST_NAMES[$i]}"
 
         local src_hash=$(get_hash "$src_path")
         local dst_hash=$(get_hash "$dst_path")
@@ -232,61 +401,31 @@ install_or_update() {
         if [ "$force" = "true" ] || [ "$dst_hash" = "missing" ] || [ "$src_hash" != "$dst_hash" ]; then
             cp "$src_path" "$dst_path"
 
-            # Set executable for hooks and scripts
-            if [[ "$dst_path" == *"/hooks/"* ]] || [[ "$dst_path" == *"/scripts/"* ]]; then
+            # Set executable for shell scripts
+            if [[ "$dst_path" == *.sh ]]; then
                 chmod +x "$dst_path"
             fi
 
             if [ "$dst_hash" = "missing" ]; then
-                echo -e "${GREEN}✓${NC} Installed $display_name"
+                echo -e "  ${GREEN}✓${NC} Installed $display_name"
             else
-                echo -e "${CYAN}↻${NC} Updated $display_name"
+                echo -e "  ${CYAN}↻${NC} Updated $display_name"
             fi
         else
-            echo -e "  Skipped $display_name (already current)"
+            echo -e "    Skipped $display_name (already current)"
         fi
     done
 
-    # Create README.md if missing
-    if [ ! -f ~/.claude/README.md ]; then
-        cat > ~/.claude/README.md << 'EOF'
-# CommitCraft
-
-Your personal Claude Code enhancements.
-
-## Directory Structure
-
-```
-~/.claude/
-├── scripts/          # Reusable scripts
-├── commands/         # Slash commands
-└── README.md         # This file
-```
-
-## Updating
-
-To check for updates:
-```bash
-cd ~/path/to/AppletScriptorium/CommitCraft
-./commitcraft-install.sh
-```
-
-## Source
-
-Installed from: AppletScriptorium/CommitCraft/
-EOF
-        echo -e "${GREEN}✓${NC} Created README.md"
-    fi
-
     echo ""
     echo -e "${GREEN}✓${NC} Installation/update complete"
+    echo ""
+    echo "Invoke in Claude Code: /commitcraft [commit|push|pr|release|setup|check]"
     echo ""
     read -p "Press Enter to exit..."
     exit 0
 }
 
 show_diffs() {
-    # Check if delta is available
     if ! command -v delta >/dev/null 2>&1; then
         echo ""
         echo -e "${RED}Error: delta pager not found${NC}"
@@ -301,41 +440,32 @@ show_diffs() {
     echo ""
 
     local has_diffs=false
-    local total=${#DEST_PATHS[@]}
+    local total=${#SRC_FILES[@]}
 
     for ((i=0; i<total; i++)); do
-        local dest="${DEST_PATHS[$i]}"
-        local src_file="${SRC_FILES[$i]}"
-        local src_path="$SCRIPT_DIR/$src_file"
-        local dst_path=$(expand_path "$dest")
-        local display_name=$(basename "$dst_path")
+        local src_path="$SCRIPT_DIR/${SRC_FILES[$i]}"
+        local dst_path="$INSTALL_DIR/${DEST_NAMES[$i]}"
+        local display_name="${DEST_NAMES[$i]}"
 
         local src_hash=$(get_hash "$src_path")
         local dst_hash=$(get_hash "$dst_path")
 
         if [ "$dst_hash" = "missing" ]; then
-            # Show new files
             has_diffs=true
             echo -e "${BOLD}━━━ $display_name ${YELLOW}(new file)${NC} ━━━${NC}"
-            echo ""
             echo "Will be installed to: $dst_path"
             echo ""
         elif [ "$src_hash" != "$dst_hash" ]; then
-            # Show diffs for changed files
             has_diffs=true
             echo -e "${BOLD}━━━ $display_name ━━━${NC}"
             echo ""
-
-            # Use delta for syntax-highlighted diffs (disable pager)
-            # diff returns 1 when files differ, use || true to prevent script exit
             diff -u "$dst_path" "$src_path" | delta --paging=never || true
-
             echo ""
         fi
     done
 
     if [ "$has_diffs" = "false" ]; then
-        echo "No diffs to show (all files match or are missing)"
+        echo "No diffs to show (all files are current)"
     fi
 
     echo ""
@@ -344,7 +474,7 @@ show_diffs() {
 
 uninstall() {
     echo ""
-    echo -e "${YELLOW}Warning: This will remove all CommitCraft tools${NC}"
+    echo -e "${YELLOW}Warning: This will remove all CommitCraft files from ~/.claude/skills/commitcraft/${NC}"
     echo ""
     read -p "Are you sure? [y/N] " -n 1 -r
     echo
@@ -358,64 +488,40 @@ uninstall() {
     echo "Uninstalling..."
     echo ""
 
-    # Remove only CommitCraft files (selective deletion)
-    local total=${#DEST_PATHS[@]}
+    # Remove files from manifest (file-by-file, not rm -rf)
+    local total=${#DEST_NAMES[@]}
     for ((i=0; i<total; i++)); do
-        local dest="${DEST_PATHS[$i]}"
-        local dst_path=$(expand_path "$dest")
-        local display_name=$(basename "$dst_path")
-
+        local dst_path="$INSTALL_DIR/${DEST_NAMES[$i]}"
         if [ -f "$dst_path" ]; then
             rm "$dst_path"
-            echo -e "${GREEN}✓${NC} Removed $display_name"
+            echo -e "  ${GREEN}✓${NC} Removed ${DEST_NAMES[$i]}"
         fi
     done
 
-    # Remove README.md if it's the CommitCraft version
-    if [ -f ~/.claude/README.md ]; then
-        if grep -q "AppletScriptorium/CommitCraft" ~/.claude/README.md 2>/dev/null; then
-            rm ~/.claude/README.md
-            echo -e "${GREEN}✓${NC} Removed README.md"
+    # Remove empty subdirectories (use ls -A to catch dotfiles)
+    for subdir in "templates" "workflows"; do
+        local dir="$INSTALL_DIR/$subdir"
+        if [ -d "$dir" ] && [ -z "$(ls -A "$dir")" ]; then
+            rmdir "$dir"
+            echo -e "  ${GREEN}✓${NC} Removed empty $subdir/"
         fi
+    done
+
+    # Remove install dir only if empty
+    if [ -d "$INSTALL_DIR" ] && [ -z "$(ls -A "$INSTALL_DIR")" ]; then
+        rmdir "$INSTALL_DIR"
+        echo -e "  ${GREEN}✓${NC} Removed commitcraft/ directory"
     fi
 
-    # Clean up empty directories
-    if [ -d ~/.claude/scripts ] && [ -z "$(ls -A ~/.claude/scripts)" ]; then
-        rmdir ~/.claude/scripts
-        echo -e "${GREEN}✓${NC} Removed empty scripts/ directory"
+    # Remove git template hook (legacy cleanup)
+    if [ -f "$HOME/.git-templates/hooks/post-checkout" ]; then
+        rm "$HOME/.git-templates/hooks/post-checkout"
+        echo -e "  ${GREEN}✓${NC} Removed git template hook"
     fi
-
-    if [ -d ~/.claude/commands ] && [ -z "$(ls -A ~/.claude/commands)" ]; then
-        rmdir ~/.claude/commands
-        echo -e "${GREEN}✓${NC} Removed empty commands/ directory"
-    fi
-
-    # Only remove ~/.claude/ if it's completely empty (no other tools installed)
-    if [ -d ~/.claude ] && [ -z "$(ls -A ~/.claude)" ]; then
-        rmdir ~/.claude
-        echo -e "${GREEN}✓${NC} Removed empty ~/.claude/ directory"
-    fi
-
-    # Remove git template hook
-    if [ -f ~/.git-templates/hooks/post-checkout ]; then
-        rm ~/.git-templates/hooks/post-checkout
-        echo -e "${GREEN}✓${NC} Removed post-checkout hook"
-    fi
-
-    # Remove git config
     if git config --global --get init.templatedir >/dev/null 2>&1; then
         git config --global --unset init.templatedir
-        echo -e "${GREEN}✓${NC} Removed git config"
+        echo -e "  ${GREEN}✓${NC} Removed git templatedir config"
     fi
-
-    # Remove shell aliases
-    for rc in ~/.zshrc ~/.bashrc; do
-        if [ -f "$rc" ] && grep -q "alias commitcraft-init=" "$rc" 2>/dev/null; then
-            sed -i.bak '/# CommitCraft alias/d' "$rc"
-            sed -i.bak '/alias commitcraft-init=/d' "$rc"
-            echo -e "${GREEN}✓${NC} Removed alias from $rc"
-        fi
-    done
 
     echo ""
     echo -e "${GREEN}✓${NC} Uninstall complete"
@@ -437,7 +543,25 @@ main() {
                 show_not_installed
                 read -p "Choice: " choice
                 case "$choice" in
-                    1) install_or_update false ;;
+                    1)
+                        cleanup_legacy  # no-op if nothing found
+                        install_or_update false
+                        ;;
+                    2|q|Q) exit 0 ;;
+                    *) echo "Invalid choice" ; sleep 1 ;;
+                esac
+                ;;
+
+            legacy_detected)
+                show_legacy_detected
+                read -p "Choice: " choice
+                case "$choice" in
+                    1)
+                        echo ""
+                        echo "Cleaning up legacy files..."
+                        cleanup_legacy
+                        install_or_update false
+                        ;;
                     2|q|Q) exit 0 ;;
                     *) echo "Invalid choice" ; sleep 1 ;;
                 esac
@@ -448,10 +572,11 @@ main() {
                 read -p "Choice: " choice
                 case "$choice" in
                     1) install_or_update false ;;
-                    2) show_diffs ;;
-                    3) install_or_update true ;;
-                    4) uninstall ;;
-                    5|q|Q) exit 0 ;;
+                    2) show_file_details ; read -p "Press Enter to continue..." ;;
+                    3) show_diffs ;;
+                    4) install_or_update true ;;
+                    5) uninstall ;;
+                    6|q|Q) exit 0 ;;
                     *) echo "Invalid choice" ; sleep 1 ;;
                 esac
                 ;;

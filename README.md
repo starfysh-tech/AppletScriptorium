@@ -66,9 +66,9 @@ hal --path Sources
 ---
 
 ### CommitCraft (🟡 10 minutes)
-Development workflow enhancement toolkit. Automated git commits and releases with AI assistance.
+Development workflow toolkit for Claude Code. AI-generated conventional commits, GitHub issue validation, PR creation, and release guidance across 6 workflows.
 
-**Use case:** Automate commits and releases with security checks, conventional format, and auto-generated release notes.
+**Use case:** Automate commits, PRs, and releases with security checks, conventional format, issue tracking, and AI-generated descriptions.
 
 **Get started:** One-time global install, works in all repositories:
 ```bash
@@ -121,8 +121,8 @@ cd CommitCraft
 
 # Use in any git repository
 cd ~/your-project
-/commitcraft-push      # AI-assisted commits with security scanning
-/commitcraft-release   # Automated semantic versioning
+/commitcraft push      # AI-generated commit + push with issue tracking
+/commitcraft release   # Semantic version guidance and release workflow
 ```
 
 **Next:** Read [CommitCraft/README.md](./CommitCraft/) for full command documentation.
@@ -181,18 +181,15 @@ Requires LM Studio + Mail.app + SMTP setup.
 │   ├── Tests/                    # Test suite
 │   ├── Package.swift             # Swift package manifest
 │   └── README.md                 # Usage documentation
-├── CommitCraft/                  # Development workflow enhancement toolkit
-│   ├── commitcraft-analyze.sh    # Pre-commit analysis script
-│   ├── commitcraft-release-analyze.sh  # Release version analysis
-│   ├── commitcraft-push.md       # Automated commit command
-│   ├── commitcraft-release.md    # Automated release command
+├── CommitCraft/                  # Development workflow toolkit (Claude Code skill)
+│   ├── SKILL.md                  # Skill definition — routes /commitcraft <arg>
 │   ├── commitcraft-install.sh    # Global installer with TUI
-│   ├── shell-aliases             # Optional shell convenience aliases
-│   ├── README.md                 # Setup and usage guide
-│   └── docs/                     # Detailed documentation
-│       ├── commitcraft-push.md   # Commit command user guide
-│       ├── commitcraft-release.md # Release command user guide
-│       └── adding-tools.md       # Extension guide
+│   ├── commitcraft-setup.sh      # Interactive tooling setup + --check mode
+│   ├── commitcraft-issues.sh     # Branch-based GitHub issue validation
+│   ├── commitcraft-release-analyze.sh  # Semantic version analysis
+│   ├── workflows/                # 6 workflow files (commit, push, pr, release, setup, check)
+│   ├── templates/                # 7 config templates (commitlint, gitleaks, pre-commit, CI)
+│   └── README.md                 # Setup and usage guide
 └── README.md                     # This file
 ```
 
@@ -215,8 +212,8 @@ python3 ExtensionAuditor/extension-auditor.py --help
 # SegmentSalmon - Help and validation
 SegmentSalmon/segment-salmon --help
 
-# CommitCraft - Test analysis script
-~/.claude/scripts/commitcraft-analyze.sh
+# CommitCraft - Validate tooling configuration
+~/.claude/skills/commitcraft/commitcraft-setup.sh --check
 ```
 
 ---

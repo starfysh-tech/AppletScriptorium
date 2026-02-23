@@ -1,0 +1,36 @@
+# Gitleaks configuration for CommitCraft
+# https://github.com/gitleaks/gitleaks
+
+title = "gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for common false positives"
+paths = [
+  '''node_modules/''',
+  '''vendor/''',
+  '''.venv/''',
+  '''venv/''',
+  '''\.git/''',
+  '''\.gitignore$''',
+  '''package-lock\.json$''',
+  '''yarn\.lock$''',
+  '''pnpm-lock\.yaml$''',
+  '''poetry\.lock$''',
+  '''Cargo\.lock$''',
+  '''go\.sum$'''
+]
+
+regexes = [
+  '''example\.com''',
+  '''localhost''',
+  '''127\.0\.0\.1''',
+  '''0\.0\.0\.0''',
+  '''YOUR_API_KEY''',
+  '''INSERT.*HERE''',
+  '''REPLACE.*WITH''',
+  '''TODO''',
+  '''FIXME'''
+]
