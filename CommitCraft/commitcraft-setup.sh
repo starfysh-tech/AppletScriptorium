@@ -152,6 +152,26 @@ detect_environment() {
         ECOSYSTEMS+=("go")
     fi
 
+    # Detect Rust
+    if [[ -f "Cargo.toml" ]]; then
+        ECOSYSTEMS+=("rust")
+    fi
+
+    # Detect Ruby
+    if [[ -f "Gemfile" ]]; then
+        ECOSYSTEMS+=("ruby")
+    fi
+
+    # Detect Java
+    if [[ -f "pom.xml" ]] || [[ -f "build.gradle" ]] || [[ -f "build.gradle.kts" ]]; then
+        ECOSYSTEMS+=("java")
+    fi
+
+    # Detect Swift
+    if [[ -f "Package.swift" ]]; then
+        ECOSYSTEMS+=("swift")
+    fi
+
     # Fallback to generic
     if [[ ${#ECOSYSTEMS[@]} -eq 0 ]]; then
         ECOSYSTEMS=("generic")
@@ -213,6 +233,14 @@ check_commitlint() {
         fi
     fi
 
+    # Check for tool (global CLI — go, generic, rust, etc.)
+    if [[ "$has_tool" == "false" ]]; then
+        if command -v commitlint &>/dev/null; then
+            has_tool=true
+            cli_version=$(safe_timeout 5 commitlint --version | head -n1)
+        fi
+    fi
+
     # Build detail string
     if [[ "$has_config" == "true" ]] && [[ "$has_tool" == "true" ]]; then
         STATE_commitlint="CONFIGURED"
@@ -230,12 +258,20 @@ check_commitlint() {
             detail_parts+=("config: $config_file found")
         fi
         if [[ "$has_tool" == "false" ]]; then
-            detail_parts+=("@commitlint/cli not in package.json")
+            if [[ " ${ECOSYSTEMS[*]} " =~ " node " ]]; then
+                detail_parts+=("@commitlint/cli not in package.json")
+            else
+                detail_parts+=("commitlint CLI not found locally (CI enforcement still works)")
+            fi
         fi
         DETAIL_commitlint="${detail_parts[*]}"
     else
         STATE_commitlint="MISSING"
-        DETAIL_commitlint="no config file found, @commitlint/cli not in package.json"
+        if [[ " ${ECOSYSTEMS[*]} " =~ " node " ]]; then
+            DETAIL_commitlint="no config file found, @commitlint/cli not in package.json"
+        else
+            DETAIL_commitlint="no config file found, commitlint CLI not installed"
+        fi
     fi
 }
 
@@ -733,7 +769,8 @@ setup_commitlint() {
         log_info "Generic ecosystem - setting up config file only..."
         cp "$TEMPLATES_DIR/.commitlintrc.yml" "$REPO_ROOT/"
         log_success "Created .commitlintrc.yml"
-        log_warn "Enforcement will be via CI only (no local hooks)"
+        log_warn "Local enforcement requires commitlint CLI (npm i -g @commitlint/cli)"
+        log_info "CI enforcement works automatically — the workflow installs commitlint via npm"
     fi
 
     STATE_commitlint="CONFIGURED"
@@ -820,6 +857,20 @@ setup_gitleaks() {
         echo 'gitleaks protect --staged --verbose' >> .husky/pre-commit
         chmod +x .husky/pre-commit
         log_success "Added gitleaks to husky pre-commit hook"
+    elif [[ "$HOOK_MANAGER" == "pre-commit" ]]; then
+        if [[ -f ".pre-commit-config.yaml" ]]; then
+            if grep -q "gitleaks" ".pre-commit-config.yaml" 2>/dev/null; then
+                log_success "gitleaks already in .pre-commit-config.yaml"
+            else
+                log_warn "gitleaks not in .pre-commit-config.yaml — add manually:"
+                echo "  - repo: https://github.com/gitleaks/gitleaks"
+                echo "    rev: v8.30.0"
+                echo "    hooks:"
+                echo "      - id: gitleaks"
+            fi
+        else
+            log_warn "No .pre-commit-config.yaml found — run /commitcraft setup first"
+        fi
     fi
 
     # Create GitHub Actions CI workflow
@@ -1011,15 +1062,17 @@ setup_release_please() {
         release_type="python"
     elif [[ " ${ECOSYSTEMS[*]} " =~ " go " ]]; then
         release_type="go"
+    elif [[ " ${ECOSYSTEMS[*]} " =~ " rust " ]]; then
+        release_type="rust"
     fi
 
     echo "Detected release type: $release_type"
-    read -rp "Press Enter to use '$release_type', or enter type [node/python/go/simple]: " user_type
+    read -rp "Press Enter to use '$release_type', or enter type [node/python/go/rust/simple]: " user_type
 
     # Validate release type input
     if [[ -n "$user_type" ]]; then
         case "$user_type" in
-            node|python|go|simple)
+            node|python|go|rust|simple)
                 release_type="$user_type"
                 ;;
             *)

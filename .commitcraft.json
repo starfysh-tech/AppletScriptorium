@@ -1,0 +1,15 @@
+{
+  "version": "2.0.0",
+  "configured_at": "2026-02-23T18:32:11Z",
+  "ecosystems": ["generic"],
+  "hook_manager": "pre-commit",
+  "components": {
+    "commitlint": "CONFIGURED",
+    "gitleaks": "CONFIGURED",
+    "precommit_hooks": "CONFIGURED",
+    "signed_commits": "CONFIGURED",
+    "release_please": "CONFIGURED",
+    "commitlint_ci": "CONFIGURED",
+    "branch_protection": "CONFIGURED"
+  }
+}
