@@ -5,6 +5,14 @@ All notable changes to AppletScriptorium will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.0](https://github.com/starfysh-tech/AppletScriptorium/compare/v5.0.0...v5.1.0) (2026-02-23)
+
+
+### Features
+
+* **commitcraft:** add gitleaks GitHub Actions CI workflow setup ([65f2596](https://github.com/starfysh-tech/AppletScriptorium/commit/65f2596c24f4037ded289ed4827c290daeb64e7e))
+* **commitcraft:** multi-ecosystem support ([#4](https://github.com/starfysh-tech/AppletScriptorium/issues/4)) ([96807f2](https://github.com/starfysh-tech/AppletScriptorium/commit/96807f2894b69c9071ea9cdfc9da7c862d364729))
+
 ## [Unreleased]
 
 ## [5.0.0] - 2026-02-23
