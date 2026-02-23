@@ -1,336 +1,146 @@
-# CommitCraft
+# CommitCraft v5
 
-Development workflow enhancement toolkit. Provides git commit analysis with security scanning, conventional format enforcement, and automated release management.
-
-## Overview
-
-CommitCraft provides tools that enhance your development workflow across all repositories:
-
-- **Commit Analysis** - Security scanning, large file detection, sync checking
-- **Automated Commits** - AI-assisted commit messages with conventional format
-- **Release Automation** - Semantic versioning with auto-generated release notes
-
-**Key benefits:**
-
-- Single-step global setup works in all repositories
-- No per-repo configuration needed
-- Commands available immediately after installation
-- Scripts stay in `~/.claude/` - no local copies to maintain
+AI-powered git workflow toolkit for Claude Code. Handles conventional commits, issue validation, PR creation, and release guidance — through a single skill with 6 workflows.
 
 ## Quick Start
 
 ```bash
-# Clone this repository
-git clone https://github.com/starfysh-tech/AppletScriptorium.git
-cd AppletScriptorium/CommitCraft
+# One-time global install
+cd CommitCraft && ./commitcraft-install.sh
 
-# Run the installer
-./commitcraft-install.sh
+# Invoke in any git repo via Claude Code
+/commitcraft commit    # AI-generated conventional commit
+/commitcraft push      # Commit + push with issue tracking
+/commitcraft pr        # Create PR with AI-generated description
+/commitcraft release   # Semantic version bump and release guidance
+/commitcraft setup     # Interactive tooling configuration
+/commitcraft check     # Validate current configuration
 ```
 
-**The installer automatically detects your current state:**
-- **Not installed:** Offers to install tools to `~/.claude/`
-- **Updates available:** Shows what changed, offers to update
-- **Up to date:** Confirms all files current
+## Workflows
 
-Uses content hashing (MD5) for accurate change detection—works reliably after `git pull`.
+| Workflow | Description |
+|---|---|
+| `commit` | Stages files individually, generates conventional commit message, handles pre-commit hooks |
+| `push` | Full commit + push with issue validation, branch tracking, and post-push issue comments |
+| `pr` | Creates PR with AI-generated description, issue linking, draft support |
+| `release` | Guides semantic versioning via release-please (if configured) or manual tag workflow |
+| `setup` | Interactive 7-component tooling setup (commitlint, gitleaks, pre-commit, signing, release-please, CI, branch protection) |
+| `check` | Validates installed tooling and reports configuration status |
 
-After setup, CommitCraft commands work immediately in any git repository.
+## Skill Architecture
 
-## How It Works
+CommitCraft is implemented as a Claude Code skill:
 
-CommitCraft uses a simple 2-tier architecture:
+```
+~/.claude/skills/commitcraft/
+├── SKILL.md                    # Skill definition — routes /commitcraft <arg> to workflow
+├── commitcraft-setup.sh        # Interactive tooling setup + --check mode
+├── commitcraft-issues.sh       # Branch-based GitHub issue validation
+├── commitcraft-release-analyze.sh  # Semantic version analysis (fallback release)
+├── workflows/
+│   ├── commit.md               # Commit workflow (phases 1–6)
+│   ├── push.md                 # Push workflow (phases 1–8)
+│   ├── pr.md                   # PR creation workflow (phases 0–7)
+│   ├── release.md              # Release workflow (steps 1–2)
+│   ├── setup.md                # Setup workflow
+│   └── check.md                # Check workflow
+└── templates/
+    ├── commitlint.config.js    # Conventional commit rules
+    ├── .commitlintrc.yml       # commitlint config
+    ├── .gitleaks.toml          # Secret scanning rules
+    ├── .pre-commit-config.yaml # Pre-commit hook config
+    ├── commitlint-ci.yml       # GitHub Actions: commit linting
+    ├── release-please.yml      # GitHub Actions: release-please
+    └── release-please-config.json  # release-please manifest
+```
 
-**1. Global Tools (~/.claude/)**
-- Scripts installed to `~/.claude/scripts/`
-- Commands installed to `~/.claude/commands/`
-- Works in all repositories automatically
+`SKILL.md` routes `/commitcraft <argument>` by reading the corresponding `workflows/<argument>.md` file. The skill runs in a fork context using the Haiku model, keeping the main conversation context clean.
 
-**2. Commands Reference Scripts**
-- Commands like `/commitcraft-push` run scripts from `~/.claude/scripts/`
-- No local installation or configuration needed
-- Works in any directory
+## Behavioral Conventions
 
-**Flow:**
+- **No `git add -A`** — each file is staged individually (`git add <file>`)
+- **No emoji prefixes** in commit messages
+- **No attribution footers** (no Co-Authored-By or similar)
+- **Never `--no-verify`** — hook failures are hard stops, not bypasses
+- **Branch from main** — commit workflow auto-creates feature branches when on main
 
-1. Run `./commitcraft-install.sh` once (copies files to `~/.claude/`)
-2. Commands immediately available in Claude Code (any repo)
-3. Scripts run from global location using current working directory
+## Supporting Scripts
 
-## Available Tools
+### `commitcraft-setup.sh`
+Interactive setup for 7 tooling components. Installs and configures them per-repository.
 
-### /commitcraft-push Command
-
-**Brief:** Automated git commit workflow with security scanning and AI-assisted messaging.
-
-**What it does:**
-1. Runs `commitcraft-analyze.sh` for context (security, diffs, sync status)
-2. Checks for blockers (secrets, behind remote, conflicts)
-3. Auto-stages all changes
-4. Generates conventional commit message with Claude
-5. Auto-commits with attribution
-6. Auto-pushes to origin
-
-**Blockers (stops only for these):**
-- 🛑 Potential secrets detected
-- 🛑 Branch behind remote (need pull first)
-- 🛑 Merge conflicts present
-- 🛑 Large files (>1000 lines changed)
-
-**Otherwise fully automated** - no user interaction needed.
-
-**Detailed documentation:** See [docs/commitcraft-push.md](docs/commitcraft-push.md)
-
----
-
-### /commitcraft-release Command
-
-**Brief:** Automated semantic versioning and GitHub release creation.
-
-**What it does:**
-1. Runs `commitcraft-release-analyze.sh` for version analysis
-2. Checks for blockers (dirty tree, no gh CLI, no commits)
-3. Auto-detects version bump from conventional commits
-4. Generates structured release notes
-5. Creates git tag
-6. Pushes tag to origin
-7. Creates GitHub release
-
-**Version bump rules:**
-- **BREAKING CHANGE** in commits → major (v2.0.0 → v3.0.0)
-- **feat:** commits → minor (v2.0.0 → v2.1.0)
-- **fix:** commits → patch (v2.0.0 → v2.0.1)
-
-**Blockers (stops only for these):**
-- 🛑 Uncommitted changes
-- 🛑 GitHub CLI not installed/authenticated
-- 🛑 No commits since last release
-
-**Otherwise fully automated** - no user interaction needed.
-
----
-
-### commitcraft-analyze.sh Script
-
-**Brief:** Pre-commit analysis for security and quality checks.
-
-**What it does:**
-- Scans for potential secrets (API keys, passwords, tokens)
-- Detects large file changes (>1000 lines)
-- Checks sync status with remote
-- Surfaces TODO/FIXME markers in changes
-- Provides context for AI commit message generation
-
-**Usage:**
 ```bash
-# Via alias (if configured)
-git-analyze
+# Full interactive setup
+~/.claude/skills/commitcraft/commitcraft-setup.sh
 
-# Or directly
-~/.claude/scripts/commitcraft-analyze.sh
+# Check-only mode (used by workflows)
+~/.claude/skills/commitcraft/commitcraft-setup.sh --check
+
+# Configure specific section
+~/.claude/skills/commitcraft/commitcraft-setup.sh --section signing
 ```
 
-**Used by:** `/commitcraft-push` command
+### `commitcraft-issues.sh`
+Validates current branch against GitHub issues. Reads issue number from branch name (e.g., `feat/my-feature-305` → issue #305), checks labels and completion status.
 
----
-
-### commitcraft-release-analyze.sh Script
-
-**Brief:** Release analysis for semantic versioning.
-
-**What it does:**
-- Validates gh CLI availability and authentication
-- Checks for clean working tree
-- Parses latest semver tag
-- Categorizes commits by type (breaking/feat/fix/docs)
-- Calculates version bump
-- Displays structured analysis
-
-**Usage:**
 ```bash
-~/.claude/scripts/commitcraft-release-analyze.sh
+~/.claude/skills/commitcraft/commitcraft-issues.sh
+# Outputs: OK | BLOCKED | INCOMPLETE | NOT_FOUND | NO_ISSUE | ERROR
 ```
 
-**Used by:** `/commitcraft-release` command
+### `commitcraft-release-analyze.sh`
+Analyzes git log for conventional commits to determine semantic version bump. Used as fallback when release-please is not configured.
+
+```bash
+~/.claude/skills/commitcraft/commitcraft-release-analyze.sh
+```
 
 ## Installation Details
 
-### What Gets Installed
-
-```
-~/.claude/
-├── scripts/
-│   ├── commitcraft-analyze.sh
-│   └── commitcraft-release-analyze.sh
-└── commands/
-    ├── commitcraft-push.md
-    └── commitcraft-release.md
-```
-
-### Shell Aliases (Optional)
-
-Add to your `~/.zshrc` or `~/.bashrc`:
-
 ```bash
-# Run global setup
-alias claude-setup='~/Code/AppletScriptorium/CommitCraft/commitcraft-install.sh'
-
-# Run pre-commit analysis
-alias git-analyze='~/.claude/scripts/commitcraft-analyze.sh'
+cd CommitCraft && ./commitcraft-install.sh
 ```
 
-See [shell-aliases](shell-aliases) for complete set of convenience aliases.
+The installer:
+- Detects state: not installed, legacy v4.x found, updates available, or up to date
+- Cleans up legacy v4.x files (`~/.claude/scripts/commitcraft-*`, `~/.claude/commands/commitcraft-*`) automatically
+- Installs 17 files to `~/.claude/skills/commitcraft/` preserving subdirectory structure
+- Uses MD5 hashing for accurate change detection (not timestamps)
+- Grouped TUI display: SKILL.md + scripts (3) + workflows (6) + templates (7)
+- File-by-file uninstall (no `rm -rf`)
 
-## Using Commands
+## Migration from v4.x
 
-### In Any Repository
+| v4.x | v5.0 |
+|---|---|
+| `/commitcraft-push` | `/commitcraft push` |
+| `/commitcraft-release` | `/commitcraft release` |
+| `~/.claude/scripts/commitcraft-analyze.sh` | `~/.claude/skills/commitcraft/commitcraft-setup.sh --check` |
+| `~/.claude/commands/commitcraft-push.md` | `~/.claude/skills/commitcraft/workflows/push.md` |
+| `~/.claude/commands/commitcraft-release.md` | `~/.claude/skills/commitcraft/workflows/release.md` |
+| Install: `~/.claude/scripts/` + `commands/` | Install: `~/.claude/skills/commitcraft/` |
 
-```bash
-cd any-project
-
-# Use CommitCraft commands immediately
-/commitcraft-push
-/commitcraft-release
-
-# Or run scripts directly
-~/.claude/scripts/commitcraft-analyze.sh
-```
-
-**No per-repo setup needed.** Commands work in any git repository after global installation.
-
-## Updating
-
-### Update Global Toolkit
-
-```bash
-cd AppletScriptorium/CommitCraft
-git pull
-
-# Re-run installer - shows what changed
-./commitcraft-install.sh
-```
-
-The installer uses content hashing to detect changes and shows exactly which files have updates available.
-
-### No Per-Repo Updates Needed
-
-Since commands reference `~/.claude/scripts/` directly, all repositories use the latest versions automatically after updating global installation.
-
-## Adding New Tools
-
-This system is designed for extension. To add new tools:
-
-**Steps:**
-
-1. Create script in `CommitCraft/` (e.g., `my-tool.sh`)
-2. Create command in `CommitCraft/` (e.g., `my-command.md`)
-3. Update `SOURCE_FILES` array in `commitcraft-install.sh`:
-   ```bash
-   declare -A SOURCE_FILES=(
-       # ... existing files ...
-       ["~/.claude/scripts/my-tool.sh"]="my-tool.sh"
-       ["~/.claude/commands/my-command.md"]="my-command.md"
-   )
-   ```
-4. Run `./commitcraft-install.sh` to propagate to `~/.claude/`
-5. Command immediately available in all repos
-
-**Command pattern:**
-```bash
-# Commands should reference global scripts
-~/.claude/scripts/my-tool.sh
-```
-
-**Detailed documentation:** See [docs/adding-tools.md](docs/adding-tools.md)
+**To migrate:** Re-run `./commitcraft-install.sh`. The installer detects and removes old files automatically.
 
 ## Troubleshooting
 
-### Commands Not Found
+**Skill not found after install**
+- Verify: `ls ~/.claude/skills/commitcraft/SKILL.md`
+- If missing, re-run installer
 
-**Symptom:** `/commitcraft-push` not recognized in Claude Code
+**`/commitcraft <workflow>` does nothing**
+- The skill routes via `$ARGUMENTS` — use lowercase: `commit`, `push`, `pr`, `release`, `setup`, `check`
+- If argument is misspelled, skill falls back to `commit` workflow
 
-**Fixes:**
+**`commitcraft-setup.sh --check` fails**
+- Some tools are optional (commitlint, gitleaks, pre-commit)
+- Workflows continue even without full tooling — missing checks are skipped
 
-```bash
-# Verify commands installed globally
-ls -la ~/.claude/commands/
+**Legacy files still present**
+- Run installer — it detects and removes them
+- Or manually: `rm ~/.claude/scripts/commitcraft-* ~/.claude/commands/commitcraft-*`
 
-# Should see: commitcraft-push.md, commitcraft-release.md
-
-# Re-run installer if missing
-cd AppletScriptorium/CommitCraft
-./commitcraft-install.sh
-```
-
-### Scripts Not Found
-
-**Symptom:** Command fails with "script not found" error
-
-**Fixes:**
-
-```bash
-# Verify scripts installed globally
-ls -la ~/.claude/scripts/
-
-# Should see: commitcraft-analyze.sh, commitcraft-release-analyze.sh
-
-# Verify permissions
-chmod +x ~/.claude/scripts/*
-
-# Re-run installer if needed
-cd AppletScriptorium/CommitCraft
-./commitcraft-install.sh
-```
-
-### Shell Alias Not Working
-
-**Symptom:** `git-analyze` command not found
-
-**Cause:** Shell aliases are optional
-
-**Fixes:**
-
-```bash
-# Option 1: Add alias manually
-echo "alias git-analyze='~/.claude/scripts/commitcraft-analyze.sh'" >> ~/.zshrc
-source ~/.zshrc
-
-# Option 2: Use full path (no alias needed)
-~/.claude/scripts/commitcraft-analyze.sh
-
-# Option 3: Add to PATH
-echo 'export PATH="$HOME/.claude/scripts:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-### Uninstall
-
-**Remove global tools:**
-
-```bash
-# Remove all CommitCraft files
-rm -rf ~/.claude
-
-# Verify removal
-ls -la ~/.claude
-```
-
-**Clean reinstall:**
-
-```bash
-# Uninstall (step above)
-# Then re-run setup
-cd AppletScriptorium/CommitCraft
-./commitcraft-install.sh
-```
-
-## Philosophy
-
-This system prioritizes simplicity:
-
-- **Single setup** - Install once, use everywhere
-- **No per-repo config** - Works in any repository immediately
-- **Transparent** - Plain shell scripts, no magic
-- **Updateable** - One command updates all repositories
-
-The goal is to provide useful development tools without complexity or maintenance burden.
+**`gh` not authenticated**
+- Issue validation and PR creation require `gh auth login`
+- Workflows degrade gracefully: issue steps are skipped, PR creation fails with clear error

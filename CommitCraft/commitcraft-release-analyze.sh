@@ -5,42 +5,27 @@
 
 set -euo pipefail
 
-# Detect repository directory
-# Priority: 1) First parameter if it's a directory, 2) Env var, 3) Current directory
-REPO_DIR=""
-if [ -n "${1:-}" ] && [ -d "$1" ]; then
-    REPO_DIR="$1"
-    shift
-elif [ -n "${CLAUDE_CODE_WORKING_DIR:-}" ]; then
-    REPO_DIR="$CLAUDE_CODE_WORKING_DIR"
-else
-    REPO_DIR="$PWD"
-fi
+echo "RELEASE_ANALYZE_START"
+echo "=== CommitCraft Release Analysis ==="
+echo ""
 
-# Validate we're in a git repo
-if ! git -C "$REPO_DIR" rev-parse --git-dir >/dev/null 2>&1; then
-    echo "Error: Not a git repository: $REPO_DIR" >&2
+# Check we're on main branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$CURRENT_BRANCH" != "main" ]; then
+    echo "✗ Not on main branch"
+    echo ""
+    echo "Current branch: $CURRENT_BRANCH"
+    echo "Releases must be created from the main branch"
+    echo ""
+    echo "Run: git checkout main"
     exit 1
 fi
 
-# Helper function for git commands
-git_cmd() {
-    git -C "$REPO_DIR" "$@"
-}
-
-# Color codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-echo -e "${BLUE}=== CommitCraft Release Analysis ===${NC}"
-echo ""
+echo "✓ On main branch"
 
 # Check for gh CLI
 if ! command -v gh &> /dev/null; then
-    echo -e "${RED}✗${NC} GitHub CLI (gh) not found"
+    echo "✗ GitHub CLI (gh) not found"
     echo ""
     echo "Install: brew install gh"
     echo "Then authenticate: gh auth login"
@@ -49,40 +34,45 @@ fi
 
 # Check gh authentication
 if ! gh auth status &> /dev/null; then
-    echo -e "${RED}✗${NC} GitHub CLI not authenticated"
+    echo "✗ GitHub CLI not authenticated"
     echo ""
     echo "Run: gh auth login"
     exit 1
 fi
 
 # Check for clean working tree
-if [ -n "$(git_cmd status --porcelain)" ]; then
-    echo -e "${RED}✗${NC} Working tree has uncommitted changes"
+if [ -n "$(git status --porcelain)" ]; then
+    echo "✗ Working tree has uncommitted changes"
     echo ""
     echo "Commit or stash changes before creating a release"
     exit 1
 fi
 
-echo -e "${GREEN}✓${NC} Working tree is clean"
-echo -e "${GREEN}✓${NC} GitHub CLI authenticated"
+echo "✓ Working tree is clean"
+echo "✓ GitHub CLI authenticated"
 echo ""
 
 # Get latest tag
-LATEST_TAG=$(git_cmd tag --sort=-v:refname | head -1)
+LATEST_TAG=$(git tag --sort=-v:refname | head -1)
 
 if [ -z "$LATEST_TAG" ]; then
-    echo -e "${YELLOW}⚠${NC}  No existing tags found"
+    echo "⚠  No existing tags found"
     echo ""
     echo "Suggested first version: v1.0.0"
-    echo "Commits in repository: $(git_cmd rev-list --count HEAD)"
+    echo "Commits in repository: $(git rev-list --count HEAD)"
+    echo "CURRENT_VERSION: none"
+    echo "NEW_VERSION: v1.0.0"
+    echo "BUMP_TYPE: initial"
+    echo "COMMIT_COUNT: $(git rev-list --count HEAD)"
+    echo "RELEASE_ANALYZE_END"
     exit 0
 fi
 
-echo "Current version: ${BLUE}${LATEST_TAG}${NC}"
+echo "Current version: ${LATEST_TAG}"
 
 # Parse current version (assumes vMAJOR.MINOR.PATCH format)
 if [[ ! $LATEST_TAG =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-    echo -e "${RED}✗${NC} Tag format not recognized (expected vMAJOR.MINOR.PATCH)"
+    echo "✗ Tag format not recognized (expected vMAJOR.MINOR.PATCH)"
     echo "Found: $LATEST_TAG"
     exit 1
 fi
@@ -92,13 +82,18 @@ MINOR="${BASH_REMATCH[2]}"
 PATCH="${BASH_REMATCH[3]}"
 
 # Get commits since last tag
-COMMITS_SINCE=$(git_cmd log ${LATEST_TAG}..HEAD --oneline)
+COMMITS_SINCE=$(git log ${LATEST_TAG}..HEAD --oneline)
 COMMIT_COUNT=$(echo "$COMMITS_SINCE" | grep -c ^ || echo 0)
 
 if [ "$COMMIT_COUNT" -eq 0 ]; then
-    echo -e "${YELLOW}⚠${NC}  No commits since ${LATEST_TAG}"
+    echo "⚠  No commits since ${LATEST_TAG}"
     echo ""
     echo "Nothing to release"
+    echo "CURRENT_VERSION: ${LATEST_TAG}"
+    echo "NEW_VERSION: ${LATEST_TAG}"
+    echo "BUMP_TYPE: none"
+    echo "COMMIT_COUNT: 0"
+    echo "RELEASE_ANALYZE_END"
     exit 1
 fi
 
@@ -114,31 +109,31 @@ OTHER_COUNT=0
 
 # Check for breaking changes (in commit body/footer)
 while IFS= read -r commit_hash; do
-    COMMIT_MSG=$(git_cmd log -1 --format=%B "$commit_hash")
+    COMMIT_MSG=$(git log -1 --format=%B "$commit_hash")
     if echo "$COMMIT_MSG" | grep -q "BREAKING CHANGE"; then
         ((BREAKING_COUNT++))
     fi
-done < <(git_cmd log ${LATEST_TAG}..HEAD --format=%H)
+done < <(git log ${LATEST_TAG}..HEAD --format=%H)
 
-# Count by commit type (from subject line)
-FEAT_COUNT=$(echo "$COMMITS_SINCE" | grep -c "feat" || echo 0)
-FIX_COUNT=$(echo "$COMMITS_SINCE" | grep -c "fix" || echo 0)
-DOCS_COUNT=$(echo "$COMMITS_SINCE" | grep -c "docs" || echo 0)
+# Count by commit type (from subject line) - precise conventional commit matching
+FEAT_COUNT=$(echo "$COMMITS_SINCE" | grep -cE '^[a-f0-9]+ feat(\(|:)' || true)
+FIX_COUNT=$(echo "$COMMITS_SINCE" | grep -cE '^[a-f0-9]+ fix(\(|:)' || true)
+DOCS_COUNT=$(echo "$COMMITS_SINCE" | grep -cE '^[a-f0-9]+ docs(\(|:)' || true)
 OTHER_COUNT=$((COMMIT_COUNT - FEAT_COUNT - FIX_COUNT - DOCS_COUNT))
 
 # Display categorization
 echo "Commit breakdown:"
 if [ "$BREAKING_COUNT" -gt 0 ]; then
-    echo -e "  🚨 Breaking changes: ${RED}${BREAKING_COUNT}${NC}"
+    echo "  Breaking changes: ${BREAKING_COUNT}"
 fi
 if [ "$FEAT_COUNT" -gt 0 ]; then
-    echo -e "  ✨ Features: ${GREEN}${FEAT_COUNT}${NC}"
+    echo "  Features: ${FEAT_COUNT}"
 fi
 if [ "$FIX_COUNT" -gt 0 ]; then
-    echo -e "  🐛 Bug fixes: ${YELLOW}${FIX_COUNT}${NC}"
+    echo "  Bug fixes: ${FIX_COUNT}"
 fi
 if [ "$DOCS_COUNT" -gt 0 ]; then
-    echo -e "  📚 Documentation: ${BLUE}${DOCS_COUNT}${NC}"
+    echo "  Documentation: ${DOCS_COUNT}"
 fi
 if [ "$OTHER_COUNT" -gt 0 ]; then
     echo "  Other: ${OTHER_COUNT}"
@@ -171,16 +166,24 @@ fi
 
 NEW_VERSION="v${NEW_MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
 
-echo -e "Suggested bump: ${YELLOW}${BUMP_TYPE}${NC}"
-echo -e "New version: ${GREEN}${NEW_VERSION}${NC}"
+echo "Suggested bump: ${BUMP_TYPE}"
+echo "New version: ${NEW_VERSION}"
 echo ""
 
 # Show recent commits for context
 echo "Recent commits:"
-git_cmd log ${LATEST_TAG}..HEAD --oneline --no-decorate | head -10
+git log ${LATEST_TAG}..HEAD --oneline --no-decorate | head -10
 if [ "$COMMIT_COUNT" -gt 10 ]; then
     echo "... and $((COMMIT_COUNT - 10)) more"
 fi
 echo ""
 
-echo -e "${GREEN}✓${NC} Ready to create release"
+echo "✓ Ready to create release"
+echo ""
+
+# Parseable output
+echo "CURRENT_VERSION: ${LATEST_TAG}"
+echo "NEW_VERSION: ${NEW_VERSION}"
+echo "BUMP_TYPE: ${BUMP_TYPE}"
+echo "COMMIT_COUNT: ${COMMIT_COUNT}"
+echo "RELEASE_ANALYZE_END"
