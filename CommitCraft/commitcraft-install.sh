@@ -48,6 +48,7 @@ SRC_FILES=(
     "templates/commitlint-ci.yml"
     "templates/release-please-config.json"
     "templates/release-please.yml"
+    "templates/gitleaks.yml"
 )
 DEST_NAMES=(
     "SKILL.md"
@@ -67,6 +68,7 @@ DEST_NAMES=(
     "templates/commitlint-ci.yml"
     "templates/release-please-config.json"
     "templates/release-please.yml"
+    "templates/gitleaks.yml"
 )
 
 # Legacy files from v4.x (may exist on other users' machines)
@@ -263,9 +265,9 @@ show_file_status() {
     local wf_status=$(group_status 4 5 6 7 8 9)
     print_group_line "workflows/ (6)" "$wf_status"
 
-    # templates/ (7) — indices 10 11 12 13 14 15 16
-    local tmpl_status=$(group_status 10 11 12 13 14 15 16)
-    print_group_line "templates/ (7)" "$tmpl_status"
+    # templates/ (8) — indices 10 11 12 13 14 15 16 17
+    local tmpl_status=$(group_status 10 11 12 13 14 15 16 17)
+    print_group_line "templates/ (8)" "$tmpl_status"
 
     echo ""
 }
@@ -301,7 +303,7 @@ show_not_installed() {
     echo "  • SKILL.md (skill definition)"
     echo "  • scripts (3 — setup, issues, release-analyze)"
     echo "  • workflows/ (6 — commit, push, pr, release, setup, check)"
-    echo "  • templates/ (7 — commitlint, gitleaks, pre-commit, CI)"
+    echo "  • templates/ (8 — commitlint, gitleaks, pre-commit, CI)"
     echo ""
     echo "Invocation: /commitcraft [commit|push|pr|release|setup|check]"
     echo ""

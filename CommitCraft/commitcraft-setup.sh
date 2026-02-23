@@ -244,6 +244,7 @@ check_gitleaks() {
     local has_config=false
     local gitleaks_version=""
     local hook_integration=false
+    local has_ci_workflow=false
     local detail_parts=()
 
     if command -v gitleaks &>/dev/null; then
@@ -264,6 +265,11 @@ check_gitleaks() {
         hook_integration=true
     fi
 
+    # Check CI workflow
+    if [[ -f ".github/workflows/gitleaks.yml" ]]; then
+        has_ci_workflow=true
+    fi
+
     # Build detail string
     if [[ "$has_binary" == "true" ]] && [[ "$has_config" == "true" ]]; then
         STATE_gitleaks="CONFIGURED"
@@ -273,6 +279,11 @@ check_gitleaks() {
         detail_parts+=("config: .gitleaks.toml")
         if [[ "$hook_integration" == "true" ]]; then
             detail_parts+=("pre-commit hook")
+        fi
+        if [[ "$has_ci_workflow" == "true" ]]; then
+            detail_parts+=("CI workflow")
+        else
+            detail_parts+=("no CI workflow")
         fi
         DETAIL_gitleaks="${detail_parts[*]}"
     elif [[ "$has_binary" == "true" ]] || [[ "$has_config" == "true" ]]; then
@@ -732,6 +743,27 @@ setup_commitlint() {
 # Section 2: Security Scanning (gitleaks)
 # ============================================================================
 
+_setup_gitleaks_ci_workflow() {
+    mkdir -p .github/workflows
+    cp "$TEMPLATES_DIR/gitleaks.yml" "$REPO_ROOT/.github/workflows/gitleaks.yml"
+    log_success "Created .github/workflows/gitleaks.yml"
+
+    # Detect org vs personal to give accurate secret instructions
+    local owner_type=""
+    if command -v gh &>/dev/null; then
+        owner_type=$(gh repo view --json owner --jq '.owner.type' 2>/dev/null || echo "")
+    fi
+
+    if [[ "$owner_type" == "Organization" ]]; then
+        log_warn "Organization repo: GITLEAKS_LICENSE secret required"
+        echo "  → Settings → Secrets and variables → Actions → New organization secret"
+        echo "  → Name: GITLEAKS_LICENSE"
+        echo "  → Get license: https://gitleaks.io"
+    else
+        log_info "Personal repo: GITLEAKS_LICENSE not required"
+    fi
+}
+
 setup_gitleaks() {
     echo ""
     echo "=========================================="
@@ -740,7 +772,15 @@ setup_gitleaks() {
     echo ""
 
     if [[ "${STATE_gitleaks}" == "CONFIGURED" ]]; then
-        log_success "gitleaks already configured"
+        # Local scanning configured — check if CI workflow is also present
+        if [[ -f ".github/workflows/gitleaks.yml" ]]; then
+            log_success "gitleaks already configured"
+            return
+        fi
+        log_success "gitleaks local scanning configured"
+        if ask_yes_no "Set up gitleaks GitHub Actions CI workflow?" "y"; then
+            _setup_gitleaks_ci_workflow
+        fi
         return
     fi
 
@@ -781,6 +821,9 @@ setup_gitleaks() {
         chmod +x .husky/pre-commit
         log_success "Added gitleaks to husky pre-commit hook"
     fi
+
+    # Create GitHub Actions CI workflow
+    _setup_gitleaks_ci_workflow
 
     log_info "Recommendation: Enable GitHub push protection in repo settings"
 
