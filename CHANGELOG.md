@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [5.0.0] - 2026-02-23
 ### Added
 - **Summarizer:** add trafilatura extractor with shared quality module
 - **Summarizer:** multi-model eval system with corpus caching
@@ -198,7 +200,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AppleScript: process-pro-alert.scpt → process-alert.scpt
 - Config file: ~/.pro-alert-env → ~/.alert-env
 
-[unreleased]: https://github.com/starfysh-tech/AppletScriptorium/compare/v4.2.0...HEAD
+[unreleased]: https://github.com/starfysh-tech/AppletScriptorium/compare/v5.0.0...HEAD
+[5.0.0]: https://github.com/starfysh-tech/AppletScriptorium/compare/v4.2.0...v5.0.0
 [4.2.0]: https://github.com/starfysh-tech/AppletScriptorium/releases/tag/v4.2.0
 [4.1.0]: https://github.com/starfysh-tech/AppletScriptorium/compare/v4.0.1...v4.1.0
 [4.0.1]: https://github.com/starfysh-tech/AppletScriptorium/compare/v4.0.0...v4.0.1
