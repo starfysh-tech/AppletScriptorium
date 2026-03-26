@@ -64,9 +64,6 @@ Create PR description following this format:
 - [ ] Verification step 1
 - [ ] Verification step 2
 - [ ] Verification step 3
-
----
-Claude Code (<model>)
 ```
 
 **Style Guidelines:**
@@ -90,13 +87,28 @@ Generate conventional commit-style title from commits:
 
 ## Phase 5: Check for Linked Issue
 
-Look for issue references in commits:
+Run issue validation:
 
 ```bash
-git log main..HEAD --format=%B | grep -E "(Refs|Closes|Fixes) #[0-9]+"
+~/.claude/skills/commitcraft/commitcraft-issues.sh
 ```
 
-If issue found, prepare to link in PR body (add `Closes #<num>` to Summary if appropriate).
+Parse output and determine issue linkage:
+
+| STATUS | Action |
+|---|---|
+| `OK` | Propose `Closes #<num>` in PR Summary. For multiple issues, use `Closes #A, closes #B, closes #C` (keyword before EACH number — GitHub requires this). |
+| `INCOMPLETE` | Propose `Closes #<num>` with warning: "Issue has N unchecked acceptance criteria" |
+| `BLOCKED` | WARN — "Issue #X has blocking labels", fall through to ask |
+| `NOT_FOUND` | WARN — "Branch suggests #X but issue not found", fall through to ask |
+| `NO_ISSUE` | Fall through to ask |
+| `ERROR` | WARN — display error, fall through to ask |
+
+**For OK/INCOMPLETE:** Ask via `AskUserQuestion`:
+- "Link issue #<num> (<title>)?" → Closes #N / Refs #N / Skip
+
+**For all other statuses:** Ask via `AskUserQuestion`:
+- "Issue number to close with this PR? (or skip)" → User types number / Skip
 
 ## Phase 6: Create PR
 
@@ -115,16 +127,12 @@ gh pr create --title "<type>(<scope>): <summary>" --body "$(cat <<'EOF'
 
 ## Test plan
 - [ ] Step 1
-
----
-Claude Code (<model>)
 EOF
 )"
 ```
 
 Add flags:
 - `--draft` if user selected draft
-- `--web` to open in browser after creation
 
 Capture PR URL from output.
 

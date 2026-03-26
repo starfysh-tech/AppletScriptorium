@@ -52,8 +52,8 @@ echo "✓ Working tree is clean"
 echo "✓ GitHub CLI authenticated"
 echo ""
 
-# Get latest tag
-LATEST_TAG=$(git tag --sort=-v:refname | head -1)
+# Get latest v-prefixed semver tag (ignores bare numeric tags like 1.1.0)
+LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
 
 if [ -z "$LATEST_TAG" ]; then
     echo "⚠  No existing tags found"
@@ -81,9 +81,9 @@ MAJOR="${BASH_REMATCH[1]}"
 MINOR="${BASH_REMATCH[2]}"
 PATCH="${BASH_REMATCH[3]}"
 
-# Get commits since last tag
-COMMITS_SINCE=$(git log ${LATEST_TAG}..HEAD --oneline)
-COMMIT_COUNT=$(echo "$COMMITS_SINCE" | grep -c ^ || echo 0)
+# Get commits since last tag (exclude merge commits to avoid double-counting)
+COMMITS_SINCE=$(git log "${LATEST_TAG}..HEAD" --oneline --no-merges)
+COMMIT_COUNT=$(echo "$COMMITS_SINCE" | grep -c . || echo 0)
 
 if [ "$COMMIT_COUNT" -eq 0 ]; then
     echo "⚠  No commits since ${LATEST_TAG}"
@@ -94,7 +94,7 @@ if [ "$COMMIT_COUNT" -eq 0 ]; then
     echo "BUMP_TYPE: none"
     echo "COMMIT_COUNT: 0"
     echo "RELEASE_ANALYZE_END"
-    exit 1
+    exit 0
 fi
 
 echo "Commits since release: ${COMMIT_COUNT}"
@@ -107,19 +107,19 @@ FIX_COUNT=0
 DOCS_COUNT=0
 OTHER_COUNT=0
 
-# Check for breaking changes (in commit body/footer)
-while IFS= read -r commit_hash; do
-    COMMIT_MSG=$(git log -1 --format=%B "$commit_hash")
-    if echo "$COMMIT_MSG" | grep -q "BREAKING CHANGE"; then
-        ((BREAKING_COUNT++))
-    fi
-done < <(git log ${LATEST_TAG}..HEAD --format=%H)
+# Check for breaking changes in full commit bodies (single-pass)
+BREAKING_COUNT=$(git log "${LATEST_TAG}..HEAD" --no-merges --format=%B | grep -cE "BREAKING CHANGE|^[a-z]+!(\(|:)" || echo 0)
 
-# Count by commit type (from subject line) - precise conventional commit matching
-FEAT_COUNT=$(echo "$COMMITS_SINCE" | grep -cE '^[a-f0-9]+ feat(\(|:)' || true)
-FIX_COUNT=$(echo "$COMMITS_SINCE" | grep -cE '^[a-f0-9]+ fix(\(|:)' || true)
-DOCS_COUNT=$(echo "$COMMITS_SINCE" | grep -cE '^[a-f0-9]+ docs(\(|:)' || true)
-OTHER_COUNT=$((COMMIT_COUNT - FEAT_COUNT - FIX_COUNT - DOCS_COUNT))
+# Count by commit type (single awk pass over oneline output)
+read -r FEAT_COUNT FIX_COUNT DOCS_COUNT PERF_COUNT REVERT_COUNT <<< "$(echo "$COMMITS_SINCE" | awk '
+  /^[a-f0-9]+ feat(!?\(|!?:)/   {f++}
+  /^[a-f0-9]+ fix(!?\(|!?:)/    {x++}
+  /^[a-f0-9]+ docs(!?\(|!?:)/   {d++}
+  /^[a-f0-9]+ perf(!?\(|!?:)/   {p++}
+  /^[a-f0-9]+ revert(!?\(|!?:)/ {r++}
+  END {print f+0, x+0, d+0, p+0, r+0}
+')"
+OTHER_COUNT=$((COMMIT_COUNT - FEAT_COUNT - FIX_COUNT - DOCS_COUNT - PERF_COUNT - REVERT_COUNT))
 
 # Display categorization
 echo "Commit breakdown:"
@@ -134,6 +134,12 @@ if [ "$FIX_COUNT" -gt 0 ]; then
 fi
 if [ "$DOCS_COUNT" -gt 0 ]; then
     echo "  Documentation: ${DOCS_COUNT}"
+fi
+if [ "$PERF_COUNT" -gt 0 ]; then
+    echo "  Performance: ${PERF_COUNT}"
+fi
+if [ "$REVERT_COUNT" -gt 0 ]; then
+    echo "  Reverts: ${REVERT_COUNT}"
 fi
 if [ "$OTHER_COUNT" -gt 0 ]; then
     echo "  Other: ${OTHER_COUNT}"
@@ -151,13 +157,7 @@ elif [ "$FEAT_COUNT" -gt 0 ]; then
     NEW_MAJOR=$MAJOR
     NEW_MINOR=$((MINOR + 1))
     NEW_PATCH=0
-elif [ "$FIX_COUNT" -gt 0 ]; then
-    BUMP_TYPE="patch"
-    NEW_MAJOR=$MAJOR
-    NEW_MINOR=$MINOR
-    NEW_PATCH=$((PATCH + 1))
 else
-    # Default to patch for other changes
     BUMP_TYPE="patch"
     NEW_MAJOR=$MAJOR
     NEW_MINOR=$MINOR
@@ -172,7 +172,7 @@ echo ""
 
 # Show recent commits for context
 echo "Recent commits:"
-git log ${LATEST_TAG}..HEAD --oneline --no-decorate | head -10
+echo "$COMMITS_SINCE" | head -10
 if [ "$COMMIT_COUNT" -gt 10 ]; then
     echo "... and $((COMMIT_COUNT - 10)) more"
 fi
@@ -186,4 +186,11 @@ echo "CURRENT_VERSION: ${LATEST_TAG}"
 echo "NEW_VERSION: ${NEW_VERSION}"
 echo "BUMP_TYPE: ${BUMP_TYPE}"
 echo "COMMIT_COUNT: ${COMMIT_COUNT}"
+
+# Structured commit output (unit separator \x1f delimited)
+echo ""
+echo "COMMITS_START"
+git log "${LATEST_TAG}..HEAD" --format="%h$(printf '\x1f')%s" --no-merges
+echo "COMMITS_END"
+
 echo "RELEASE_ANALYZE_END"

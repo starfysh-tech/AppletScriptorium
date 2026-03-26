@@ -167,6 +167,7 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 
 ## Working Agreement
 
+- **Scope discipline**: Discoveries outside the current task go to `todo.md`, not into the code. Add a one-line description under the appropriate section (Backlog for ideas, Prioritized for approved work). Do not implement without approval.
 - Ship the simplest solution that works on local macOS
 - Avoid premature abstractions until multiple agents need them
 - Add logging, error handling, idempotency, and locking when relevant
