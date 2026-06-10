@@ -1,10 +1,8 @@
 ---
 name: commitcraft
-description: AI-powered conventional commits, issue validation, PR creation, and release guidance
+description: Generate conventional commits, validate linked issues, create PRs, and produce release notes for this project. Use when the user runs /commitcraft, says 'commit', 'commit my changes', 'open a PR', 'cut a release', 'write release notes', or has staged changes ready to land. Always use commitcraft for commits — never raw `git commit`. Subcommands: commit | push | pr | release | setup | check.
 argument-hint: [commit|push|pr|release|setup|check]
 allowed-tools: [Bash, Read, Write, Edit, ToolSearch, AskUserQuestion]
-context: fork
-model: haiku
 ---
 
 # CommitCraft

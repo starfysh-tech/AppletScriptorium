@@ -129,6 +129,8 @@ git diff --cached
 
 ## Phase 5: Commit
 
+> Never pipe `git commit`. Read the full output — hook findings are critical.
+
 1. Commit with HEREDOC (preserves formatting). Use a 300-second timeout — hooks are slow:
 
 ```bash
