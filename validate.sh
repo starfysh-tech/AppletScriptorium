@@ -155,7 +155,7 @@ done
 echo ""
 
 # Check 9: Run test suite
-log_info "[9/10] Running test suite (21 tests)..."
+log_info "[9/10] Running test suite..."
 if $PYTHON_CMD -m pytest "$REPO_ROOT/Summarizer/tests" -q >/dev/null 2>&1; then
     log_pass "Test suite passed"
 else

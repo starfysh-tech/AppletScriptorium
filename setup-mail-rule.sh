@@ -473,6 +473,6 @@ echo "  - Generate HTML digest"
 echo "  - Send email to: $USER_EMAIL"
 echo "  - Mark trigger email as read"
 echo ""
-echo "For detailed troubleshooting, see: Summarizer/MAIL_RULE_SETUP.md"
+echo "For detailed setup and troubleshooting, see: docs/SETUP.md and docs/TROUBLESHOOTING.md"
 echo ""
 

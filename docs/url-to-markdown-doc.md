@@ -43,9 +43,8 @@ npm install url-to-markdown-cli-tool
 ### From Source (Current)
 
 ```bash
-# Clone and install from this repository
-git clone https://github.com/yourusername/url-to-markdown-cli-tool.git
-cd url-to-markdown-cli-tool
+# From a local checkout of the url-to-markdown-cli-tool repository
+cd /path/to/url-to-markdown-cli-tool
 npm install
 npm install -g .
 ```

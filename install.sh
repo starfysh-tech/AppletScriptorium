@@ -140,7 +140,7 @@ log_success "Scripts made executable, runs/ directory created"
 echo ""
 
 # Step 6: Run tests
-log_info "Step 6/7: Running test suite (21 tests)..."
+log_info "Step 6/7: Running test suite..."
 if $PYTHON_CMD -m pytest "$REPO_ROOT/Summarizer/tests" -q; then
     log_success "All tests passed"
 else
@@ -170,7 +170,7 @@ echo "  4. Run manual test:"
 echo "     python3 -m Summarizer.cli run --output-dir runs/test --max-articles 3 --subject-filter 'Google Alert -'"
 echo ""
 echo "For complete documentation, see:"
-echo "  - SETUP.md (comprehensive setup guide)"
-echo "  - MAIL_RULE_SETUP.md (Mail automation)"
+echo "  - docs/SETUP.md (setup, Mail automation, verification)"
+echo "  - docs/TROUBLESHOOTING.md (common failures and fixes)"
 echo "  - README.md (quick start)"
 echo ""

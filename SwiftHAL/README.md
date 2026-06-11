@@ -48,8 +48,8 @@ The "Risk Score" is a **statistical estimate** of defect density based on code v
 ### Build from Source
 
 ```bash
-git clone <repository-url>
-cd SwiftHAL
+git clone https://github.com/starfysh-tech/AppletScriptorium.git
+cd AppletScriptorium/SwiftHAL
 swift build -c release
 cp .build/release/SwiftHAL /usr/local/bin/hal
 ```

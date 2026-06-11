@@ -97,7 +97,7 @@ No setup required. Instant results.
 
 ```bash
 cd ~/Code
-git clone https://github.com/yourusername/AppletScriptorium.git
+git clone https://github.com/starfysh-tech/AppletScriptorium.git
 cd AppletScriptorium
 
 # Run it

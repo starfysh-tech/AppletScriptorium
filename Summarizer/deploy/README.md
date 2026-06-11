@@ -1,11 +1,11 @@
 # Deployment Guide — Google Alert Intelligence
 
-This repository ships the tooling and scripts needed to capture Google Alerts (any topic), fetch the linked articles, summarize them with Ollama, and emit HTML/text digests.
+This repository ships the tooling and scripts needed to capture Google Alerts (any topic), fetch the linked articles, summarize them with LM Studio, and emit HTML/text digests with optional Ollama fallback.
 
 ## Deployment Options
 
 **Recommended: Mail Rule Automation (Event-Driven)**
-For real-time processing when Google Alerts arrive, see `../MAIL_RULE_SETUP.md` for complete Mail.app rule configuration. This provides immediate processing with no cron scheduling needed.
+For real-time processing when Google Alerts arrive, see [`../../docs/SETUP.md#mail-rule-automation`](../../docs/SETUP.md#mail-rule-automation) for complete Mail.app rule configuration. This provides immediate processing with no cron scheduling needed.
 
 **Alternative: Cron Scheduling (Time-Based)**
 To run the pipeline on a fixed schedule from your Mac, follow the steps below. This is useful for batch digest generation but lacks the real-time responsiveness of Mail rules.
@@ -14,11 +14,8 @@ To run the pipeline on a fixed schedule from your Mac, follow the steps below. T
 
 - **Python 3.11+**
 - **Apple Mail** with script support enabled (for AppleScript to fetch the alert)
-- **Ollama** installed and running (`brew install ollama` and `ollama serve`)
-- Pull the summarizer model:
-  ```bash
-  ollama pull qwen3:latest
-  ```
+- **LM Studio** running with a loaded model
+- **Ollama** optional fallback backend (`brew install ollama` and `ollama pull qwen3:latest` if you enable it)
 
 Install Python dependencies once:
 ```bash
@@ -53,15 +50,15 @@ This creates:
 - Sets `PYTHONPATH`
 - Chooses an output dir (default `runs/<timestamp>`, overridable via `ALERT_OUTPUT_DIR`)
 - Executes the CLI
-- Sends macOS notifications (and optional email using `mail`)
+- Sends macOS notifications (and optional log email using `mail`)
 
 Optional environment variables (set in `~/.alert-env`):
 - `ALERT_EMAIL_RECIPIENT` — notify on failures
 - `ALERT_NOTIFY_ON_SUCCESS=1` — also notify when runs succeed
 - `ALERT_OUTPUT_DIR` — override the default output directory
 - `ALERT_MODEL`, `ALERT_MAX_ARTICLES` — tune behavior
-- `ALERT_DIGEST_EMAIL` — comma-separated recipients for the generated digest
-- `ALERT_EMAIL_SENDER` — address used to select the Mail.app account for digest delivery
+- `ALERT_DIGEST_EMAIL` — comma-separated recipients; the CLI uses these to create `digest.eml`
+- `ALERT_EMAIL_SENDER` — optional `From` header for generated digest messages and SMTP sends
 
 ## 4. Cron Setup
 
@@ -89,7 +86,7 @@ Or replay into a scratch directory (limit article count if needed):
 python3 -m Summarizer.cli run --output-dir runs/manual-replay --max-articles 3
 ```
 - For Cloudflare-guarded links, install the url-to-md CLI (`npm install -g url-to-markdown-cli-tool`) so the pipeline can extract Markdown when standard HTTP fails.
-- To email the digest automatically, export `ALERT_DIGEST_EMAIL` (comma-separated) and optionally `ALERT_EMAIL_SENDER` before running the CLI or wrapper; the plaintext digest is handed to Mail.app via AppleScript.
+- `ALERT_DIGEST_EMAIL` causes the CLI to create `digest.eml`. SMTP delivery only happens when the CLI is run with `--smtp-send` (the Mail rule template does this; `Summarizer/bin/run_alert.sh` does not).
 
 ## 7. Future Enhancements
 

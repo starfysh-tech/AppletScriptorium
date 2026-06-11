@@ -98,7 +98,8 @@ OLLAMA_MODEL=qwen3:latest
 **Backend Fallback Behavior:**
 - Pipeline tries LM Studio first (if `LMSTUDIO_BASE_URL` configured)
 - If LM Studio fails AND `OLLAMA_ENABLED=true`, tries Ollama
-- If both fail (or neither configured), pipeline exits with error
+- The bundled `install.sh` and `validate.sh` scripts also provision/check Ollama as the supported fallback path
+- If neither backend is available, pipeline exits with error
 
 ---
 
@@ -109,7 +110,7 @@ OLLAMA_MODEL=qwen3:latest
 ```bash
 # 1. Clone repository
 cd ~/Code
-git clone https://github.com/yourusername/AppletScriptorium.git
+git clone https://github.com/starfysh-tech/AppletScriptorium.git
 cd AppletScriptorium
 
 # 2. Run automated installer
@@ -125,9 +126,9 @@ cd AppletScriptorium
 The `install.sh` script automates:
 - Checking prerequisites
 - Installing Python dependencies
-- Starting Ollama and pulling qwen3:latest model
+- Provisioning Ollama fallback support (`brew services start ollama` + `ollama pull qwen3:latest`)
 - Making scripts executable
-- Running test suite
+- Running the Summarizer test suite
 
 ### Manual Installation
 
@@ -136,13 +137,14 @@ If automated setup fails or you need manual control:
 ```bash
 # 1. Clone repository
 cd ~/Code
-git clone https://github.com/yourusername/AppletScriptorium.git
+git clone https://github.com/starfysh-tech/AppletScriptorium.git
 cd AppletScriptorium
 
 # 2. Install Python dependencies (system Python with --user flag)
 python3 -m pip install --user -r Summarizer/requirements.txt
 
-# 3. Install and start Ollama
+# 3. Optional: If you want Ollama fallback, install and start it
+brew install ollama
 brew services start ollama
 ollama pull qwen3:latest
 
@@ -184,7 +186,7 @@ macOS requires permissions for AppleScript to interact with Mail.app:
 
 **What it enables:** AppleScript can capture inbox messages
 
-**Note:** Mail rule automation doesn't require any special permissions—it uses SMTP for email delivery instead of UI automation.
+**Note:** Mail rule automation uses SMTP for digest delivery, but Mail.app still needs Accessibility permission to run the AppleScript rule.
 
 ---
 
@@ -481,6 +483,6 @@ open runs/test-*/digest.html
 ## Support
 
 - **Issues during setup**: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
-- **Development**: [CLAUDE.md](./CLAUDE.md) or [AGENTS.md](./AGENTS.md)
-- **Usage examples**: [README.md](./README.md)
+- **Development**: [CLAUDE.md](../CLAUDE.md) or [AGENTS.md](../AGENTS.md)
+- **Usage examples**: [README.md](../README.md)
 - **Pipeline errors**: Check `runs/*/workflow.log`

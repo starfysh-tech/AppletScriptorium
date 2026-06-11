@@ -43,8 +43,8 @@ The shell wrapper automatically handles dependency management:
 ## 🛠️ Installation
 
 ```bash
-git clone <repository-url>
-cd segment-salmon
+git clone https://github.com/starfysh-tech/AppletScriptorium.git
+cd AppletScriptorium/SegmentSalmon
 chmod +x segment-salmon
 ./segment-salmon --help
 ```
