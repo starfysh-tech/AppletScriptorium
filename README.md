@@ -65,16 +65,19 @@ hal --path Sources
 
 ---
 
-### CommitCraft (🟡 10 minutes)
-Development workflow toolkit for Claude Code. AI-generated conventional commits, GitHub issue validation, PR creation, and release guidance across 6 workflows.
+### CommitCraft (🟡 5 minutes) — moved
+
+CommitCraft now ships as a Claude Code plugin in the **nautilai** marketplace:
+[starfysh-tech/nautilai](https://github.com/starfysh-tech/nautilai).
 
 **Use case:** Automate commits, PRs, and releases with security checks, conventional format, issue tracking, and AI-generated descriptions.
 
-**Get started:** One-time global install, works in all repositories:
-```bash
-cd CommitCraft && ./commitcraft-install.sh
+**Get started:** Install via Claude Code's plugin system (no global installer):
+```text
+/plugin marketplace add starfysh-tech/nautilai
+/plugin install commitcraft@nautilai
 ```
-[Full documentation →](./CommitCraft/)
+[Full documentation →](https://github.com/starfysh-tech/nautilai/tree/main/commitcraft#readme)
 
 ---
 
@@ -112,20 +115,18 @@ python3 ExtensionAuditor/extension-auditor.py
 
 ### 🟡 CommitCraft (Best for Developers)
 
-One-time install, works everywhere.
+Now a Claude Code plugin — install once, works in every repository.
 
-```bash
-# After cloning (above)
-cd CommitCraft
-./commitcraft-install.sh
+```text
+/plugin marketplace add starfysh-tech/nautilai
+/plugin install commitcraft@nautilai
 
 # Use in any git repository
-cd ~/your-project
-/commitcraft push      # AI-generated commit + push with issue tracking
-/commitcraft release   # Semantic version guidance and release workflow
+/commitcraft:commitcraft push      # AI-generated commit + push with issue tracking
+/commitcraft:commitcraft release   # Semantic version guidance and release workflow
 ```
 
-**Next:** Read [CommitCraft/README.md](./CommitCraft/) for full command documentation.
+**Next:** Read the [CommitCraft plugin docs](https://github.com/starfysh-tech/nautilai/tree/main/commitcraft#readme) for full command documentation.
 
 ---
 
@@ -181,15 +182,7 @@ Requires LM Studio + Mail.app + SMTP setup.
 │   ├── Tests/                    # Test suite
 │   ├── Package.swift             # Swift package manifest
 │   └── README.md                 # Usage documentation
-├── CommitCraft/                  # Development workflow toolkit (Claude Code skill)
-│   ├── SKILL.md                  # Skill definition — routes /commitcraft <arg>
-│   ├── commitcraft-install.sh    # Global installer with TUI
-│   ├── commitcraft-setup.sh      # Interactive tooling setup + --check mode
-│   ├── commitcraft-issues.sh     # Branch-based GitHub issue validation
-│   ├── commitcraft-release-analyze.sh  # Semantic version analysis
-│   ├── workflows/                # 6 workflow files (commit, push, pr, release, setup, check)
-│   ├── templates/                # 7 config templates (commitlint, gitleaks, pre-commit, CI)
-│   └── README.md                 # Setup and usage guide
+├── CommitCraft/                  # Moved → starfysh-tech/nautilai (see README pointer)
 └── README.md                     # This file
 ```
 
@@ -212,8 +205,8 @@ python3 ExtensionAuditor/extension-auditor.py --help
 # SegmentSalmon - Help and validation
 SegmentSalmon/segment-salmon --help
 
-# CommitCraft - Validate tooling configuration
-~/.claude/skills/commitcraft/commitcraft-setup.sh --check
+# CommitCraft - now a plugin; validate via the skill
+/commitcraft:commitcraft check
 ```
 
 ---

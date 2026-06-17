@@ -5,6 +5,16 @@ All notable changes to AppletScriptorium will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- **CommitCraft:** Extracted to its own repository and repackaged as a Claude Code plugin.
+  It now lives in the [nautilai](https://github.com/starfysh-tech/nautilai) marketplace —
+  install with `/plugin marketplace add starfysh-tech/nautilai` and
+  `/plugin install commitcraft@nautilai`. The `CommitCraft/` directory retains a pointer
+  README only.
+
 ## [5.1.0](https://github.com/starfysh-tech/AppletScriptorium/compare/v5.0.0...v5.1.0) (2026-02-23)
 
 
