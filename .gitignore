@@ -21,7 +21,8 @@ htmlcov/
 # Runtime outputs
 runs/
 storage/
-Summarizer/evals/
+# Eval framework source lives in Summarizer/evals/; only its result folders are outputs
+Summarizer/evals/final-*/
 
 # Claude Code configuration
 .claude/

@@ -58,3 +58,72 @@ def test_summarizer_raises_on_failure(sample_article):
 
     with pytest.raises(SummarizerError):
         summarize_article(sample_article, runner=failing_runner)
+
+
+# --- LM Studio model resolution (loaded model wins, glm preferred) ---
+
+def _patch_lmstudio_inventory(monkeypatch, loaded, downloaded, preferred=("zai-org/glm-4.6v-flash",), pin=None):
+    from Summarizer import summarizer as S
+    monkeypatch.setattr(S, "_get_active_llms", lambda base_url: list(loaded))
+    monkeypatch.setattr(S, "_get_loaded_models", lambda base_url: list(downloaded))
+    monkeypatch.setattr(S, "LMSTUDIO_PREFERRED_MODELS", list(preferred))
+    monkeypatch.setattr(S, "LMSTUDIO_MODEL", pin)
+
+
+def test_resolve_explicit_override_wins(monkeypatch):
+    from Summarizer.summarizer import resolve_lmstudio_model
+    _patch_lmstudio_inventory(monkeypatch, loaded=["zai-org/glm-4.6v-flash"], downloaded=[])
+    assert resolve_lmstudio_model("http://x", "qwen/qwen3.5-9b") == "qwen/qwen3.5-9b"
+
+
+def test_resolve_prefers_glm_when_loaded_alongside_others(monkeypatch):
+    from Summarizer.summarizer import resolve_lmstudio_model
+    _patch_lmstudio_inventory(monkeypatch, loaded=["kurtis", "zai-org/glm-4.6v-flash"], downloaded=[])
+    assert resolve_lmstudio_model("http://x") == "zai-org/glm-4.6v-flash"
+
+
+def test_resolve_uses_whatever_is_loaded(monkeypatch):
+    from Summarizer.summarizer import resolve_lmstudio_model
+    _patch_lmstudio_inventory(monkeypatch, loaded=["mistral-7b"], downloaded=["mistral-7b", "zai-org/glm-4.6v-flash"])
+    assert resolve_lmstudio_model("http://x") == "mistral-7b"
+
+
+def test_resolve_falls_back_to_downloaded_preferred_then_pin(monkeypatch):
+    from Summarizer.summarizer import resolve_lmstudio_model, SummarizerError
+    _patch_lmstudio_inventory(monkeypatch, loaded=[], downloaded=["zai-org/glm-4.6v-flash"])
+    assert resolve_lmstudio_model("http://x") == "zai-org/glm-4.6v-flash"
+    _patch_lmstudio_inventory(monkeypatch, loaded=[], downloaded=["other"], pin="pinned-model")
+    assert resolve_lmstudio_model("http://x") == "pinned-model"
+    _patch_lmstudio_inventory(monkeypatch, loaded=[], downloaded=["other"])
+    with pytest.raises(SummarizerError):
+        resolve_lmstudio_model("http://x")
+
+
+def test_ensure_loaded_loads_downloaded_but_inactive_model(monkeypatch):
+    from Summarizer import summarizer as S
+    calls = []
+    active = {"now": []}
+    monkeypatch.setattr(S, "_get_active_llms", lambda base_url: list(active["now"]))
+    monkeypatch.setattr(S, "_get_loaded_models", lambda base_url: ["qwen/qwen3.5-9b"])
+    import time
+    monkeypatch.setattr(time, "sleep", lambda s: None)  # the loader sleeps 2s after lms load
+
+    def fake_run(cmd, **kw):
+        calls.append(cmd)
+        active["now"] = ["qwen/qwen3.5-9b"]  # load takes effect
+        class R: returncode = 0; stdout = ""; stderr = ""
+        return R()
+    monkeypatch.setattr(S.subprocess, "run", fake_run)
+
+    ok, msg = S._ensure_correct_model_loaded("http://x", "qwen/qwen3.5-9b")
+    assert ok and "Loaded" in msg
+    assert calls and "load" in calls[0] and "qwen/qwen3.5-9b" in calls[0]
+
+    # Already active: no lms call
+    calls.clear()
+    ok, msg = S._ensure_correct_model_loaded("http://x", "qwen/qwen3.5-9b")
+    assert ok and not calls
+
+    # Not even downloaded: fail without calling lms
+    ok, msg = S._ensure_correct_model_loaded("http://x", "nope")
+    assert not ok and not calls

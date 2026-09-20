@@ -111,7 +111,6 @@ def generate_cross_article_insights(articles: list[dict]) -> list[str]:
             CROSS_ARTICLE_INSIGHTS_PROMPT,
             CROSS_ARTICLE_MIN_ARTICLES,
             CROSS_ARTICLE_MIN_SOURCES,
-            LMSTUDIO_MODEL,
             TEMPERATURE,
         )
     except ImportError as exc:
@@ -170,9 +169,9 @@ def generate_cross_article_insights(articles: list[dict]) -> list[str]:
             article_summaries="\n\n".join(summaries_text)
         )
 
-        # Use higher temperature than summarization for creative pattern-finding
-        # Must explicitly set model to use LM Studio model (not default Ollama model)
-        cfg = SummarizerConfig(model=LMSTUDIO_MODEL, temperature=0.3, max_tokens=1024)
+        # Use higher temperature than summarization for creative pattern-finding.
+        # model=None lets _run_with_lmstudio resolve the loaded/preferred model.
+        cfg = SummarizerConfig(model=None, temperature=0.3, max_tokens=1024)
 
         logger.info("[insights] Generating cross-article insights for %d articles", len(article_list))
 

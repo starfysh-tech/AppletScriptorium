@@ -21,7 +21,18 @@ import os
 # LM Studio API Configuration (Primary Backend)
 # If LMSTUDIO_BASE_URL is set, LM Studio is used as primary backend
 LMSTUDIO_BASE_URL = os.environ.get("LMSTUDIO_BASE_URL")  # e.g., "http://192.168.1.11:1234"
-LMSTUDIO_MODEL = os.environ.get("LMSTUDIO_MODEL")  # e.g., "llama-chat-summary-3.2-3b"
+LMSTUDIO_MODEL = os.environ.get("LMSTUDIO_MODEL")  # Optional explicit pin; leave unset to use whatever is loaded
+# Used when no model is pinned: the first of these that is loaded wins; otherwise
+# whatever LLM LM Studio currently has loaded; otherwise the first of these that is
+# downloaded gets loaded. Comma-separated, highest preference first.
+LMSTUDIO_PREFERRED_MODELS = [
+    m.strip() for m in os.environ.get("LMSTUDIO_PREFERRED_MODELS", "qwen/qwen3.5-9b,zai-org/glm-4.6v-flash").split(",") if m.strip()
+]
+# Reasoning effort sent with every LM Studio request. "none" turns off the
+# thinking phase on models that have one (qwen3.5 honours it; glm does not) —
+# the 2026-09 eval found thinking costs 20x wall-clock for ~4 pts of accuracy.
+# Set LMSTUDIO_REASONING_EFFORT to "low"/"medium"/"high" to re-enable, or "" to omit.
+LMSTUDIO_REASONING_EFFORT = os.environ.get("LMSTUDIO_REASONING_EFFORT", "none")
 LMSTUDIO_TIMEOUT = float(os.environ.get("LMSTUDIO_TIMEOUT", "180.0"))
 LMSTUDIO_HEALTH_TIMEOUT = 2.0  # Fast health check timeout before requests
 
@@ -104,6 +115,22 @@ Article content:
 
 # Valid article types
 ARTICLE_TYPES = ["RESEARCH", "NEWS", "OPINION", "PRESS_RELEASE"]
+
+# Grammar for the classifier: a single enum field, so the model cannot answer
+# with anything but one of the four types.
+ARTICLE_TYPE_JSON_SCHEMA = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "article_type",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {"type": {"type": "string", "enum": ARTICLE_TYPES}},
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+    },
+}
 
 
 # =============================================================================

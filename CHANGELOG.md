@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Summarizer:** classifier always returned NEWS because the summary JSON schema was forced
+  onto the classification request; it now uses its own enum schema, so the RESEARCH /
+  PRESS_RELEASE / OPINION prompts fire. The eval label metric now checks each gold
+  annotation's `expected_labels` instead of a hardcoded NEWS set.
+- **Summarizer:** `Summarizer/evals/` (the eval framework `cli.py eval` imports) was
+  gitignored as a runtime output and missing from the repo; it is now tracked, with
+  only its result folders (`evals/final-*/`) ignored.
+
+### Changed
+
+- **Summarizer:** LM Studio model is resolved at run time — `--model` override, else a
+  preferred model that is loaded, else whatever is loaded, else the first preferred model
+  that is downloaded (`LMSTUDIO_PREFERRED_MODELS`, default `qwen/qwen3.5-9b,zai-org/glm-4.6v-flash`).
+  `LMSTUDIO_MODEL` is now an optional pin. `LMSTUDIO_REASONING_EFFORT` (default `none`)
+  is sent on every request so thinking models answer in seconds instead of minutes.
+
 ### Removed
 
 - **CommitCraft:** Extracted to its own repository and repackaged as a Claude Code plugin.

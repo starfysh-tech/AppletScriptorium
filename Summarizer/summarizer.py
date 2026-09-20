@@ -14,7 +14,7 @@ import json
 import logging
 import re
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, List, Literal, Optional
 
@@ -22,6 +22,7 @@ import httpx
 
 from .config import (
     ARTICLE_TYPE_PROMPT,
+    ARTICLE_TYPE_JSON_SCHEMA,
     ARTICLE_TYPES,
     DEFAULT_MODEL,
     TEMPERATURE,
@@ -33,6 +34,8 @@ from .config import (
     OLLAMA_TIMEOUT,
     LMSTUDIO_BASE_URL,
     LMSTUDIO_MODEL,
+    LMSTUDIO_PREFERRED_MODELS,
+    LMSTUDIO_REASONING_EFFORT,
     LMSTUDIO_TIMEOUT,
     LMSTUDIO_HEALTH_TIMEOUT,
     SUMMARY_PROMPT_TEMPLATE,
@@ -52,7 +55,7 @@ class SummarizerError(RuntimeError):
 
 @dataclass(frozen=True)
 class SummarizerConfig:
-    model: str = DEFAULT_MODEL
+    model: str | None = None  # None: LM Studio resolves the loaded/preferred model; Ollama uses OLLAMA_MODEL
     temperature: float = TEMPERATURE
     max_tokens: int = MAX_TOKENS
 
@@ -124,13 +127,14 @@ def summarize_article(
                 raise SummarizerError(f"Custom runner failed for {url}") from exc
         # Explicit backend specified (no auto-fallback)
         elif backend == "lmstudio":
-            if not LMSTUDIO_BASE_URL or not LMSTUDIO_MODEL:
-                raise SummarizerError("LM Studio backend requested but LMSTUDIO_BASE_URL or LMSTUDIO_MODEL not configured in .env")
+            if not LMSTUDIO_BASE_URL:
+                raise SummarizerError("LM Studio backend requested but LMSTUDIO_BASE_URL not configured in .env")
 
-            logger.info("[lmstudio] Calling %s at %s for %s (attempt %d/%d)", LMSTUDIO_MODEL, LMSTUDIO_BASE_URL, url, attempt, max_attempts)
+            lm_cfg = replace(cfg, model=resolve_lmstudio_model(LMSTUDIO_BASE_URL, cfg.model))
+            logger.info("[lmstudio] Calling %s at %s for %s (attempt %d/%d)", lm_cfg.model, LMSTUDIO_BASE_URL, url, attempt, max_attempts)
             try:
-                raw_output = _run_with_lmstudio(prompt, cfg)
-                model_name = cfg.model or LMSTUDIO_MODEL
+                raw_output = _run_with_lmstudio(prompt, lm_cfg)
+                model_name = lm_cfg.model
                 backend_used = "lmstudio"
             except SummarizerError:
                 raise  # No fallback when backend is explicitly specified
@@ -144,13 +148,11 @@ def summarize_article(
                 raise  # No fallback when backend is explicitly specified
         # Auto-fallback mode: LM Studio with optional Ollama fallback
         elif LMSTUDIO_BASE_URL:
-            if not LMSTUDIO_MODEL:
-                raise SummarizerError("LMSTUDIO_BASE_URL set but LMSTUDIO_MODEL not configured in .env")
-
-            logger.info("[lmstudio] Calling %s at %s for %s (attempt %d/%d)", LMSTUDIO_MODEL, LMSTUDIO_BASE_URL, url, attempt, max_attempts)
             try:
-                raw_output = _run_with_lmstudio(prompt, cfg)
-                model_name = cfg.model or LMSTUDIO_MODEL
+                lm_cfg = replace(cfg, model=resolve_lmstudio_model(LMSTUDIO_BASE_URL, cfg.model))
+                logger.info("[lmstudio] Calling %s at %s for %s (attempt %d/%d)", lm_cfg.model, LMSTUDIO_BASE_URL, url, attempt, max_attempts)
+                raw_output = _run_with_lmstudio(prompt, lm_cfg)
+                model_name = lm_cfg.model
                 backend_used = "lmstudio"
             except SummarizerError as exc:
                 logger.error("[lmstudio] Failed for %s: %s", url, exc)
@@ -171,7 +173,7 @@ def summarize_article(
         # No backend configured
         else:
             raise SummarizerError(
-                "No LLM backend configured. Set LMSTUDIO_BASE_URL and LMSTUDIO_MODEL in .env file"
+                "No LLM backend configured. Set LMSTUDIO_BASE_URL in .env file"
             )
 
         # Log raw LLM output for diagnosis
@@ -255,9 +257,13 @@ def classify_article_type(article: ArticleDict, *, config: SummarizerConfig | No
     prompt = ARTICLE_TYPE_PROMPT.format(content=truncated)
 
     try:
-        # Use LM Studio for classification
-        raw_output = _run_with_lmstudio(prompt, cfg)
-        detected_type = raw_output.strip().upper()
+        # Use LM Studio for classification with an enum grammar (the default
+        # response_format is the *summary* schema, which can never yield a type).
+        raw_output = _run_with_lmstudio(prompt, cfg, response_format=ARTICLE_TYPE_JSON_SCHEMA)
+        try:
+            detected_type = str(json.loads(raw_output).get("type", "")).strip().upper()
+        except (json.JSONDecodeError, AttributeError):
+            detected_type = raw_output.strip().strip('"').upper()
 
         # Validate response
         if detected_type in ARTICLE_TYPES:
@@ -388,30 +394,82 @@ def _get_loaded_models(base_url: str) -> list[str]:
     return []
 
 
-def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool, str]:
-    """Ensure ONLY the target model is loaded in LM Studio.
+def _get_active_llms(base_url: str) -> list[str]:
+    """LLM/VLM model IDs LM Studio currently has loaded (not merely downloaded).
 
-    If other models are loaded or target is not loaded, unloads all models
-    and loads only the target model.
+    /v1/models lists everything downloaded; /api/v0/models carries the load state.
+    Returns empty list if cannot connect.
+    """
+    try:
+        with httpx.Client(timeout=LMSTUDIO_HEALTH_TIMEOUT) as client:
+            response = client.get(f"{base_url}/api/v0/models")
+            if response.status_code == 200:
+                return [
+                    m["id"] for m in response.json().get("data", [])
+                    if m.get("state") == "loaded" and m.get("type") in ("llm", "vlm")
+                ]
+    except Exception:
+        pass
+    return []
+
+
+def resolve_lmstudio_model(base_url: str, explicit: str | None = None) -> str:
+    """Pick the LM Studio model to use.
+
+    Order: explicit override -> a preferred model that is already loaded -> whatever
+    LLM is currently loaded -> first preferred model that is downloaded (it will be
+    loaded on demand) -> the legacy LMSTUDIO_MODEL pin.
+
+    Raises SummarizerError if nothing can be chosen.
+    """
+    if explicit:
+        return explicit
+
+    loaded = _get_active_llms(base_url)
+    for preferred in LMSTUDIO_PREFERRED_MODELS:
+        if preferred in loaded:
+            return preferred
+    if loaded:
+        logger.info("[lmstudio] No preferred model loaded; using what LM Studio has: %s", loaded[0])
+        return loaded[0]
+
+    downloaded = _get_loaded_models(base_url)
+    for preferred in LMSTUDIO_PREFERRED_MODELS:
+        if preferred in downloaded:
+            return preferred
+
+    if LMSTUDIO_MODEL:
+        return LMSTUDIO_MODEL
+    raise SummarizerError(
+        "No LM Studio model available: nothing loaded, none of "
+        f"LMSTUDIO_PREFERRED_MODELS ({', '.join(LMSTUDIO_PREFERRED_MODELS) or 'unset'}) downloaded, "
+        "and LMSTUDIO_MODEL not set"
+    )
+
+
+def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool, str]:
+    """Ensure the target model is loaded in LM Studio, loading it via `lms` if
+    it is downloaded but not active. Other loaded models are left alone.
 
     Args:
         base_url: LM Studio API base URL
-        target_model: Model identifier to load (from LMSTUDIO_MODEL)
+        target_model: Model identifier to load (see resolve_lmstudio_model)
 
     Returns:
         (success: bool, message: str)
     """
     import time
 
-    loaded = _get_loaded_models(base_url)
-
-    # Model already available - no action needed
-    if target_model in loaded:
-        logger.info("[lmstudio] Model already available: %s", target_model)
+    # /v1/models lists downloaded models; only /api/v0/models says what is loaded.
+    if target_model in _get_active_llms(base_url):
+        logger.info("[lmstudio] Model already loaded: %s", target_model)
         return True, f"Using {target_model}"
 
-    # Model not available - load it (no need to unload others)
-    logger.info("[lmstudio] Model %s not in available list, loading...", target_model)
+    if target_model not in _get_loaded_models(base_url):
+        return False, f"Model '{target_model}' not found - check .env LMSTUDIO_PREFERRED_MODELS / LMSTUDIO_MODEL"
+
+    # Downloaded but not loaded - load it (no need to unload others)
+    logger.info("[lmstudio] Model %s downloaded but not loaded, loading...", target_model)
 
     # Skip unload - LM Studio can have multiple models available
     if False:  # Disabled: was causing issues with multi-model LM Studio setups
@@ -445,12 +503,12 @@ def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool
         if result.returncode != 0:
             stderr = result.stderr.strip()
             if "not found" in stderr.lower() or "no model" in stderr.lower():
-                return False, f"Model '{target_model}' not found - check .env LMSTUDIO_MODEL"
+                return False, f"Model '{target_model}' not found - check .env LMSTUDIO_PREFERRED_MODELS / LMSTUDIO_MODEL"
             return False, f"Load failed: {stderr[:200]}"
 
         # Verify load succeeded
         time.sleep(2)
-        loaded = _get_loaded_models(base_url)
+        loaded = _get_active_llms(base_url)
         if target_model in loaded:
             logger.info("[lmstudio] Successfully loaded: %s", target_model)
             return True, f"Loaded {target_model}"
@@ -489,17 +547,18 @@ def _test_lmstudio_availability(base_url: str) -> bool:
         return False
 
 
-def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig) -> str:
+def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: dict = SUMMARY_JSON_SCHEMA) -> str:
     """Call LM Studio API using OpenAI-compatible endpoint.
+
+    response_format defaults to the summary schema; pass another schema for
+    calls that expect a different shape (e.g. classification).
 
     Raises SummarizerError on any failure with informative error messages.
     """
     if not LMSTUDIO_BASE_URL:
         raise SummarizerError("LMSTUDIO_BASE_URL not configured in .env")
 
-    target_model = cfg.model or LMSTUDIO_MODEL
-    if not target_model:
-        raise SummarizerError("No model specified in config or .env LMSTUDIO_MODEL")
+    target_model = resolve_lmstudio_model(LMSTUDIO_BASE_URL, cfg.model)
 
     # Ensure correct model is loaded (auto-load if needed, unload others)
     success, message = _ensure_correct_model_loaded(LMSTUDIO_BASE_URL, target_model)
@@ -514,8 +573,10 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig) -> str:
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": MAX_TOKENS,
         "temperature": cfg.temperature,
-        "response_format": SUMMARY_JSON_SCHEMA,
+        "response_format": response_format,
     }
+    if LMSTUDIO_REASONING_EFFORT:
+        payload["reasoning_effort"] = LMSTUDIO_REASONING_EFFORT
 
     # Log prompt size for debugging oversized payloads
     prompt_chars = len(prompt)
@@ -567,7 +628,7 @@ def _run_with_ollama(prompt: str, cfg: SummarizerConfig) -> str:
     args = [
         "ollama",
         "run",
-        cfg.model,
+        cfg.model or OLLAMA_MODEL,
     ]
 
     for attempt in range(2):

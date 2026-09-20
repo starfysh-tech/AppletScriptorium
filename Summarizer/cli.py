@@ -32,7 +32,7 @@ from .article_fetcher import (
     fetch_article,
     get_last_fetch_outcome,
 )
-from .config import DEFAULT_MODEL, DIGEST_SUBJECT_TEMPLATE, LMSTUDIO_BASE_URL, LMSTUDIO_MODEL, MAX_WORKERS, OLLAMA_ENABLED
+from .config import DEFAULT_MODEL, DIGEST_SUBJECT_TEMPLATE, LMSTUDIO_BASE_URL, MAX_WORKERS, OLLAMA_ENABLED
 from .content_cleaner import extract_content, strip_cruft
 from .digest_renderer import render_digest_html, render_digest_text
 from .link_extractor import extract_links_from_eml
@@ -533,7 +533,7 @@ def parse_args(argv=None) -> argparse.Namespace:
 
     run_parser = subparsers.add_parser("run", help="Fetch latest alert and generate digest")
     run_parser.add_argument("--output-dir", required=True, help="Directory to write artifacts")
-    run_parser.add_argument("--model", help="Override LLM model name (uses LMSTUDIO_MODEL or OLLAMA_MODEL from .env by default)")
+    run_parser.add_argument("--model", help="Override LLM model name (default: the loaded LM Studio model, preferring LMSTUDIO_PREFERRED_MODELS)")
     run_parser.add_argument("--max-articles", type=int, help="Optional cap on number of articles processed")
     run_parser.add_argument(
         "--subject-filter",
@@ -636,10 +636,14 @@ def run_pipeline(args: argparse.Namespace) -> Path:
         sum_cfg = SummarizerConfig(model=args.model)
 
         # Pre-flight check: Ensure LM Studio model is ready before fetching articles
-        if LMSTUDIO_BASE_URL and LMSTUDIO_MODEL:
-            from .summarizer import _ensure_correct_model_loaded
+        if LMSTUDIO_BASE_URL:
+            from .summarizer import SummarizerError, _ensure_correct_model_loaded, resolve_lmstudio_model
             logging.info("[preflight] Verifying LM Studio model is loaded...")
-            success, message = _ensure_correct_model_loaded(LMSTUDIO_BASE_URL, sum_cfg.model or LMSTUDIO_MODEL)
+            try:
+                target_model = resolve_lmstudio_model(LMSTUDIO_BASE_URL, sum_cfg.model)
+                success, message = _ensure_correct_model_loaded(LMSTUDIO_BASE_URL, target_model)
+            except SummarizerError as exc:  # LM Studio unreachable / nothing to pick: let Ollama fallback decide
+                success, message = False, str(exc)
             if not success:
                 logging.error("[preflight] Model setup failed: %s", message)
                 if not OLLAMA_ENABLED:
