@@ -35,8 +35,15 @@ def _match_annotations(content_files: List[Path], annotations, *, warn_missing: 
         if not title_slug:  # an empty key would be meaningless
             logger.warning("Annotation has no title, cannot match content file: %s", annotation.url)
             continue
-        # The file slug is truncated at 40 chars, so accept a prefix match either way.
-        match = next((f for slug, f in by_slug.items() if slug.startswith(title_slug) or title_slug.startswith(slug)), None)
+        # Exact slug first; the file slug is truncated at 40 chars, so fall
+        # back to a prefix match only when it is unambiguous.
+        match = by_slug.get(title_slug)
+        if match is None:
+            candidates = [f for slug, f in by_slug.items() if slug.startswith(title_slug) or title_slug.startswith(slug)]
+            if len(candidates) > 1:
+                logger.warning("Ambiguous content files for %r: %s; skipping", annotation.title[:40], [c.name for c in candidates])
+                continue
+            match = candidates[0] if candidates else None
         if match is None:
             if warn_missing:
                 logger.warning("No content file found for: %s", annotation.title)

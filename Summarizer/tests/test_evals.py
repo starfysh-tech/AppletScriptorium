@@ -63,11 +63,14 @@ def test_accuracy_actionability_vocab_and_expected_category():
 
 def test_accuracy_tags_must_be_single_allowed_emoji():
     def news(tw, ms):
-        return [f"**KEY DEVELOPMENT**: launch", f"**TACTICAL WIN {tw}**: y", f"**MARKET SIGNAL {ms}**: z", "**CONCERN**: No concerns stated in article."]
+        return ["**KEY DEVELOPMENT**: launch", f"**TACTICAL WIN {tw}**: y", f"**MARKET SIGNAL {ms}**: z", "**CONCERN**: No concerns stated in article."]
     assert evaluate_accuracy(_summary(news("[🚀 SHIP NOW]", "[🟡 NOTABLE]"), "ℹ️ CONTEXT ONLY"), NEWS, ARTICLE).tag_selected
     assert not evaluate_accuracy(_summary(news("[🚀/🗺️/👀]", "[🟡 NOTABLE]"), "ℹ️ CONTEXT ONLY"), NEWS, ARTICLE).tag_selected
     assert not evaluate_accuracy(_summary(news("", "[🟡 NOTABLE]"), "ℹ️ CONTEXT ONLY"), NEWS, ARTICLE).tag_selected
     assert not evaluate_accuracy(_summary(news("[🚀 SHIP NOW]", "[💥 BOOM]"), "ℹ️ CONTEXT ONLY"), NEWS, ARTICLE).tag_selected
+    # duplicated emoji or several bracket groups are not "exactly one tag"
+    assert not evaluate_accuracy(_summary(news("[🚀🚀 SHIP NOW]", "[🟡 NOTABLE]"), "ℹ️ CONTEXT ONLY"), NEWS, ARTICLE).tag_selected
+    assert not evaluate_accuracy(_summary(news("[🚀][👀]", "[🟡 NOTABLE]"), "ℹ️ CONTEXT ONLY"), NEWS, ARTICLE).tag_selected
     # RESEARCH bullets have no tagged labels: not subject to the check
     assert evaluate_accuracy(_summary(GOOD_RESEARCH), RESEARCH, ARTICLE).tag_selected
 
@@ -77,6 +80,9 @@ def test_accuracy_article_type_scored_only_when_reported():
     assert evaluate_accuracy(_summary(GOOD_RESEARCH, article_type="RESEARCH"), RESEARCH, ARTICLE).article_type_correct is True
     wrong = evaluate_accuracy(_summary(GOOD_RESEARCH, article_type="NEWS"), RESEARCH, ARTICLE)
     assert wrong.article_type_correct is False
+    # key present but None = the classifier failed and the fallback prompt was used: counts as wrong
+    failed = _summary(GOOD_RESEARCH); failed["article_type"] = None
+    assert evaluate_accuracy(failed, RESEARCH, ARTICLE).article_type_correct is False
     assert wrong.accuracy_score < evaluate_accuracy(_summary(GOOD_RESEARCH, article_type="RESEARCH"), RESEARCH, ARTICLE).accuracy_score
 
 
@@ -131,6 +137,17 @@ def test_load_articles_walks_older_runs(tmp_path, monkeypatch):
     arts = {a["url"]: a["content"] for a in la.load_articles_from_runs(tmp_path)}
     assert set(arts) == {"u1", "u2"}
     assert arts["u2"].startswith("DETROIT")
+
+
+def test_load_articles_exact_slug_beats_prefix_and_ambiguity_is_skipped(tmp_path, monkeypatch):
+    from Summarizer.evals import load_articles as la
+    d = tmp_path / "alert-20260101-000000" / "articles"; d.mkdir(parents=True)
+    (d / "01-target-article-title-extended-cut.content.md").write_text("longer")
+    (d / "02-target-article-title.content.md").write_text("exact")
+    ann = lambda title, url: GoldAnnotation(url=url, title=title, article_type="NEWS", expected_labels=[], has_explicit_concern=False, key_facts=[], expected_actionability="MONITOR")
+    monkeypatch.setattr(la, "GOLD_ANNOTATIONS", [ann("Target Article Title", "exact"), ann("Target Article", "ambiguous")])
+    arts = {a["url"]: a["content"] for a in la.load_articles_from_runs(tmp_path)}
+    assert arts == {"exact": "exact"}  # exact slug wins; the ambiguous prefix is skipped
 
 
 def test_load_articles_prefers_newest_and_ignores_body_mentions(tmp_path, monkeypatch):

@@ -21,9 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   400'd on any smaller window.
 - **Summarizer evals:** metrics now score what they claim — labels must equal the gold
   set, actionability must be an allowed category and match the annotation, tags must be
-  one allowed emoji, `article_type_correct` compares the classifier's result (recorded
-  on summaries as `article_type`), CONCERN text is checked against the article on every
-  article, comma-formatted numbers are not split, and consistency compares bullet bodies
+  exactly one allowed emoji in a single bracket group, `article_type_correct` compares the
+  classifier's result (recorded on summaries as `article_type`, `None` when classification
+  failed and the NEWS fallback ran), a CONCERN on an article that has one is checked for
+  grounding in the article text (articles annotated as having none still reject any real
+  concern), comma-formatted numbers are not split, and consistency compares bullet bodies
   only. Runner uses `~/.lmstudio/bin/lms`, rejects `runs < 1`, and reports success per
   attempt. Gold articles are matched by the pipeline's filename slug across all run
   directories instead of a title-prefix search of the newest one.

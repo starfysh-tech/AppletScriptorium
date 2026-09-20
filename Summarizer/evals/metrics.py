@@ -19,7 +19,7 @@ class AccuracyMetrics:
     labels_match_type: bool  # True if labels match article type (e.g., RESEARCH has KEY FINDING, METHODOLOGY, IMPLICATION, CONCERN)
     actionability_valid: bool  # True if actionability is one of the allowed "<emoji> <category>" values
     facts_present: float  # Proportion of key facts from gold standard present in summary (0.0-1.0)
-    article_type_correct: bool | None  # Classified type == gold type; None when the summary carries no type
+    article_type_correct: bool | None  # Classified type == gold type (False if classification failed); None when the summary predates the field
     tag_selected: bool  # True if TACTICAL WIN / MARKET SIGNAL carry one allowed tag (not a placeholder)
     actionability_correct: bool = True  # Actionability category == gold expected_actionability
 
@@ -188,10 +188,13 @@ def evaluate_accuracy(summary: dict, gold: dict, article_content: str) -> Accura
         allowed = TAG_EMOJI.get(label)
         if allowed is None:
             continue
-        m = re.search(r"\[(.*?)\]", text.split(":")[0])
-        bracket = _VARIATION_SELECTORS.sub("", m.group(1)) if m else ""
-        present = [e for e in allowed if e in bracket]
-        if len(present) != 1 or "/" in bracket:
+        groups = re.findall(r"\[(.*?)\]", text.split(":")[0])
+        if len(groups) != 1:  # no tag, or several bracket groups like [🚀][👀]
+            tag_selected = False
+            break
+        bracket = _VARIATION_SELECTORS.sub("", groups[0])
+        occurrences = sum(bracket.count(e) for e in allowed)
+        if occurrences != 1 or "/" in bracket:  # exactly one allowed emoji, once
             tag_selected = False
             break
 
@@ -215,10 +218,13 @@ def evaluate_accuracy(summary: dict, gold: dict, article_content: str) -> Accura
     facts_present = facts_found / len(gold_obj.key_facts) if gold_obj.key_facts else 0.0
 
     # Check: the classifier's article type (summarize_article records it on the
-    # summary) matches the gold type. Summaries produced before that field
-    # existed report None and are excluded from the score.
-    classified = summary.get("article_type")
-    article_type_correct = (str(classified).upper() == gold_obj.article_type) if classified else None
+    # summary, None when classification failed) matches the gold type.
+    # Summaries produced before that field existed are excluded from the score.
+    if "article_type" in summary:
+        classified = summary["article_type"]  # None: classifier failed and the NEWS fallback was used
+        article_type_correct = bool(classified) and str(classified).upper() == gold_obj.article_type
+    else:
+        article_type_correct = None
 
     return AccuracyMetrics(
         has_4_bullets=has_4_bullets,

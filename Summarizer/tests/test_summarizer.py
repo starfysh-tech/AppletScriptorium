@@ -127,3 +127,18 @@ def test_ensure_loaded_loads_downloaded_but_inactive_model(monkeypatch):
     # Not even downloaded: fail without calling lms
     ok, msg = S._ensure_correct_model_loaded("http://x", "nope")
     assert not ok and not calls
+
+
+def test_fit_max_tokens_refuses_when_prompt_fills_context(monkeypatch):
+    from Summarizer import summarizer as S
+    monkeypatch.setattr(S, "_lmstudio_context_length", lambda base_url, model: 1000)
+    assert S._fit_max_tokens("http://x", "m", "word " * 100, 16384) == 1000 - (500 // 3 + 256)
+    with pytest.raises(S.SummarizerError):
+        S._fit_max_tokens("http://x", "m", "word " * 600, 16384)
+
+
+def test_estimate_tokens_counts_non_ascii_per_char():
+    from Summarizer.summarizer import _estimate_tokens, _truncate_to_tokens
+    assert _estimate_tokens("abcdef") == 2
+    assert _estimate_tokens("日本語のテキスト") == 8
+    assert _estimate_tokens(_truncate_to_tokens("日本語" * 100, 50)) <= 50

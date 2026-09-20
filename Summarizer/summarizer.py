@@ -103,9 +103,12 @@ def summarize_article(
     cfg = config or SummarizerConfig()
     url = article.get('url', 'unknown')
 
-    # Classify article type to select appropriate prompt
-    article_type = classify_article_type(article, config=cfg)
-    logger.info("[classify] Article type for %s: %s", url, article_type)
+    # Classify article type to select appropriate prompt. A failed
+    # classification uses the NEWS prompt but is recorded as None so callers
+    # (and the eval) can tell the fallback from a real NEWS result.
+    classified_type = _classify_article_type(article, config=cfg)
+    article_type = classified_type or "NEWS"
+    logger.info("[classify] Article type for %s: %s", url, classified_type or "NEWS (fallback)")
 
     prompt = _build_prompt(article, article_type=article_type)
 
@@ -211,7 +214,7 @@ def summarize_article(
                 "snippet": article.get("snippet", ""),
                 "summary": [{"type": "bullet", "text": bullet} for bullet in bullets],
                 "model": model_name,
-                "article_type": article_type,
+                "article_type": classified_type,
             }
             if actionability:
                 result["actionability"] = actionability
@@ -231,14 +234,15 @@ def summarize_article(
 def classify_article_type(article: ArticleDict, *, config: SummarizerConfig | None = None) -> str:
     """Classify article type using LM Studio to select appropriate summarization prompt.
 
-    Args:
-        article: Article dictionary with content
-        config: Optional SummarizerConfig
-
-    Returns:
-        One of: "RESEARCH", "NEWS", "OPINION", "PRESS_RELEASE"
-        Falls back to "NEWS" if classification fails or LM Studio unavailable
+    Returns one of ARTICLE_TYPES, falling back to "NEWS" if classification
+    fails. Use _classify_article_type to distinguish a real NEWS result from
+    the fallback.
     """
+    return _classify_article_type(article, config=config) or "NEWS"
+
+
+def _classify_article_type(article: ArticleDict, *, config: SummarizerConfig | None = None) -> str | None:
+    """Classify article type, or None if the classifier failed / was unavailable."""
     cfg = config or SummarizerConfig()
 
     # Extract first ~500 words to save tokens
@@ -274,11 +278,14 @@ def classify_article_type(article: ArticleDict, *, config: SummarizerConfig | No
             return detected_type
         else:
             logger.warning("[classify] Invalid type '%s', falling back to NEWS", detected_type)
-            return "NEWS"
+            return None
 
     except Exception as exc:
         logger.warning("[classify] Classification failed: %s - falling back to NEWS", exc)
-        return "NEWS"
+        return None
+
+
+_TRUNCATION_MARKER = "\n\n[Content truncated to fit context window]"
 
 
 def _truncate_content(content: str, max_chars: int) -> str:
@@ -311,7 +318,7 @@ def _truncate_content(content: str, max_chars: int) -> str:
         # No sentence boundary found, use hard cutoff
         result = truncated
 
-    return result + "\n\n[Content truncated to fit context window]"
+    return result + _TRUNCATION_MARKER
 
 
 def _build_prompt(article: ArticleDict, article_type: str | None = None, max_chars: int = MAX_CONTENT_CHARS) -> str:
@@ -329,8 +336,10 @@ def _build_prompt(article: ArticleDict, article_type: str | None = None, max_cha
     else:
         content_text = str(content)
 
-    # Truncate content to fit context window
+    # Truncate content to fit context window: by chars for the configured
+    # limit, then by estimated tokens so dense scripts do not overflow.
     content_text = _truncate_content(content_text, max_chars)
+    content_text = _truncate_to_tokens(content_text, max_chars // 3)
 
     title = article.get("title", "")
 
@@ -567,15 +576,43 @@ def _lmstudio_context_length(base_url: str, model: str) -> int | None:
 # Tokens kept free of article content in an LM Studio request: the prompt
 # template plus room for the summary itself. Conservative on purpose.
 _LMSTUDIO_RESERVED_TOKENS = 2500
-_CHARS_PER_TOKEN = 3
+_MIN_COMPLETION_TOKENS = 256
+
+
+def _estimate_tokens(text: str) -> int:
+    """Conservative token estimate without a tokenizer: ~3 chars per token for
+    ASCII, one token per non-ASCII character (CJK and similar scripts tokenize
+    close to one character per token)."""
+    non_ascii = sum(1 for ch in text if ord(ch) > 127)
+    return (len(text) - non_ascii) // 3 + non_ascii
+
+
+def _truncate_to_tokens(content: str, token_budget: int) -> str:
+    """Truncate content so _estimate_tokens(content) <= token_budget."""
+    if _estimate_tokens(content) <= token_budget:
+        return content
+    budget = max(1, token_budget - _estimate_tokens(_TRUNCATION_MARKER))  # marker is appended below
+    lo, hi = 0, len(content)
+    while lo < hi:  # largest prefix that fits
+        mid = (lo + hi + 1) // 2
+        if _estimate_tokens(content[:mid]) <= budget:
+            lo = mid
+        else:
+            hi = mid - 1
+    return _truncate_content(content, max(1, lo))
 
 
 def _lmstudio_content_budget(base_url: str, model: str) -> int:
-    """Max article chars that fit the model's granted context (MAX_CONTENT_CHARS if unknown)."""
+    """Max article chars that fit the model's granted context (MAX_CONTENT_CHARS if unknown).
+
+    Expressed in chars for _build_prompt; the request is re-checked in tokens
+    by _fit_max_tokens, so non-Latin content that tokenizes densely is caught
+    there rather than silently overflowing.
+    """
     ctx = _lmstudio_context_length(base_url, model)
     if not ctx:
         return MAX_CONTENT_CHARS
-    return max(1000, min(MAX_CONTENT_CHARS, (ctx - _LMSTUDIO_RESERVED_TOKENS) * _CHARS_PER_TOKEN))
+    return max(1000, min(MAX_CONTENT_CHARS, (ctx - _LMSTUDIO_RESERVED_TOKENS) * 3))
 
 
 def _fit_max_tokens(base_url: str, model: str, prompt: str, requested: int) -> int:
@@ -583,14 +620,21 @@ def _fit_max_tokens(base_url: str, model: str, prompt: str, requested: int) -> i
 
     LM Studio rejects a request whose prompt plus max_tokens exceeds the
     loaded context, so a fixed MAX_TOKENS fails on any model that was loaded
-    with a smaller window. Prompt size is estimated conservatively (3 chars
-    per token) and a margin is kept for the chat template.
+    with a smaller window. Raises SummarizerError when the prompt itself
+    leaves too little room for a completion, rather than sending a request
+    the engine will reject.
     """
     ctx = _lmstudio_context_length(base_url, model)
     if not ctx:
         return requested
-    prompt_tokens = len(prompt) // 3 + 256
-    return max(256, min(requested, ctx - prompt_tokens))
+    remaining = ctx - (_estimate_tokens(prompt) + 256)  # 256: chat template overhead
+    if remaining < _MIN_COMPLETION_TOKENS:
+        raise SummarizerError(
+            f"Prompt (~{_estimate_tokens(prompt)} tokens) leaves under {_MIN_COMPLETION_TOKENS} tokens "
+            f"of the {ctx}-token context loaded for {model}; load the model with a larger context "
+            "or lower MAX_CONTENT_CHARS"
+        )
+    return min(requested, remaining)
 
 
 def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: dict = SUMMARY_JSON_SCHEMA) -> str:

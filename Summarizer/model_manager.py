@@ -1,6 +1,7 @@
 """Model discovery and management for LM Studio and Ollama backends."""
 
 import logging
+import os
 import re
 import subprocess
 from dataclasses import dataclass
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # LM Studio installs its CLI here and does not put it on PATH by default.
 _LMS_HOME = Path.home() / ".lmstudio" / "bin" / "lms"
-LMS = str(_LMS_HOME) if _LMS_HOME.exists() else "lms"
+LMS = str(_LMS_HOME) if _LMS_HOME.is_file() and os.access(_LMS_HOME, os.X_OK) else "lms"
 
 
 @dataclass
@@ -40,8 +41,8 @@ def discover_lmstudio_models() -> List[ModelInfo]:
             check=True,
             timeout=10
         )
-    except FileNotFoundError:
-        logger.warning("lms CLI not found (%s); skipping LM Studio model discovery", LMS)
+    except (FileNotFoundError, PermissionError, OSError) as exc:
+        logger.warning("lms CLI not runnable (%s): %s; skipping LM Studio model discovery", LMS, exc)
         return []
     except subprocess.CalledProcessError as e:
         logger.warning(f"lms ls failed: {e.stderr}")
