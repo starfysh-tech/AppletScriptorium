@@ -183,14 +183,3 @@ def get_annotation_by_url(url: str) -> GoldAnnotation | None:
             return annotation
     return None
 
-
-def get_annotations_by_type(article_type: ArticleType) -> List[GoldAnnotation]:
-    """Get all gold standard annotations of a specific article type.
-
-    Args:
-        article_type: Article type to filter by
-
-    Returns:
-        List of matching GoldAnnotation objects
-    """
-    return [a for a in GOLD_ANNOTATIONS if a.article_type == article_type]

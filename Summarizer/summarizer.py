@@ -133,7 +133,8 @@ def summarize_article(
             lm_cfg = replace(cfg, model=resolve_lmstudio_model(LMSTUDIO_BASE_URL, cfg.model))
             logger.info("[lmstudio] Calling %s at %s for %s (attempt %d/%d)", lm_cfg.model, LMSTUDIO_BASE_URL, url, attempt, max_attempts)
             try:
-                raw_output = _run_with_lmstudio(prompt, lm_cfg)
+                lm_prompt = _build_prompt(article, article_type=article_type, max_chars=_lmstudio_content_budget(LMSTUDIO_BASE_URL, lm_cfg.model))
+                raw_output = _run_with_lmstudio(lm_prompt, lm_cfg)
                 model_name = lm_cfg.model
                 backend_used = "lmstudio"
             except SummarizerError:
@@ -151,7 +152,8 @@ def summarize_article(
             try:
                 lm_cfg = replace(cfg, model=resolve_lmstudio_model(LMSTUDIO_BASE_URL, cfg.model))
                 logger.info("[lmstudio] Calling %s at %s for %s (attempt %d/%d)", lm_cfg.model, LMSTUDIO_BASE_URL, url, attempt, max_attempts)
-                raw_output = _run_with_lmstudio(prompt, lm_cfg)
+                lm_prompt = _build_prompt(article, article_type=article_type, max_chars=_lmstudio_content_budget(LMSTUDIO_BASE_URL, lm_cfg.model))
+                raw_output = _run_with_lmstudio(lm_prompt, lm_cfg)
                 model_name = lm_cfg.model
                 backend_used = "lmstudio"
             except SummarizerError as exc:
@@ -209,6 +211,7 @@ def summarize_article(
                 "snippet": article.get("snippet", ""),
                 "summary": [{"type": "bullet", "text": bullet} for bullet in bullets],
                 "model": model_name,
+                "article_type": article_type,
             }
             if actionability:
                 result["actionability"] = actionability
@@ -311,7 +314,7 @@ def _truncate_content(content: str, max_chars: int) -> str:
     return result + "\n\n[Content truncated to fit context window]"
 
 
-def _build_prompt(article: ArticleDict, article_type: str | None = None) -> str:
+def _build_prompt(article: ArticleDict, article_type: str | None = None, max_chars: int = MAX_CONTENT_CHARS) -> str:
     content = article.get("content", "")
     if isinstance(content, list):  # backward compatibility
         fragments: List[str] = []
@@ -327,7 +330,7 @@ def _build_prompt(article: ArticleDict, article_type: str | None = None) -> str:
         content_text = str(content)
 
     # Truncate content to fit context window
-    content_text = _truncate_content(content_text, MAX_CONTENT_CHARS)
+    content_text = _truncate_content(content_text, max_chars)
 
     title = article.get("title", "")
 
@@ -547,6 +550,49 @@ def _test_lmstudio_availability(base_url: str) -> bool:
         return False
 
 
+def _lmstudio_context_length(base_url: str, model: str) -> int | None:
+    """Context length LM Studio granted the loaded model (None if unknown)."""
+    try:
+        with httpx.Client(timeout=LMSTUDIO_HEALTH_TIMEOUT) as client:
+            response = client.get(f"{base_url}/api/v0/models")
+            if response.status_code == 200:
+                for m in response.json().get("data", []):
+                    if m.get("id") == model and m.get("state") == "loaded":
+                        return int(m.get("loaded_context_length") or 0) or None
+    except Exception:
+        pass
+    return None
+
+
+# Tokens kept free of article content in an LM Studio request: the prompt
+# template plus room for the summary itself. Conservative on purpose.
+_LMSTUDIO_RESERVED_TOKENS = 2500
+_CHARS_PER_TOKEN = 3
+
+
+def _lmstudio_content_budget(base_url: str, model: str) -> int:
+    """Max article chars that fit the model's granted context (MAX_CONTENT_CHARS if unknown)."""
+    ctx = _lmstudio_context_length(base_url, model)
+    if not ctx:
+        return MAX_CONTENT_CHARS
+    return max(1000, min(MAX_CONTENT_CHARS, (ctx - _LMSTUDIO_RESERVED_TOKENS) * _CHARS_PER_TOKEN))
+
+
+def _fit_max_tokens(base_url: str, model: str, prompt: str, requested: int) -> int:
+    """Cap max_tokens so prompt + completion fits the granted context.
+
+    LM Studio rejects a request whose prompt plus max_tokens exceeds the
+    loaded context, so a fixed MAX_TOKENS fails on any model that was loaded
+    with a smaller window. Prompt size is estimated conservatively (3 chars
+    per token) and a margin is kept for the chat template.
+    """
+    ctx = _lmstudio_context_length(base_url, model)
+    if not ctx:
+        return requested
+    prompt_tokens = len(prompt) // 3 + 256
+    return max(256, min(requested, ctx - prompt_tokens))
+
+
 def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: dict = SUMMARY_JSON_SCHEMA) -> str:
     """Call LM Studio API using OpenAI-compatible endpoint.
 
@@ -571,7 +617,7 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: d
     payload = {
         "model": target_model,  # Use the verified loaded model
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": MAX_TOKENS,
+        "max_tokens": _fit_max_tokens(LMSTUDIO_BASE_URL, target_model, prompt, MAX_TOKENS),
         "temperature": cfg.temperature,
         "response_format": response_format,
     }

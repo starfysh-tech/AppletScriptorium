@@ -17,26 +17,32 @@ class AccuracyMetrics:
 
     has_4_bullets: bool  # True if exactly 4 bullets present
     labels_match_type: bool  # True if labels match article type (e.g., RESEARCH has KEY FINDING, METHODOLOGY, IMPLICATION, CONCERN)
-    actionability_valid: bool  # True if actionability is properly formatted (emoji + label)
+    actionability_valid: bool  # True if actionability is one of the allowed "<emoji> <category>" values
     facts_present: float  # Proportion of key facts from gold standard present in summary (0.0-1.0)
-    article_type_correct: bool  # True if classified article type matches gold standard
-    tag_selected: bool  # True if tags are selected (not placeholder [🚀/🗺️/👀])
+    article_type_correct: bool | None  # Classified type == gold type; None when the summary carries no type
+    tag_selected: bool  # True if TACTICAL WIN / MARKET SIGNAL carry one allowed tag (not a placeholder)
+    actionability_correct: bool = True  # Actionability category == gold expected_actionability
 
     @property
     def accuracy_score(self) -> float:
         """Compute overall accuracy score (0.0-1.0).
 
-        Weighted average of all metrics:
-        - Structure (bullets, labels, actionability, tags): 50%
+        Weighted average:
+        - Structure: 50% — bullets, labels, actionability format, actionability
+          category, tags, and article type (the last only when the summary
+          reports the classified type)
         - Content (facts_present): 50%
-        Note: article_type_correct is excluded since we don't classify articles.
         """
-        structure_score = (
-            int(self.has_4_bullets) +
-            int(self.labels_match_type) +
-            int(self.actionability_valid) +
-            int(self.tag_selected)
-        ) / 4.0
+        checks = [
+            self.has_4_bullets,
+            self.labels_match_type,
+            self.actionability_valid,
+            self.actionability_correct,
+            self.tag_selected,
+        ]
+        if self.article_type_correct is not None:
+            checks.append(self.article_type_correct)
+        structure_score = sum(int(c) for c in checks) / len(checks)
 
         content_score = self.facts_present
 
@@ -95,6 +101,33 @@ class HallucinationMetrics:
         ])
 
 
+# Vocabulary the prompts in config.py allow (emoji variation selectors stripped).
+ACTIONABILITY_CATEGORIES = {"ACT NOW", "MONITOR", "RESEARCH NEEDED", "CONTEXT ONLY"}
+TAG_EMOJI = {
+    "TACTICAL WIN": {"🚀", "🗺", "👀"},
+    "MARKET SIGNAL": {"🔴", "🟡", "⚫"},
+}
+_VARIATION_SELECTORS = re.compile(r"[\ufe0e\ufe0f]")
+
+
+def _label_of(bullet_text: str) -> str:
+    """'**KEY FINDING [🚀 SHIP NOW]**: body' -> 'KEY FINDING' (tags and asterisks stripped)."""
+    label = bullet_text.split(":")[0].strip("*").strip()
+    label = re.sub(r"\s*\[.*?\]", "", label)
+    return label.strip("*").strip()
+
+
+def _body_of(bullet_text: str) -> str:
+    return bullet_text.split(":", 1)[1].strip() if ":" in bullet_text else bullet_text
+
+
+def _actionability_category(actionability: str) -> str:
+    """'⚠️ MONITOR' -> 'MONITOR'; also tolerates the bare category."""
+    text = _VARIATION_SELECTORS.sub("", actionability or "").strip()
+    words = [w for w in text.split() if re.search(r"[A-Za-z]", w)]
+    return " ".join(words).upper()
+
+
 def evaluate_accuracy(summary: dict, gold: dict, article_content: str) -> AccuracyMetrics:
     """Evaluate summary accuracy against gold standard.
 
@@ -117,18 +150,12 @@ def evaluate_accuracy(summary: dict, gold: dict, article_content: str) -> Accura
     # Extract bullets from summary
     bullets = summary.get("summary", [])
     bullet_texts = [b.get("text", "") for b in bullets]
-    bullet_labels = [b.get("text", "").split(":")[0].strip("*").strip() for b in bullets]
 
     # Check: exactly 4 bullets
     has_4_bullets = len(bullets) == 4
 
-    # Normalize labels for comparison (remove tags like [TAG])
-    normalized_labels = []
-    for label in bullet_labels:
-        # Remove tags in brackets and asterisks
-        clean_label = re.sub(r'\s*\[.*?\]', '', label)
-        clean_label = clean_label.strip('*').strip()
-        normalized_labels.append(clean_label)
+    # Labels with tags and asterisks stripped, for comparison
+    normalized_labels = [_label_of(t) for t in bullet_texts]
 
     # Check: labels are exactly the gold annotation's expected set for the
     # article type (RESEARCH -> KEY FINDING/METHODOLOGY/IMPLICATION/CONCERN,
@@ -140,23 +167,31 @@ def evaluate_accuracy(summary: dict, gold: dict, article_content: str) -> Accura
         expected = ["KEY DEVELOPMENT", "TACTICAL WIN", "MARKET SIGNAL", "CONCERN"]
     labels_match = sorted(normalized_labels) == sorted(expected)
 
-    # Check: actionability is valid (has emoji + label, not empty)
-    actionability = summary.get("actionability", "")
-    actionability_valid = bool(actionability) and len(actionability.split()) >= 2
+    # Check: actionability is "<emoji> <category>" with an allowed category,
+    # and the category is the one the gold annotation expects
+    actionability = summary.get("actionability", "") or ""
+    category = _actionability_category(actionability)
+    # "emoji prefix" = first token carries no ASCII letters/digits (ℹ counts as
+    # alphanumeric in Unicode, so str.isalnum() is the wrong test)
+    first_token = actionability.split()[0] if actionability.split() else ""
+    has_emoji_prefix = bool(first_token) and not re.search(r"[A-Za-z0-9]", first_token)
+    actionability_valid = has_emoji_prefix and category in ACTIONABILITY_CATEGORIES
+    actionability_correct = category == (gold_obj.expected_actionability or "").upper()
 
-    # Check: tags are selected (not placeholder)
+    # Check: every TACTICAL WIN / MARKET SIGNAL bullet carries exactly one
+    # allowed tag emoji in its brackets (a slash-separated placeholder such as
+    # [🚀/🗺️/👀] or a missing bracket both fail). Bullets without a tagged
+    # label (RESEARCH, PRESS_RELEASE) are not subject to the check.
     tag_selected = True
-    bullets_text = "\n".join(bullet_texts)
-    # Look for placeholder patterns like [🚀/🗺️/👀] or [🔴/🟡/⚫]
-    placeholder_patterns = [
-        r'\[🚀/🗺️/👀\]',
-        r'\[🔴/🟡/⚫\]',
-        r'\[TAG\]',
-        r'\[action-tag\]',
-        r'\[urgency-tag\]',
-    ]
-    for pattern in placeholder_patterns:
-        if re.search(pattern, bullets_text):
+    for text in bullet_texts:
+        label = _label_of(text)
+        allowed = TAG_EMOJI.get(label)
+        if allowed is None:
+            continue
+        m = re.search(r"\[(.*?)\]", text.split(":")[0])
+        bracket = _VARIATION_SELECTORS.sub("", m.group(1)) if m else ""
+        present = [e for e in allowed if e in bracket]
+        if len(present) != 1 or "/" in bracket:
             tag_selected = False
             break
 
@@ -179,10 +214,11 @@ def evaluate_accuracy(summary: dict, gold: dict, article_content: str) -> Accura
             facts_found += 1
     facts_present = facts_found / len(gold_obj.key_facts) if gold_obj.key_facts else 0.0
 
-    # Check: article type correct (would need to track this from classification step)
-    # For now, we'll mark as True since we don't have access to the classification result
-    # This can be improved by passing the classification result to this function
-    article_type_correct = True  # TODO: Pass actual classification result
+    # Check: the classifier's article type (summarize_article records it on the
+    # summary) matches the gold type. Summaries produced before that field
+    # existed report None and are excluded from the score.
+    classified = summary.get("article_type")
+    article_type_correct = (str(classified).upper() == gold_obj.article_type) if classified else None
 
     return AccuracyMetrics(
         has_4_bullets=has_4_bullets,
@@ -191,6 +227,7 @@ def evaluate_accuracy(summary: dict, gold: dict, article_content: str) -> Accura
         facts_present=facts_present,
         article_type_correct=article_type_correct,
         tag_selected=tag_selected,
+        actionability_correct=actionability_correct,
     )
 
 
@@ -213,22 +250,23 @@ def evaluate_consistency(summaries: List[dict]) -> ConsistencyMetrics:
 
     # Check: structure identical (same bullet count and labels)
     first_bullets = summaries[0].get("summary", [])
-    first_labels = [b.get("text", "").split(":")[0].strip("*").strip() for b in first_bullets]
+    first_labels = [_label_of(b.get("text", "")) for b in first_bullets]
 
     structure_identical = True
     for summary in summaries[1:]:
         bullets = summary.get("summary", [])
-        labels = [b.get("text", "").split(":")[0].strip("*").strip() for b in bullets]
+        labels = [_label_of(b.get("text", "")) for b in bullets]
         if len(bullets) != len(first_bullets) or labels != first_labels:
             structure_identical = False
             break
 
-    # Check: content similarity (Jaccard similarity of bullet text)
+    # Check: content similarity (Jaccard similarity of bullet bodies; labels
+    # and tags are excluded since structure_identical already scores them)
     all_bullet_texts = []
     for summary in summaries:
         bullets = summary.get("summary", [])
-        bullet_texts = [b.get("text", "").lower() for b in bullets]
-        all_bullet_texts.append(set(" ".join(bullet_texts).split()))
+        bullet_bodies = [_body_of(b.get("text", "")).lower() for b in bullets]
+        all_bullet_texts.append(set(" ".join(bullet_bodies).split()))
 
     # Compute average pairwise Jaccard similarity
     similarity_scores = []
@@ -255,6 +293,23 @@ def evaluate_consistency(summaries: List[dict]) -> ConsistencyMetrics:
         content_similarity=content_similarity,
         actionability_stable=actionability_stable,
     )
+
+
+_STOPWORDS = {
+    "the", "a", "an", "and", "or", "of", "to", "in", "on", "for", "with", "by", "is", "are", "was",
+    "were", "be", "been", "that", "this", "these", "those", "it", "its", "as", "at", "from", "not",
+    "no", "but", "may", "might", "can", "could", "than", "which", "who", "has", "have", "had", "study",
+    "article", "authors", "results", "data",
+}
+
+
+def _supported_by_article(text: str, article_content: str, threshold: float = 0.5) -> bool:
+    """True if at least `threshold` of the text's content words appear in the article."""
+    article_words = set(re.findall(r"\b\w+\b", article_content.lower()))
+    words = [w for w in re.findall(r"\b\w+\b", text.lower()) if len(w) > 3 and w not in _STOPWORDS]
+    if not words:
+        return True
+    return sum(w in article_words for w in words) / len(words) >= threshold
 
 
 def detect_hallucinations(summary: dict, article_content: str, gold: dict) -> HallucinationMetrics:
@@ -288,10 +343,11 @@ def detect_hallucinations(summary: dict, article_content: str, gold: dict) -> Ha
             break
 
     # Check 1: concern_is_fabricated
+    # A real CONCERN (not the "no concerns" boilerplate) is fabricated when the
+    # article has no explicit concern at all, or when the concern's content
+    # words are mostly absent from the article text.
     concern_is_fabricated = False
-    if concern_bullet and not gold_obj.has_explicit_concern:
-        # Article has no explicit concerns, but model generated a CONCERN
-        # Check if it's the standard "No concerns" text
+    if concern_bullet:
         no_concern_phrases = [
             "no concerns stated in article",
             "no significant concerns identified",
@@ -300,7 +356,10 @@ def detect_hallucinations(summary: dict, article_content: str, gold: dict) -> Ha
         ]
         is_no_concern = any(phrase in concern_bullet.lower() for phrase in no_concern_phrases)
         if not is_no_concern:
-            concern_is_fabricated = True
+            if not gold_obj.has_explicit_concern:
+                concern_is_fabricated = True
+            else:
+                concern_is_fabricated = not _supported_by_article(_body_of(concern_bullet), article_content)
 
     # Check 2: concern_is_benefit (concern describes ONLY positive outcome)
     # A false positive occurs when concern discusses lack of benefit or limited evidence
@@ -341,8 +400,9 @@ def detect_hallucinations(summary: dict, article_content: str, gold: dict) -> Ha
 
     # Check 4: invented_numbers
     invented_numbers = False
-    # Extract all numbers from summary
-    summary_text = " ".join(bullet_texts)
+    # Extract all numbers from summary (strip thousands separators so 10,000
+    # is one number, not "10" and "000")
+    summary_text = " ".join(bullet_texts).replace(",", "")
     summary_numbers = set(re.findall(r'\b\d+\.?\d*\b', summary_text))
 
     # Extract all numbers from article (also strip commas for matching)

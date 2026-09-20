@@ -46,11 +46,14 @@ Human-curated annotations for test articles:
 - **Key Facts**: Important facts that should appear in summary
 - **Expected Actionability**: Category like MONITOR, ACT NOW, etc.
 
-Current test articles:
-1. Patient-reported outcomes research (RESEARCH)
+Current test articles (see `GOLD_ANNOTATIONS`):
+1. Patient-reported outcomes and medication confidence (RESEARCH)
 2. AAOS Orthobiologics Registry (PRESS_RELEASE)
 3. LogicMark medication reminder (PRESS_RELEASE)
 4. ECU fear avoidance tool (NEWS)
+5. SAT-151 testosterone replacement therapy and hematocrit (RESEARCH)
+6. Beamion LUNG-1 patient-reported outcomes in HER2-mutated NSCLC (NEWS)
+7. Lumbar bracing after short lumbar fusion (RESEARCH)
 
 ### Metrics (`metrics.py`)
 
@@ -61,20 +64,21 @@ Three dataclasses track different quality aspects:
 Checks structural validity and content quality:
 
 - `has_4_bullets` - Exactly 4 bullets present
-- `labels_match_type` - Labels match article type (e.g., RESEARCH has KEY FINDING, METHODOLOGY, IMPLICATION, CONCERN)
-- `actionability_valid` - Properly formatted actionability indicator
-- `tag_selected` - Tags are selected, not placeholder `[🚀/🗺️/👀]`
+- `labels_match_type` - Labels are exactly the annotation's `expected_labels` (order-insensitive, count-sensitive)
+- `actionability_valid` - Actionability is `<emoji> <category>` with an allowed category (ACT NOW / MONITOR / RESEARCH NEEDED / CONTEXT ONLY)
+- `actionability_correct` - Category matches the annotation's `expected_actionability`
+- `tag_selected` - TACTICAL WIN / MARKET SIGNAL bullets carry exactly one allowed tag emoji, not a placeholder like `[🚀/🗺️/👀]`
 - `facts_present` - Proportion of key facts from gold standard (0.0-1.0)
-- `article_type_correct` - Classification matches gold standard
+- `article_type_correct` - The classifier's type (recorded on the summary as `article_type`) matches the annotation; `None` for summaries without that field
 
-**Scoring**: Weighted average (60% structure + 40% content)
+**Scoring**: 50% structure (mean of the boolean checks above, `article_type_correct` included only when known) + 50% content (`facts_present`)
 
 #### ConsistencyMetrics
 
 Measures output stability across runs:
 
 - `structure_identical` - Same bullet count and labels
-- `content_similarity` - Jaccard similarity of text content
+- `content_similarity` - Jaccard similarity of bullet bodies (labels/tags excluded — `structure_identical` covers them)
 - `actionability_stable` - Same actionability across runs
 
 **Scoring**: Weighted average (40% structure + 40% similarity + 20% actionability)
@@ -83,7 +87,7 @@ Measures output stability across runs:
 
 Detects fabricated or incorrect content:
 
-- `concern_is_fabricated` - CONCERN text doesn't appear in article
+- `concern_is_fabricated` - A real CONCERN when the article states none, or one whose content words are mostly absent from the article
 - `concern_is_benefit` - CONCERN describes positive outcome
 - `concern_duplicates_other` - CONCERN duplicates another bullet
 - `invented_numbers` - Numbers in summary not in article

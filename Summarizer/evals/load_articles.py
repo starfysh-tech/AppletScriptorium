@@ -1,5 +1,6 @@
 """Helper functions to load test articles from gold standard."""
 
+import re
 from pathlib import Path
 from typing import List, Dict
 import logging
@@ -9,10 +10,44 @@ from .gold_standard import GOLD_ANNOTATIONS
 logger = logging.getLogger(__name__)
 
 
-def load_articles_from_directory(articles_dir: Path) -> List[Dict]:
-    """Load test articles from a directory of content files.
+def _slug(value: str) -> str:
+    """Same slug the pipeline uses for article filenames (cli.slugify), first 40 chars."""
+    return re.sub(r"[^a-zA-Z0-9]+", "-", value).strip("-").lower()[:40]
 
-    Matches gold standard annotations to .content.md files using title matching.
+
+def _match_annotations(content_files: List[Path], annotations, *, warn_missing: bool) -> List[Dict]:
+    """Match gold annotations to content files.
+
+    The pipeline names each file ``NN-<slug(title)[:40]>.content.md``, so the
+    filename is matched against the annotation title's slug. Article bodies
+    are not searched: they often omit the title entirely, and a loose text
+    match can pick an unrelated article that merely mentions it.
+    """
+    by_slug = {}
+    for f in content_files:
+        name = f.name[: -len(".content.md")]
+        slug = name.split("-", 1)[1] if re.match(r"^\d+-", name) else name
+        by_slug.setdefault(slug, f)  # first (newest) wins
+
+    articles = []
+    for annotation in annotations:
+        title_slug = _slug(annotation.title)
+        if not title_slug:  # an empty key would be meaningless
+            logger.warning("Annotation has no title, cannot match content file: %s", annotation.url)
+            continue
+        # The file slug is truncated at 40 chars, so accept a prefix match either way.
+        match = next((f for slug, f in by_slug.items() if slug.startswith(title_slug) or title_slug.startswith(slug)), None)
+        if match is None:
+            if warn_missing:
+                logger.warning("No content file found for: %s", annotation.title)
+            continue
+        articles.append({"url": annotation.url, "title": annotation.title, "content": match.read_text(encoding="utf-8", errors="ignore")})
+        logger.info("Matched: %s -> %s", annotation.title[:40], match.name)
+    return articles
+
+
+def load_articles_from_directory(articles_dir: Path) -> List[Dict]:
+    """Load test articles from a directory of *.content.md files.
 
     Args:
         articles_dir: Directory containing *.content.md files
@@ -23,45 +58,22 @@ def load_articles_from_directory(articles_dir: Path) -> List[Dict]:
     if not articles_dir.exists():
         logger.error("Articles directory not found: %s", articles_dir)
         return []
-
-    content_files = list(articles_dir.glob("*.content.md"))
+    content_files = sorted(articles_dir.glob("*.content.md"))
     if not content_files:
         logger.error("No .content.md files found in %s", articles_dir)
         return []
-
     logger.info("Found %d content files in %s", len(content_files), articles_dir)
-
-    articles = []
-    for annotation in GOLD_ANNOTATIONS:
-        matched = False
-
-        # Try to match by title (first 20 chars)
-        title_prefix = annotation.title.lower()[:20]
-
-        for content_file in content_files:
-            content = content_file.read_text(encoding="utf-8")
-
-            # Check if title appears in first 1000 chars of content
-            if title_prefix in content.lower()[:1000]:
-                article = {
-                    "url": annotation.url,
-                    "title": annotation.title,
-                    "content": content,
-                }
-                articles.append(article)
-                logger.info("Matched: %s -> %s", annotation.title[:40], content_file.name)
-                matched = True
-                break
-
-        if not matched:
-            logger.warning("No content file found for: %s", annotation.title)
-
+    articles = _match_annotations(content_files, GOLD_ANNOTATIONS, warn_missing=True)
     logger.info("Loaded %d/%d articles", len(articles), len(GOLD_ANNOTATIONS))
     return articles
 
 
 def load_articles_from_runs(runs_dir: Path = None) -> List[Dict]:
-    """Load test articles from most recent runs/ directory.
+    """Load test articles from the runs/ tree.
+
+    Gold articles come from whichever runs fetched them, so every
+    runs/alert-*/articles directory is searched, newest first, and the first
+    match per annotation wins.
 
     Args:
         runs_dir: Path to runs directory (defaults to repo root/runs)
@@ -70,26 +82,21 @@ def load_articles_from_runs(runs_dir: Path = None) -> List[Dict]:
         List of article dicts with url, title, content keys
     """
     if runs_dir is None:
-        # Find repo root
-        current = Path(__file__).resolve()
-        repo_root = current.parent.parent.parent
+        repo_root = Path(__file__).resolve().parent.parent.parent
         runs_dir = repo_root / "runs"
-
     if not runs_dir.exists():
         logger.error("runs/ directory not found at %s", runs_dir)
         return []
 
-    # Find most recent alert directory
-    alert_dirs = sorted(runs_dir.glob("alert-*"), reverse=True)
-    if not alert_dirs:
-        logger.error("No alert-* directories found in %s", runs_dir)
+    alert_dirs = sorted((d for d in runs_dir.glob("alert-*") if (d / "articles").is_dir()), reverse=True)
+    content_files = [f for d in alert_dirs for f in sorted((d / "articles").glob("*.content.md"))]
+    if not content_files:
+        logger.error("No alert-*/articles/*.content.md files found under %s", runs_dir)
         return []
 
-    most_recent = alert_dirs[0]
-    articles_dir = most_recent / "articles"
-
-    logger.info("Using articles from: %s", articles_dir)
-    return load_articles_from_directory(articles_dir)
+    articles = _match_annotations(content_files, GOLD_ANNOTATIONS, warn_missing=True)
+    logger.info("Loaded %d/%d gold articles from %d run directories", len(articles), len(GOLD_ANNOTATIONS), len(alert_dirs))
+    return articles
 
 
 def find_article_by_url(url: str, articles: List[Dict]) -> Dict | None:

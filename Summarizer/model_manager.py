@@ -4,11 +4,16 @@ import logging
 import re
 import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal, List
 
 Backend = Literal["lmstudio", "ollama"]
 
 logger = logging.getLogger(__name__)
+
+# LM Studio installs its CLI here and does not put it on PATH by default.
+_LMS_HOME = Path.home() / ".lmstudio" / "bin" / "lms"
+LMS = str(_LMS_HOME) if _LMS_HOME.exists() else "lms"
 
 
 @dataclass
@@ -29,14 +34,14 @@ def discover_lmstudio_models() -> List[ModelInfo]:
     """
     try:
         result = subprocess.run(
-            ["lms", "ls"],
+            [LMS, "ls"],
             capture_output=True,
             text=True,
             check=True,
             timeout=10
         )
     except FileNotFoundError:
-        logger.warning("lms CLI not found; skipping LM Studio model discovery")
+        logger.warning("lms CLI not found (%s); skipping LM Studio model discovery", LMS)
         return []
     except subprocess.CalledProcessError as e:
         logger.warning(f"lms ls failed: {e.stderr}")
@@ -152,7 +157,7 @@ def load_lmstudio_model(model_name: str) -> None:
     """
     logger.info(f"Loading LM Studio model: {model_name}")
     result = subprocess.run(
-        ["lms", "load", model_name],
+        [LMS, "load", "--yes", model_name],
         capture_output=True,
         text=True,
         check=True,
@@ -173,7 +178,7 @@ def unload_lmstudio_model(model_name: str) -> None:
     """
     logger.info(f"Unloading LM Studio model: {model_name}")
     result = subprocess.run(
-        ["lms", "unload", model_name],
+        [LMS, "unload", model_name],
         capture_output=True,
         text=True,
         check=True,
@@ -191,7 +196,7 @@ def unload_all_lmstudio_models() -> None:
     """
     logger.info("Unloading all LM Studio models")
     result = subprocess.run(
-        ["lms", "unload", "--all"],
+        [LMS, "unload", "--all"],
         capture_output=True,
         text=True,
         check=True,

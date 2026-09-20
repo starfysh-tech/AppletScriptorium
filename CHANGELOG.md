@@ -16,6 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Summarizer:** `Summarizer/evals/` (the eval framework `cli.py eval` imports) was
   gitignored as a runtime output and missing from the repo; it is now tracked, with
   only its result folders (`evals/final-*/`) ignored.
+- **Summarizer:** LM Studio requests now size `max_tokens` and article truncation to the
+  context the model was actually loaded with, instead of a fixed 16k / 32k chars that
+  400'd on any smaller window.
+- **Summarizer evals:** metrics now score what they claim — labels must equal the gold
+  set, actionability must be an allowed category and match the annotation, tags must be
+  one allowed emoji, `article_type_correct` compares the classifier's result (recorded
+  on summaries as `article_type`), CONCERN text is checked against the article on every
+  article, comma-formatted numbers are not split, and consistency compares bullet bodies
+  only. Runner uses `~/.lmstudio/bin/lms`, rejects `runs < 1`, and reports success per
+  attempt. Gold articles are matched by the pipeline's filename slug across all run
+  directories instead of a title-prefix search of the newest one.
 
 ### Changed
 

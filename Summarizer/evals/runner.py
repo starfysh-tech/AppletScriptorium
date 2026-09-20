@@ -2,6 +2,7 @@
 
 import httpx
 import logging
+import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -10,7 +11,7 @@ import json
 
 from ..summarizer import summarize_article, SummarizerConfig
 from ..config import LMSTUDIO_BASE_URL
-from ..model_manager import discover_lmstudio_models, load_lmstudio_model, unload_all_lmstudio_models
+from ..model_manager import LMS, discover_lmstudio_models, load_lmstudio_model, unload_all_lmstudio_models
 from .metrics import (
     evaluate_accuracy,
     evaluate_consistency,
@@ -19,7 +20,7 @@ from .metrics import (
     ConsistencyMetrics,
     HallucinationMetrics,
 )
-from .gold_standard import GOLD_ANNOTATIONS, GoldAnnotation
+from .gold_standard import GOLD_ANNOTATIONS, GoldAnnotation, get_annotation_by_url
 
 logger = logging.getLogger(__name__)
 
@@ -73,20 +74,20 @@ class ModelResults:
 class ModelEvaluator:
     """Evaluates LLM models on the summarization task."""
 
-    def __init__(self, lmstudio_url: str = None):
+    def __init__(self):
         """Initialize evaluator.
 
-        Args:
-            lmstudio_url: LM Studio API URL (defaults to LMSTUDIO_BASE_URL from config)
+        Talks to the LM Studio instance configured by LMSTUDIO_BASE_URL (the
+        summarizer reads the same setting, so there is no per-instance override).
         """
-        self.lmstudio_url = lmstudio_url or LMSTUDIO_BASE_URL
+        self.lmstudio_url = LMSTUDIO_BASE_URL
         if not self.lmstudio_url:
             raise ValueError("LM Studio URL not configured. Set LMSTUDIO_BASE_URL in .env")
 
-        # Full path to LM Studio CLI
-        self.lms_cli = Path.home() / ".lmstudio" / "bin" / "lms"
-        if not self.lms_cli.exists():
-            raise ValueError(f"LM Studio CLI not found at {self.lms_cli}")
+        # model_manager resolves the CLI to ~/.lmstudio/bin/lms or PATH
+        self.lms_cli = Path(LMS)
+        if not shutil.which(LMS):
+            raise ValueError(f"LM Studio CLI not found at {LMS}")
 
     def get_available_models(self) -> List[str]:
         """Get list of available models from LM Studio.
@@ -144,6 +145,8 @@ class ModelEvaluator:
         Returns:
             ModelResults object with evaluation metrics
         """
+        if runs < 1:
+            raise ValueError(f"runs must be >= 1, got {runs}")
         logger.info("Evaluating model: %s (runs=%d, articles=%d)", model, runs, len(articles))
 
         # Load model
@@ -158,13 +161,7 @@ class ModelEvaluator:
             url = article.get("url", "")
             logger.info("Evaluating article: %s", url)
 
-            # Find gold standard annotation
-            gold = None
-            for annotation in GOLD_ANNOTATIONS:
-                if annotation.url == url:
-                    gold = annotation
-                    break
-
+            gold = get_annotation_by_url(url)
             if not gold:
                 logger.warning("No gold standard for %s, skipping", url)
                 results.error_count += 1
