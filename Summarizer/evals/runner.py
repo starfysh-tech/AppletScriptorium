@@ -59,12 +59,15 @@ class ModelResults:
         has_hallucinations = [m.has_hallucinations for m in self.hallucination_scores]
         return sum(has_hallucinations) / len(has_hallucinations)
 
+    runs_per_article: int = 1
+
     @property
     def success_rate(self) -> float:
-        """Calculate proportion of successful summaries (no errors)."""
-        if self.total_articles == 0:
+        """Proportion of attempted summaries (articles x runs) that succeeded."""
+        attempts = self.total_articles * max(1, self.runs_per_article)
+        if attempts == 0:
             return 0.0
-        return (self.total_articles - self.error_count) / self.total_articles
+        return max(0.0, attempts - self.error_count) / attempts
 
 
 class ModelEvaluator:
@@ -148,7 +151,7 @@ class ModelEvaluator:
             logger.error("Failed to load model %s, skipping evaluation", model)
             return ModelResults(model=model, total_articles=len(articles), error_count=len(articles))
 
-        results = ModelResults(model=model, total_articles=len(articles))
+        results = ModelResults(model=model, total_articles=len(articles), runs_per_article=runs)
 
         # For each article, run multiple times
         for article in articles:

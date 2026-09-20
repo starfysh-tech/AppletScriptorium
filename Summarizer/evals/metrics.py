@@ -122,14 +122,6 @@ def evaluate_accuracy(summary: dict, gold: dict, article_content: str) -> Accura
     # Check: exactly 4 bullets
     has_4_bullets = len(bullets) == 4
 
-    # Check: labels match the gold standard's expected set for the article type
-    # (RESEARCH -> KEY FINDING/METHODOLOGY/IMPLICATION/CONCERN, etc.). The
-    # classifier used to be broken and always produced NEWS labels, so this
-    # previously accepted NEWS labels for every type; now the gold list is the
-    # reference, with NEWS labels still accepted as a fallback.
-    expected = gold.get("expected_labels") if isinstance(gold, dict) else getattr(gold, "expected_labels", None)
-    standard_labels = set(expected or []) | {"KEY DEVELOPMENT", "KEY FINDING", "TACTICAL WIN", "MARKET SIGNAL", "CONCERN"}
-
     # Normalize labels for comparison (remove tags like [TAG])
     normalized_labels = []
     for label in bullet_labels:
@@ -138,12 +130,15 @@ def evaluate_accuracy(summary: dict, gold: dict, article_content: str) -> Accura
         clean_label = clean_label.strip('*').strip()
         normalized_labels.append(clean_label)
 
-    # Check if labels are valid standard labels
-    labels_match = True
-    for norm_label in normalized_labels:
-        if not any(std in norm_label for std in standard_labels):
-            labels_match = False
-            break
+    # Check: labels are exactly the gold annotation's expected set for the
+    # article type (RESEARCH -> KEY FINDING/METHODOLOGY/IMPLICATION/CONCERN,
+    # etc.), order-insensitive but count-sensitive so a repeated label cannot
+    # stand in for a missing one. Falls back to the NEWS label set when an
+    # annotation carries no expected_labels.
+    expected = gold.get("expected_labels") if isinstance(gold, dict) else getattr(gold, "expected_labels", None)
+    if not expected:
+        expected = ["KEY DEVELOPMENT", "TACTICAL WIN", "MARKET SIGNAL", "CONCERN"]
+    labels_match = sorted(normalized_labels) == sorted(expected)
 
     # Check: actionability is valid (has emoji + label, not empty)
     actionability = summary.get("actionability", "")
