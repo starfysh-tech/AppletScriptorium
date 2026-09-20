@@ -132,7 +132,19 @@ def test_ensure_loaded_loads_downloaded_but_inactive_model(monkeypatch):
 def test_fit_max_tokens_refuses_when_prompt_fills_context(monkeypatch):
     from Summarizer import summarizer as S
     monkeypatch.setattr(S, "_lmstudio_context_length", lambda base_url, model: 1000)
-    assert S._fit_max_tokens("http://x", "m", "word " * 100, 16384) == 1000 - (500 // 3 + 256)
+    prompt = "word " * 100
+    fitted = S._fit_max_tokens("http://x", "m", prompt, 16384)
+    # Behavioural properties, not the formula: the request is shrunk below what
+    # was asked, still leaves a usable completion, and fits the window with
+    # the prompt (LM Studio's own accounting on a real request was ~700
+    # prompt tokens for 2.5k chars, well under this estimate).
+    assert 256 <= fitted < 16384
+    assert S._estimate_tokens(prompt) + fitted <= 1000
+    # Unknown context: the request is passed through untouched
+    monkeypatch.setattr(S, "_lmstudio_context_length", lambda base_url, model: None)
+    assert S._fit_max_tokens("http://x", "m", prompt, 16384) == 16384
+    # Prompt that fills the window: refuse rather than send a doomed request
+    monkeypatch.setattr(S, "_lmstudio_context_length", lambda base_url, model: 1000)
     with pytest.raises(S.SummarizerError):
         S._fit_max_tokens("http://x", "m", "word " * 600, 16384)
 
