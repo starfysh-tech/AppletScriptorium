@@ -47,7 +47,13 @@ OLLAMA_TIMEOUT = float(os.environ.get("OLLAMA_TIMEOUT", "120.0"))
 # Legacy settings (kept for backward compatibility with tests)
 DEFAULT_MODEL = OLLAMA_MODEL
 TEMPERATURE = 0.1  # Lower = more focused, higher = more creative (0.0-1.0)
-MAX_TOKENS = 16384  # Maximum response length from LLM
+# Completion budget for one 4-bullet summary (observed: ~200 tokens). Generous
+# headroom, but small enough that prompt + completion fits any context a model
+# is loaded with. Raise it if you enable a reasoning effort above "none", since
+# reasoning tokens come out of this budget.
+MAX_TOKENS = int(os.environ.get("LMSTUDIO_MAX_TOKENS", "2048"))
+if MAX_TOKENS < 1:
+    raise ValueError(f"LMSTUDIO_MAX_TOKENS must be >= 1, got {MAX_TOKENS}")
 
 # Content truncation to fit model context window
 # 32,000 chars ≈ 8,000 tokens, leaves ~8,000 tokens for prompt template + response
@@ -115,6 +121,14 @@ Article content:
 
 # Valid article types
 ARTICLE_TYPES = ["RESEARCH", "NEWS", "OPINION", "PRESS_RELEASE"]
+
+# Bullet/actionability vocabulary the prompts above tell the model to use.
+# Machine-readable so the evals score against the same list the prompts teach.
+ACTIONABILITY_EMOJI = {"ACT NOW": "🎯", "MONITOR": "⚠️", "RESEARCH NEEDED": "🔍", "CONTEXT ONLY": "ℹ️"}
+TAG_EMOJI = {
+    "TACTICAL WIN": {"🚀", "🗺", "👀"},   # SHIP NOW / ROADMAP / WATCH
+    "MARKET SIGNAL": {"🔴", "🟡", "⚫"},  # URGENT / NOTABLE / CONTEXT
+}
 
 # Grammar for the classifier: a single enum field, so the model cannot answer
 # with anything but one of the four types.

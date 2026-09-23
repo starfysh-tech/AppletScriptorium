@@ -20,7 +20,7 @@ from .metrics import (
     ConsistencyMetrics,
     HallucinationMetrics,
 )
-from .gold_standard import GOLD_ANNOTATIONS, GoldAnnotation, get_annotation_by_url
+from .gold_standard import get_annotation_by_url
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,7 @@ class ModelResults:
     hallucination_scores: List[HallucinationMetrics] = field(default_factory=list)
     error_count: int = 0
     total_articles: int = 0
+    runs_per_article: int = 1
 
     @property
     def avg_accuracy(self) -> float:
@@ -60,15 +61,11 @@ class ModelResults:
         has_hallucinations = [m.has_hallucinations for m in self.hallucination_scores]
         return sum(has_hallucinations) / len(has_hallucinations)
 
-    runs_per_article: int = 1
-
     @property
     def success_rate(self) -> float:
         """Proportion of attempted summaries (articles x runs) that succeeded."""
-        attempts = self.total_articles * max(1, self.runs_per_article)
-        if attempts == 0:
-            return 0.0
-        return max(0.0, attempts - self.error_count) / attempts
+        attempts = self.total_articles * self.runs_per_article
+        return (attempts - self.error_count) / attempts if attempts else 0.0
 
 
 class ModelEvaluator:
@@ -85,7 +82,6 @@ class ModelEvaluator:
             raise ValueError("LM Studio URL not configured. Set LMSTUDIO_BASE_URL in .env")
 
         # model_manager resolves the CLI to ~/.lmstudio/bin/lms or PATH
-        self.lms_cli = Path(LMS)
         if not shutil.which(LMS):
             raise ValueError(f"LM Studio CLI not found at {LMS}")
 

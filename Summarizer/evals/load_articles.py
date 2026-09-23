@@ -5,17 +5,19 @@ from pathlib import Path
 from typing import List, Dict
 import logging
 
+from ..cli import ARTICLE_SLUG_CHARS, slugify
 from .gold_standard import GOLD_ANNOTATIONS
 
 logger = logging.getLogger(__name__)
 
 
 def _slug(value: str) -> str:
-    """Same slug the pipeline uses for article filenames (cli.slugify), first 40 chars."""
-    return re.sub(r"[^a-zA-Z0-9]+", "-", value).strip("-").lower()[:40]
+    """The slug the pipeline gives an article file: cli.slugify truncated the
+    same way cli.py does when it names `NN-<slug>.content.md`."""
+    return slugify(value)[:ARTICLE_SLUG_CHARS]
 
 
-def _match_annotations(content_files: List[Path], annotations, *, warn_missing: bool) -> List[Dict]:
+def _match_annotations(content_files: List[Path], annotations) -> List[Dict]:
     """Match gold annotations to content files.
 
     The pipeline names each file ``NN-<slug(title)[:40]>.content.md``, so the
@@ -45,8 +47,7 @@ def _match_annotations(content_files: List[Path], annotations, *, warn_missing: 
                 continue
             match = candidates[0] if candidates else None
         if match is None:
-            if warn_missing:
-                logger.warning("No content file found for: %s", annotation.title)
+            logger.warning("No content file found for: %s", annotation.title)
             continue
         articles.append({"url": annotation.url, "title": annotation.title, "content": match.read_text(encoding="utf-8", errors="ignore")})
         logger.info("Matched: %s -> %s", annotation.title[:40], match.name)
@@ -70,7 +71,7 @@ def load_articles_from_directory(articles_dir: Path) -> List[Dict]:
         logger.error("No .content.md files found in %s", articles_dir)
         return []
     logger.info("Found %d content files in %s", len(content_files), articles_dir)
-    articles = _match_annotations(content_files, GOLD_ANNOTATIONS, warn_missing=True)
+    articles = _match_annotations(content_files, GOLD_ANNOTATIONS)
     logger.info("Loaded %d/%d articles", len(articles), len(GOLD_ANNOTATIONS))
     return articles
 
@@ -101,7 +102,7 @@ def load_articles_from_runs(runs_dir: Path = None) -> List[Dict]:
         logger.error("No alert-*/articles/*.content.md files found under %s", runs_dir)
         return []
 
-    articles = _match_annotations(content_files, GOLD_ANNOTATIONS, warn_missing=True)
+    articles = _match_annotations(content_files, GOLD_ANNOTATIONS)
     logger.info("Loaded %d/%d gold articles from %d run directories", len(articles), len(GOLD_ANNOTATIONS), len(alert_dirs))
     return articles
 

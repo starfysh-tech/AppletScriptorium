@@ -10,6 +10,8 @@ from dataclasses import dataclass
 import re
 from typing import List
 
+from ..config import ACTIONABILITY_EMOJI, TAG_EMOJI
+
 
 @dataclass
 class AccuracyMetrics:
@@ -21,7 +23,7 @@ class AccuracyMetrics:
     facts_present: float  # Proportion of key facts from gold standard present in summary (0.0-1.0)
     article_type_correct: bool | None  # Classified type == gold type (False if classification failed); None when the summary predates the field
     tag_selected: bool  # True if TACTICAL WIN / MARKET SIGNAL carry one allowed tag (not a placeholder)
-    actionability_correct: bool = True  # Actionability category == gold expected_actionability
+    actionability_correct: bool  # Actionability category == gold expected_actionability
 
     @property
     def accuracy_score(self) -> float:
@@ -101,12 +103,8 @@ class HallucinationMetrics:
         ])
 
 
-# Vocabulary the prompts in config.py allow (emoji variation selectors stripped).
-ACTIONABILITY_CATEGORIES = {"ACT NOW", "MONITOR", "RESEARCH NEEDED", "CONTEXT ONLY"}
-TAG_EMOJI = {
-    "TACTICAL WIN": {"🚀", "🗺", "👀"},
-    "MARKET SIGNAL": {"🔴", "🟡", "⚫"},
-}
+# Score against the same vocabulary the prompts teach, not a second copy.
+ACTIONABILITY_CATEGORIES = set(ACTIONABILITY_EMOJI)
 _VARIATION_SELECTORS = re.compile(r"[\ufe0e\ufe0f]")
 
 
@@ -162,9 +160,7 @@ def evaluate_accuracy(summary: dict, gold: dict, article_content: str) -> Accura
     # etc.), order-insensitive but count-sensitive so a repeated label cannot
     # stand in for a missing one. Falls back to the NEWS label set when an
     # annotation carries no expected_labels.
-    expected = gold.get("expected_labels") if isinstance(gold, dict) else getattr(gold, "expected_labels", None)
-    if not expected:
-        expected = ["KEY DEVELOPMENT", "TACTICAL WIN", "MARKET SIGNAL", "CONCERN"]
+    expected = gold_obj.expected_labels or ["KEY DEVELOPMENT", "TACTICAL WIN", "MARKET SIGNAL", "CONCERN"]
     labels_match = sorted(normalized_labels) == sorted(expected)
 
     # Check: actionability is "<emoji> <category>" with an allowed category,
@@ -183,8 +179,7 @@ def evaluate_accuracy(summary: dict, gold: dict, article_content: str) -> Accura
     # [🚀/🗺️/👀] or a missing bracket both fail). Bullets without a tagged
     # label (RESEARCH, PRESS_RELEASE) are not subject to the check.
     tag_selected = True
-    for text in bullet_texts:
-        label = _label_of(text)
+    for text, label in zip(bullet_texts, normalized_labels):
         allowed = TAG_EMOJI.get(label)
         if allowed is None:
             continue
@@ -344,7 +339,7 @@ def detect_hallucinations(summary: dict, article_content: str, gold: dict) -> Ha
     concern_bullet = None
     for bullet in bullets:
         text = bullet.get("text", "")
-        if "**CONCERN" in text or "**CREDIBILITY" in text:
+        if _label_of(text) in ("CONCERN", "CREDIBILITY"):
             concern_bullet = text
             break
 
@@ -376,7 +371,7 @@ def detect_hallucinations(summary: dict, article_content: str, gold: dict) -> Ha
                         "increased", "enhanced", "superior", "advantage", "benefit"]
         negative_qualifiers = ["not", "no", "lack", "limited", "without", "failed", "concern",
                                "risk", "need", "require", "further", "may", "might", "unclear"]
-        concern_body = concern_bullet.split(":", 1)[1].lower() if ":" in concern_bullet else concern_bullet.lower()
+        concern_body = _body_of(concern_bullet).lower()
         has_benefit = any(word in concern_body for word in benefit_words)
         has_negative = any(word in concern_body for word in negative_qualifiers)
         # Only flag if purely positive (benefit words present but no negative qualifiers)
@@ -387,14 +382,14 @@ def detect_hallucinations(summary: dict, article_content: str, gold: dict) -> Ha
     concern_duplicates_other = False
     if concern_bullet:
         # Extract concern text (after label)
-        concern_text = concern_bullet.split(":", 1)[1].strip() if ":" in concern_bullet else concern_bullet
+        concern_text = _body_of(concern_bullet)
         concern_words = set(concern_text.lower().split())
 
         # Check other bullets for overlap
         for bullet in bullet_texts:
             if bullet == concern_bullet:
                 continue
-            bullet_text = bullet.split(":", 1)[1].strip() if ":" in bullet else bullet
+            bullet_text = _body_of(bullet)
             bullet_words = set(bullet_text.lower().split())
 
             # If >50% of concern words appear in another bullet, it's a duplicate

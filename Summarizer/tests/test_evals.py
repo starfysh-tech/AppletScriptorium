@@ -26,6 +26,23 @@ NEWS = GoldAnnotation(
 )
 
 
+def _ann(title, url, **kw):
+    """Minimal annotation for loader tests, where only title/url matter."""
+    return GoldAnnotation(
+        url=url, title=title, article_type="NEWS", expected_labels=[],
+        has_explicit_concern=False, key_facts=[], expected_actionability="MONITOR", **kw
+    )
+
+
+def _articles_dir(tmp_path, stamp, files):
+    """Create runs/alert-<stamp>/articles/ containing {name: text}."""
+    d = tmp_path / f"alert-{stamp}" / "articles"
+    d.mkdir(parents=True)
+    for name, text in files.items():
+        (d / name).write_text(text)
+    return d
+
+
 def _summary(bullets, actionability="⚠️ MONITOR", article_type=None):
     s = {"summary": [{"type": "bullet", "text": b} for b in bullets], "actionability": actionability}
     if article_type:
@@ -61,16 +78,21 @@ def test_accuracy_actionability_vocab_and_expected_category():
         assert not evaluate_accuracy(_summary(GOOD_RESEARCH, bad), RESEARCH, ARTICLE).actionability_valid
 
 
-def test_accuracy_tags_must_be_single_allowed_emoji():
-    def news(tw, ms):
-        return ["**KEY DEVELOPMENT**: launch", f"**TACTICAL WIN {tw}**: y", f"**MARKET SIGNAL {ms}**: z", "**CONCERN**: No concerns stated in article."]
-    assert evaluate_accuracy(_summary(news("[🚀 SHIP NOW]", "[🟡 NOTABLE]"), "ℹ️ CONTEXT ONLY"), NEWS, ARTICLE).tag_selected
-    assert not evaluate_accuracy(_summary(news("[🚀/🗺️/👀]", "[🟡 NOTABLE]"), "ℹ️ CONTEXT ONLY"), NEWS, ARTICLE).tag_selected
-    assert not evaluate_accuracy(_summary(news("", "[🟡 NOTABLE]"), "ℹ️ CONTEXT ONLY"), NEWS, ARTICLE).tag_selected
-    assert not evaluate_accuracy(_summary(news("[🚀 SHIP NOW]", "[💥 BOOM]"), "ℹ️ CONTEXT ONLY"), NEWS, ARTICLE).tag_selected
-    # duplicated emoji or several bracket groups are not "exactly one tag"
-    assert not evaluate_accuracy(_summary(news("[🚀🚀 SHIP NOW]", "[🟡 NOTABLE]"), "ℹ️ CONTEXT ONLY"), NEWS, ARTICLE).tag_selected
-    assert not evaluate_accuracy(_summary(news("[🚀][👀]", "[🟡 NOTABLE]"), "ℹ️ CONTEXT ONLY"), NEWS, ARTICLE).tag_selected
+@pytest.mark.parametrize("tactical, market, expected", [
+    ("[🚀 SHIP NOW]", "[🟡 NOTABLE]", True),
+    ("[🚀/🗺️/👀]", "[🟡 NOTABLE]", False),      # placeholder left in
+    ("", "[🟡 NOTABLE]", False),                  # no tag at all
+    ("[🚀 SHIP NOW]", "[💥 BOOM]", False),        # emoji outside the allowed set
+    ("[🚀🚀 SHIP NOW]", "[🟡 NOTABLE]", False),   # same tag twice
+    ("[🚀][👀]", "[🟡 NOTABLE]", False),          # two bracket groups
+])
+def test_accuracy_tags_must_be_single_allowed_emoji(tactical, market, expected):
+    bullets = ["**KEY DEVELOPMENT**: launch", f"**TACTICAL WIN {tactical}**: y",
+               f"**MARKET SIGNAL {market}**: z", "**CONCERN**: No concerns stated in article."]
+    assert evaluate_accuracy(_summary(bullets, "ℹ️ CONTEXT ONLY"), NEWS, ARTICLE).tag_selected is expected
+
+
+def test_accuracy_untagged_label_sets_skip_the_tag_check():
     # RESEARCH bullets have no tagged labels: not subject to the check
     assert evaluate_accuracy(_summary(GOOD_RESEARCH), RESEARCH, ARTICLE).tag_selected
 
@@ -119,21 +141,16 @@ def test_success_rate_uses_articles_times_runs():
 def test_load_articles_skips_titleless_annotation(tmp_path, monkeypatch):
     from Summarizer.evals import load_articles as la
     (tmp_path / "01-anything.content.md").write_text("Anything at all")
-    monkeypatch.setattr(la, "GOLD_ANNOTATIONS", [GoldAnnotation(url="u", title="", article_type="NEWS", expected_labels=[], has_explicit_concern=False, key_facts=[], expected_actionability="MONITOR")])
+    monkeypatch.setattr(la, "GOLD_ANNOTATIONS", [_ann("", "u")])
     assert la.load_articles_from_directory(tmp_path) == []
 
 
 def test_load_articles_walks_older_runs(tmp_path, monkeypatch):
     from Summarizer.evals import load_articles as la
-    newer = tmp_path / "alert-20260102-000000" / "articles"; newer.mkdir(parents=True)
-    older = tmp_path / "alert-20260101-000000" / "articles"; older.mkdir(parents=True)
-    # Files are named NN-<slug(title)[:40]> by the pipeline; bodies need not contain the title
-    (newer / "01-first-article-title.content.md").write_text("body only")
-    (older / "03-second-article-title.content.md").write_text("DETROIT, MI - dateline first")
-    monkeypatch.setattr(la, "GOLD_ANNOTATIONS", [
-        GoldAnnotation(url="u1", title="First article title", article_type="NEWS", expected_labels=[], has_explicit_concern=False, key_facts=[], expected_actionability="MONITOR"),
-        GoldAnnotation(url="u2", title="Second article title", article_type="NEWS", expected_labels=[], has_explicit_concern=False, key_facts=[], expected_actionability="MONITOR"),
-    ])
+    # Files are named NN-<slug(title)> by the pipeline; bodies need not contain the title
+    _articles_dir(tmp_path, "20260102-000000", {"01-first-article-title.content.md": "body only"})
+    _articles_dir(tmp_path, "20260101-000000", {"03-second-article-title.content.md": "DETROIT, MI - dateline first"})
+    monkeypatch.setattr(la, "GOLD_ANNOTATIONS", [_ann("First article title", "u1"), _ann("Second article title", "u2")])
     arts = {a["url"]: a["content"] for a in la.load_articles_from_runs(tmp_path)}
     assert set(arts) == {"u1", "u2"}
     assert arts["u2"].startswith("DETROIT")
@@ -141,27 +158,24 @@ def test_load_articles_walks_older_runs(tmp_path, monkeypatch):
 
 def test_load_articles_exact_slug_beats_prefix_and_ambiguity_is_skipped(tmp_path, monkeypatch):
     from Summarizer.evals import load_articles as la
-    d = tmp_path / "alert-20260101-000000" / "articles"; d.mkdir(parents=True)
-    (d / "01-target-article-title-extended-cut.content.md").write_text("longer")
-    (d / "02-target-article-title.content.md").write_text("exact")
-    ann = lambda title, url: GoldAnnotation(url=url, title=title, article_type="NEWS", expected_labels=[], has_explicit_concern=False, key_facts=[], expected_actionability="MONITOR")
-    monkeypatch.setattr(la, "GOLD_ANNOTATIONS", [ann("Target Article Title", "exact"), ann("Target Article", "ambiguous")])
+    _articles_dir(tmp_path, "20260101-000000", {
+        "01-target-article-title-extended-cut.content.md": "longer",
+        "02-target-article-title.content.md": "exact",
+    })
+    monkeypatch.setattr(la, "GOLD_ANNOTATIONS", [_ann("Target Article Title", "exact"), _ann("Target Article", "ambiguous")])
     arts = {a["url"]: a["content"] for a in la.load_articles_from_runs(tmp_path)}
     assert arts == {"exact": "exact"}  # exact slug wins; the ambiguous prefix is skipped
 
 
 def test_load_articles_prefers_newest_and_ignores_body_mentions(tmp_path, monkeypatch):
     from Summarizer.evals import load_articles as la
-    newer = tmp_path / "alert-20260102-000000" / "articles"; newer.mkdir(parents=True)
-    older = tmp_path / "alert-20260101-000000" / "articles"; older.mkdir(parents=True)
-    (newer / "01-unrelated-piece.content.md").write_text("This piece mentions Target Article Title in passing " * 50)
-    (newer / "02-target-article-title.content.md").write_text("new fetch")
-    (older / "05-target-article-title.content.md").write_text("old fetch")
-    monkeypatch.setattr(la, "GOLD_ANNOTATIONS", [
-        GoldAnnotation(url="t", title="Target Article Title", article_type="NEWS", expected_labels=[], has_explicit_concern=False, key_facts=[], expected_actionability="MONITOR"),
-    ])
-    arts = la.load_articles_from_runs(tmp_path)
-    assert [a["content"] for a in arts] == ["new fetch"]
+    _articles_dir(tmp_path, "20260102-000000", {
+        "01-unrelated-piece.content.md": "This piece mentions Target Article Title in passing " * 50,
+        "02-target-article-title.content.md": "new fetch",
+    })
+    _articles_dir(tmp_path, "20260101-000000", {"05-target-article-title.content.md": "old fetch"})
+    monkeypatch.setattr(la, "GOLD_ANNOTATIONS", [_ann("Target Article Title", "t")])
+    assert [a["content"] for a in la.load_articles_from_runs(tmp_path)] == ["new fetch"]
 
 
 def test_evaluate_model_rejects_nonpositive_runs(monkeypatch):

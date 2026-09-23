@@ -42,6 +42,11 @@ from .summarizer import SummarizerConfig, SummarizerError, summarize_article
 APPLESCRIPT = PACKAGE_ROOT / "fetch-alert-source.applescript"
 
 
+# Article files are named NN-<slugify(title)[:ARTICLE_SLUG_CHARS]>.content.md;
+# the evals reverse this to match gold annotations to fetched articles.
+ARTICLE_SLUG_CHARS = 40
+
+
 def slugify(value: str) -> str:
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", value).strip("-").lower()
     return slug or "article"
@@ -215,7 +220,7 @@ def _fetch_and_extract_article(
     """
     title = link.get("title", "")
     url = link.get("url", "")
-    slug = f"{idx:02d}-{slugify(title)[:40]}"
+    slug = f"{idx:02d}-{slugify(title)[:ARTICLE_SLUG_CHARS]}"
     html_path = articles_dir / f"{slug}.html"
     fallback_md_path = articles_dir / f"{slug}.fallback.md"
     content_path = articles_dir / f"{slug}.content.md"
