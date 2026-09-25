@@ -38,6 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `LMSTUDIO_MODEL` is now an optional pin. `LMSTUDIO_REASONING_EFFORT` (default `none`)
   is sent on every request so thinking models answer in seconds instead of minutes.
 
+- **Docs:** `README.md`, `CLAUDE.md`, `docs/SETUP.md`, `docs/TROUBLESHOOTING.md` and
+  `.env.template` updated for run-time model resolution — `LMSTUDIO_MODEL` is no longer
+  required, `LMSTUDIO_PREFERRED_MODELS` / `LMSTUDIO_REASONING_EFFORT` / `LMSTUDIO_MAX_TOKENS`
+  documented, the removed "model not configured" error replaced with the two errors the
+  code now raises, and the documented `LMSTUDIO_TIMEOUT` default corrected to 180.0.
+
 ### Removed
 
 - **CommitCraft:** Extracted to its own repository and repackaged as a Claude Code plugin.

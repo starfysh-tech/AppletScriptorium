@@ -137,21 +137,50 @@ curl http://localhost:1234/v1/models
 3. Start server (CMD+R or Server tab → Start Server)
 4. Verify URL in `.env` matches server URL shown in LM Studio
 
-### LM Studio Model Not Configured
+### No LM Studio Model Available
 
-**Issue**: `LMSTUDIO_BASE_URL set but LMSTUDIO_MODEL not configured in .env`
+**Issue**: `No LM Studio model available: nothing loaded, none of
+LMSTUDIO_PREFERRED_MODELS downloaded, and LMSTUDIO_MODEL not set`
+
+The pipeline uses whatever model LM Studio has loaded, so this means nothing is
+loaded *and* no preferred model is downloaded.
+
+**Solution** — any one of:
+```bash
+# 1. Load any model in LM Studio (AI Chat tab → select model), or:
+lms load qwen/qwen3.5-9b
+
+# 2. Point LMSTUDIO_PREFERRED_MODELS at a model you have downloaded
+#    (names must match `lms ls` exactly; it will be loaded on demand)
+LMSTUDIO_PREFERRED_MODELS=qwen/qwen3.5-9b,zai-org/glm-4.6v-flash
+
+# 3. Pin one explicitly for a single run
+python3 -m Summarizer.cli run --output-dir runs/test --model qwen/qwen3.5-9b
+```
+
+**Listing what you have**: `lms ls` (downloaded) and `lms ps` (loaded).
+
+### Prompt Does Not Fit the Loaded Context
+
+**Issue**: `Prompt (~N tokens) leaves under 256 tokens of the M-token context
+loaded for <model>`
+
+LM Studio granted the model a smaller context than the article needs. The
+pipeline truncates article content to fit, so this only appears when the prompt
+template itself cannot fit.
 
 **Solution**:
 ```bash
-# Edit .env and add exact model name from LM Studio
-# Model name is case-sensitive and must match exactly
-LMSTUDIO_MODEL=llama-3.2-3b-instruct
+# Reload the model with a larger context
+lms load <model> --context-length 16384
+
+# Or lower the content limit
+MAX_CONTENT_CHARS=16000
 ```
 
-**Finding model name in LM Studio**:
-1. Go to AI Chat tab
-2. Look at model dropdown
-3. Copy exact name (including hyphens, no path/folders)
+Note: LM Studio's memory guardrails may grant *less* context than you request —
+`lms ps` shows what was actually granted. A 27B model on 16 GB of RAM can end up
+with only a few thousand tokens.
 
 ### Ollama Unresponsive (Timeout)
 
@@ -204,7 +233,7 @@ grep -E "LMSTUDIO|OLLAMA" .env
 3. Error (if both fail or neither configured)
 
 **Fix**:
-- At minimum: Configure LM Studio with `LMSTUDIO_BASE_URL` and `LMSTUDIO_MODEL`
+- At minimum: set `LMSTUDIO_BASE_URL` and have a model loaded in LM Studio
 - Optional: Enable Ollama fallback with `OLLAMA_ENABLED=true`
 - Never leave both unconfigured
 
