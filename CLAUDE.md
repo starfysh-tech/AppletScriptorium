@@ -133,17 +133,29 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 ### Summarization
 
 **LLM Backend:**
-- **Required**: LM Studio with loaded model and running server
-- **Configuration**: `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL` in `.env`
+- **Required**: LM Studio with a running server (`LMSTUDIO_BASE_URL` in `.env`)
+- **Model selection** (`summarizer.resolve_lmstudio_model`), in order:
+  1. `--model` CLI flag
+  2. the first `LMSTUDIO_PREFERRED_MODELS` entry that is *loaded* (defaults to
+     `qwen/qwen3.5-9b,zai-org/glm-4.6v-flash`; set it empty for no preference)
+  3. whatever LLM is loaded
+  4. the first preferred model that is *downloaded* (loaded on demand via `lms`)
+  5. `LMSTUDIO_MODEL`, if still set (optional legacy pin)
 - **Optional fallback**: Ollama (set `OLLAMA_ENABLED=true`)
 - **Backend chain**: LM Studio (primary) → Ollama (if enabled and LM Studio fails) → Error
-- Model can be overridden via `--model` CLI flag (applies to active backend)
+- **Reasoning**: `LMSTUDIO_REASONING_EFFORT` (default `none`) is sent on every
+  request. Thinking costs ~20x wall-clock for a few points of accuracy on this
+  task; raise `LMSTUDIO_MAX_TOKENS` if you enable it, since reasoning tokens
+  come out of the completion budget.
+- **Context**: requests size `max_tokens` and article truncation to the context
+  the model was actually loaded with (`loaded_context_length`), so a model
+  loaded with a small window truncates rather than erroring.
 - Returns structured 4-bullet format: KEY FINDING, TACTICAL WIN [tag], MARKET SIGNAL [tag], CONCERN
 - Digest includes executive summary and cross-article insights
 - Works with any Google Alert topic—summaries adapt to content
 
 **LM Studio Health Detection:**
-- **Timeout**: `LMSTUDIO_TIMEOUT = 30.0` (seconds) — detects unresponsive server
+- **Timeout**: `LMSTUDIO_TIMEOUT` (seconds, default 180.0) — detects unresponsive server
 - **Failure**: Falls back to Ollama if `OLLAMA_ENABLED=true`, otherwise raises error
 - **Tuning**: Adjust `LMSTUDIO_TIMEOUT` in `.env` if needed
 
@@ -178,7 +190,7 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 
 ## Common Gotchas
 
-- **LM Studio required**: Pipeline will fail without `LMSTUDIO_BASE_URL` and `LMSTUDIO_MODEL` configured in `.env`
+- **LM Studio required**: Pipeline will fail without `LMSTUDIO_BASE_URL` in `.env`. The model no longer has to be pinned — whatever is loaded is used (see Summarization above)
 - **AppleScript Mail rules**: Cannot use venv, must use system Python with `--user` packages
 - **AppleScript Python path**: User selects Python installation during `setup-mail-rule.sh` (script detects all installations, checks dependencies with ✓/⚠/✗ indicators, prompts for selection)
 - **Python imports**: Must use `-m Summarizer.cli` for relative imports to work

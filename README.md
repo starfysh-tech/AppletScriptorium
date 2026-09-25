@@ -169,6 +169,7 @@ Requires LM Studio + Mail.app + SMTP setup.
 │   ├── templates/process-alert.scpt    # Mail rule automation
 │   ├── requirements.txt          # Python dependencies
 │   ├── Samples/                  # Fixtures for regression tests
+│   ├── evals/                    # Model evaluation framework (accuracy, consistency, hallucination)
 │   └── tests/                    # Pytest suite
 ├── ExtensionAuditor/             # Chrome extension security scanner
 │   ├── extension-auditor.py      # Main scanner script (cross-platform)
@@ -198,6 +199,10 @@ Each tool includes tests or validation:
 ```bash
 # Summarizer - Full test suite
 python3 -m pytest Summarizer/tests
+
+# Summarizer - Compare local LLMs on the summarization task
+# (loads each model in turn; see Summarizer/evals/README.md)
+python3 -m Summarizer.cli eval
 
 # ExtensionAuditor - Dry run validation
 python3 ExtensionAuditor/extension-auditor.py --help

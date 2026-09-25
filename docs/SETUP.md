@@ -70,9 +70,17 @@ npm install -g url-to-markdown-cli-tool
 5. Configure in `.env`:
    ```bash
    LMSTUDIO_BASE_URL=http://localhost:1234
-   LMSTUDIO_MODEL=llama-3.2-3b-instruct  # Use exact model name from LM Studio
-   LMSTUDIO_TIMEOUT=30.0
+   LMSTUDIO_TIMEOUT=180.0
+   # Preferred models, highest first. The first one that is loaded wins;
+   # otherwise whatever is loaded is used. This is the built-in default, so
+   # omitting the line gives the same result; set it EMPTY
+   # (LMSTUDIO_PREFERRED_MODELS=) to always use whatever is loaded.
+   LMSTUDIO_PREFERRED_MODELS=qwen/qwen3.5-9b,zai-org/glm-4.6v-flash
    ```
+
+   You do **not** need to pin a model name. The pipeline uses whatever LM Studio
+   has loaded, preferring `LMSTUDIO_PREFERRED_MODELS`, and loads a preferred
+   model on demand if none is loaded.
 
 **Ollama Setup (Optional Fallback)**
 
@@ -374,9 +382,21 @@ Configuration can come from three sources (highest to lowest priority):
 
 **LLM Backend (LM Studio):**
 ```bash
-LMSTUDIO_BASE_URL=http://localhost:1234  # LM Studio server URL
-LMSTUDIO_MODEL=llama-3.2-3b-instruct     # Model name from LM Studio
-LMSTUDIO_TIMEOUT=30.0                     # Request timeout (seconds)
+LMSTUDIO_BASE_URL=http://localhost:1234  # LM Studio server URL (required)
+LMSTUDIO_TIMEOUT=180.0                    # Request timeout (seconds)
+```
+
+**LLM Backend (optional):**
+```bash
+# Preferred models, highest priority first. The first one that is LOADED wins;
+# if none of them is loaded, whatever is loaded is used; if nothing at all is
+# loaded, the first preferred model that is downloaded gets loaded on demand.
+# The value below is also the built-in default when the variable is unset;
+# set it EMPTY (LMSTUDIO_PREFERRED_MODELS=) to express no preference.
+LMSTUDIO_PREFERRED_MODELS=qwen/qwen3.5-9b,zai-org/glm-4.6v-flash
+LMSTUDIO_REASONING_EFFORT=none            # none|low|medium|high (default: none)
+LMSTUDIO_MAX_TOKENS=2048                  # Completion budget per summary
+LMSTUDIO_MODEL=                           # Legacy pin; only used if nothing above resolves
 ```
 
 **SMTP Email Delivery:**
@@ -411,9 +431,9 @@ ALERT_EMAIL_SENDER=sender@example.com     # Default sender address
 
 **Example Override:**
 ```bash
-# .env file has LMSTUDIO_MODEL=llama-3.2
-# CLI flag --model qwen3:latest overrides it for that run only
-# Mail rule automation always uses .env values
+# LM Studio has glm-4.6v-flash loaded
+# CLI flag --model qwen/qwen3.5-9b overrides it for that run only
+# Mail rule automation uses whatever is loaded, per LMSTUDIO_PREFERRED_MODELS
 ```
 
 ---
