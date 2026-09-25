@@ -5,6 +5,20 @@ All notable changes to AppletScriptorium will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.1](https://github.com/starfysh-tech/AppletScriptorium/compare/v5.1.0...v5.1.1) (2026-09-25)
+
+
+### Bug Fixes
+
+* **Summarizer:** resolve LM Studio model at run time, fix classifier ([#7](https://github.com/starfysh-tech/AppletScriptorium/issues/7)) ([695c5d7](https://github.com/starfysh-tech/AppletScriptorium/commit/695c5d7e9cf4d9edbea4aff66652554d5521006a))
+
+
+### Documentation
+
+* **commitcraft:** sync skill metadata and commit guidance ([8d83a50](https://github.com/starfysh-tech/AppletScriptorium/commit/8d83a50e1c91ed69dd9183722856f19df6a3b4f1))
+* reconcile setup and workflow guides ([90b1396](https://github.com/starfysh-tech/AppletScriptorium/commit/90b1396cbb5368f13d1af96ed06df62a2a4f216c))
+* update for run-time model resolution ([#8](https://github.com/starfysh-tech/AppletScriptorium/issues/8)) ([85ef650](https://github.com/starfysh-tech/AppletScriptorium/commit/85ef65038b64c77ff979ea7cc23af67378bb165c))
+
 ## [Unreleased]
 
 ### Fixed
