@@ -14,7 +14,8 @@ import json
 import logging
 import re
 import subprocess
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, List, Literal, Optional
 
@@ -22,8 +23,8 @@ import httpx
 
 from .config import (
     ARTICLE_TYPE_PROMPT,
+    ARTICLE_TYPE_JSON_SCHEMA,
     ARTICLE_TYPES,
-    DEFAULT_MODEL,
     TEMPERATURE,
     MAX_TOKENS,
     MAX_CONTENT_CHARS,
@@ -33,17 +34,18 @@ from .config import (
     OLLAMA_TIMEOUT,
     LMSTUDIO_BASE_URL,
     LMSTUDIO_MODEL,
+    LMSTUDIO_PREFERRED_MODELS,
+    LMSTUDIO_REASONING_EFFORT,
     LMSTUDIO_TIMEOUT,
     LMSTUDIO_HEALTH_TIMEOUT,
     SUMMARY_PROMPT_TEMPLATE,
     SUMMARY_PROMPTS,
     SUMMARY_JSON_SCHEMA,
 )
+from .model_manager import LMS
 
 logger = logging.getLogger(__name__)
 
-# Full path to LM Studio CLI (not in PATH when run from Mail.app)
-LMS_CLI = Path.home() / ".lmstudio" / "bin" / "lms"
 
 
 class SummarizerError(RuntimeError):
@@ -52,7 +54,7 @@ class SummarizerError(RuntimeError):
 
 @dataclass(frozen=True)
 class SummarizerConfig:
-    model: str = DEFAULT_MODEL
+    model: str | None = None  # None: LM Studio resolves the loaded/preferred model; Ollama uses OLLAMA_MODEL
     temperature: float = TEMPERATURE
     max_tokens: int = MAX_TOKENS
 
@@ -100,11 +102,32 @@ def summarize_article(
     cfg = config or SummarizerConfig()
     url = article.get('url', 'unknown')
 
-    # Classify article type to select appropriate prompt
-    article_type = classify_article_type(article, config=cfg)
-    logger.info("[classify] Article type for %s: %s", url, article_type)
+    # Classify article type to select appropriate prompt. A failed
+    # classification uses the NEWS prompt but is recorded as None so callers
+    # (and the eval) can tell the fallback from a real NEWS result.
+    classified_type = classify_article_type(article, config=cfg)
+    article_type = classified_type or "NEWS"
+    logger.info("[classify] Article type for %s: %s", url, classified_type or "NEWS (fallback)")
 
-    prompt = _build_prompt(article, article_type=article_type)
+    def lmstudio_call(attempt: int) -> tuple[str, str]:
+        """Resolve the model, size the prompt to its context, call it."""
+        lm_cfg = replace(cfg, model=resolve_lmstudio_model(LMSTUDIO_BASE_URL, cfg.model))
+        logger.info("[lmstudio] Calling %s at %s for %s (attempt %d/%d)", lm_cfg.model, LMSTUDIO_BASE_URL, url, attempt, max_attempts)
+        lm_prompt = _build_prompt(
+            article,
+            article_type=article_type,
+            token_budget=_lmstudio_content_token_budget(LMSTUDIO_BASE_URL, lm_cfg.model, lm_cfg.max_tokens),
+        )
+        return _run_with_lmstudio(lm_prompt, lm_cfg), lm_cfg.model
+
+    # Built on demand: the LM Studio path sizes its own prompt to the model's
+    # context, so only the custom-runner and Ollama paths use this one.
+    _default_prompt: list[str] = []
+
+    def default_prompt() -> str:
+        if not _default_prompt:
+            _default_prompt.append(_build_prompt(article, article_type=article_type))
+        return _default_prompt[0]
 
     # Retry loop for validation failures
     max_attempts = 2
@@ -115,7 +138,7 @@ def summarize_article(
         if runner:
             logger.debug("[custom] Using provided runner for %s", url)
             try:
-                raw_output = runner(prompt, cfg)
+                raw_output = runner(default_prompt(), cfg)
                 model_name = cfg.model
                 backend_used = "custom"
             except SummarizerError:
@@ -124,33 +147,26 @@ def summarize_article(
                 raise SummarizerError(f"Custom runner failed for {url}") from exc
         # Explicit backend specified (no auto-fallback)
         elif backend == "lmstudio":
-            if not LMSTUDIO_BASE_URL or not LMSTUDIO_MODEL:
-                raise SummarizerError("LM Studio backend requested but LMSTUDIO_BASE_URL or LMSTUDIO_MODEL not configured in .env")
+            if not LMSTUDIO_BASE_URL:
+                raise SummarizerError("LM Studio backend requested but LMSTUDIO_BASE_URL not configured in .env")
 
-            logger.info("[lmstudio] Calling %s at %s for %s (attempt %d/%d)", LMSTUDIO_MODEL, LMSTUDIO_BASE_URL, url, attempt, max_attempts)
             try:
-                raw_output = _run_with_lmstudio(prompt, cfg)
-                model_name = cfg.model or LMSTUDIO_MODEL
+                raw_output, model_name = lmstudio_call(attempt)
                 backend_used = "lmstudio"
             except SummarizerError:
                 raise  # No fallback when backend is explicitly specified
         elif backend == "ollama":
             logger.info("[ollama] Calling %s for %s (attempt %d/%d)", cfg.model or OLLAMA_MODEL, url, attempt, max_attempts)
             try:
-                raw_output = _run_with_ollama(prompt, cfg)
+                raw_output = _run_with_ollama(default_prompt(), cfg)
                 model_name = cfg.model or OLLAMA_MODEL
                 backend_used = "ollama"
             except SummarizerError:
                 raise  # No fallback when backend is explicitly specified
         # Auto-fallback mode: LM Studio with optional Ollama fallback
         elif LMSTUDIO_BASE_URL:
-            if not LMSTUDIO_MODEL:
-                raise SummarizerError("LMSTUDIO_BASE_URL set but LMSTUDIO_MODEL not configured in .env")
-
-            logger.info("[lmstudio] Calling %s at %s for %s (attempt %d/%d)", LMSTUDIO_MODEL, LMSTUDIO_BASE_URL, url, attempt, max_attempts)
             try:
-                raw_output = _run_with_lmstudio(prompt, cfg)
-                model_name = cfg.model or LMSTUDIO_MODEL
+                raw_output, model_name = lmstudio_call(attempt)
                 backend_used = "lmstudio"
             except SummarizerError as exc:
                 logger.error("[lmstudio] Failed for %s: %s", url, exc)
@@ -159,7 +175,7 @@ def summarize_article(
                 if OLLAMA_ENABLED:
                     logger.warning("[lmstudio] Falling back to Ollama (WARNING: may slow down computer)")
                     try:
-                        raw_output = _run_with_ollama(prompt, cfg)
+                        raw_output = _run_with_ollama(default_prompt(), cfg)
                         model_name = cfg.model or OLLAMA_MODEL
                         backend_used = "ollama"
                     except SummarizerError as ollama_exc:
@@ -171,7 +187,7 @@ def summarize_article(
         # No backend configured
         else:
             raise SummarizerError(
-                "No LLM backend configured. Set LMSTUDIO_BASE_URL and LMSTUDIO_MODEL in .env file"
+                "No LLM backend configured. Set LMSTUDIO_BASE_URL in .env file"
             )
 
         # Log raw LLM output for diagnosis
@@ -207,6 +223,7 @@ def summarize_article(
                 "snippet": article.get("snippet", ""),
                 "summary": [{"type": "bullet", "text": bullet} for bullet in bullets],
                 "model": model_name,
+                "article_type": classified_type,
             }
             if actionability:
                 result["actionability"] = actionability
@@ -223,16 +240,11 @@ def summarize_article(
     raise SummarizerError(f"Summary validation failed after {max_attempts} attempts: {last_validation_error}")
 
 
-def classify_article_type(article: ArticleDict, *, config: SummarizerConfig | None = None) -> str:
-    """Classify article type using LM Studio to select appropriate summarization prompt.
+def classify_article_type(article: ArticleDict, *, config: SummarizerConfig | None = None) -> str | None:
+    """Classify article type using LM Studio to select the summarization prompt.
 
-    Args:
-        article: Article dictionary with content
-        config: Optional SummarizerConfig
-
-    Returns:
-        One of: "RESEARCH", "NEWS", "OPINION", "PRESS_RELEASE"
-        Falls back to "NEWS" if classification fails or LM Studio unavailable
+    Returns one of ARTICLE_TYPES, or None if classification failed or LM Studio
+    was unavailable (callers fall back to the NEWS prompt).
     """
     cfg = config or SummarizerConfig()
 
@@ -255,9 +267,13 @@ def classify_article_type(article: ArticleDict, *, config: SummarizerConfig | No
     prompt = ARTICLE_TYPE_PROMPT.format(content=truncated)
 
     try:
-        # Use LM Studio for classification
-        raw_output = _run_with_lmstudio(prompt, cfg)
-        detected_type = raw_output.strip().upper()
+        # Use LM Studio for classification with an enum grammar (the default
+        # response_format is the *summary* schema, which can never yield a type).
+        raw_output = _run_with_lmstudio(prompt, cfg, response_format=ARTICLE_TYPE_JSON_SCHEMA)
+        try:
+            detected_type = str(json.loads(raw_output).get("type", "")).strip().upper()
+        except (json.JSONDecodeError, AttributeError):
+            detected_type = raw_output.strip().strip('"').upper()
 
         # Validate response
         if detected_type in ARTICLE_TYPES:
@@ -265,11 +281,14 @@ def classify_article_type(article: ArticleDict, *, config: SummarizerConfig | No
             return detected_type
         else:
             logger.warning("[classify] Invalid type '%s', falling back to NEWS", detected_type)
-            return "NEWS"
+            return None
 
     except Exception as exc:
         logger.warning("[classify] Classification failed: %s - falling back to NEWS", exc)
-        return "NEWS"
+        return None
+
+
+_TRUNCATION_MARKER = "\n\n[Content truncated to fit context window]"
 
 
 def _truncate_content(content: str, max_chars: int) -> str:
@@ -302,10 +321,10 @@ def _truncate_content(content: str, max_chars: int) -> str:
         # No sentence boundary found, use hard cutoff
         result = truncated
 
-    return result + "\n\n[Content truncated to fit context window]"
+    return result + _TRUNCATION_MARKER
 
 
-def _build_prompt(article: ArticleDict, article_type: str | None = None) -> str:
+def _build_prompt(article: ArticleDict, article_type: str | None = None, token_budget: int | None = None) -> str:
     content = article.get("content", "")
     if isinstance(content, list):  # backward compatibility
         fragments: List[str] = []
@@ -320,8 +339,9 @@ def _build_prompt(article: ArticleDict, article_type: str | None = None) -> str:
     else:
         content_text = str(content)
 
-    # Truncate content to fit context window
-    content_text = _truncate_content(content_text, MAX_CONTENT_CHARS)
+    # Truncate content to fit the context window (token budget; the configured
+    # character limit is the default expressed in the same unit).
+    content_text = _truncate_to_tokens(content_text, token_budget if token_budget is not None else MAX_CONTENT_CHARS // 3)
 
     title = article.get("title", "")
 
@@ -388,55 +408,116 @@ def _get_loaded_models(base_url: str) -> list[str]:
     return []
 
 
-def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool, str]:
-    """Ensure ONLY the target model is loaded in LM Studio.
+# /api/v0/models is the only endpoint carrying per-instance load state and
+# context length, and several helpers need it for the same article. Cache the
+# parsed records briefly so one summary costs one round trip instead of seven;
+# _ensure_correct_model_loaded drops the cache after changing what is loaded.
+_MODELS_CACHE_TTL = 5.0
+_models_cache: tuple[float, str, list[dict]] | None = None
 
-    If other models are loaded or target is not loaded, unloads all models
-    and loads only the target model.
+
+def _lmstudio_models(base_url: str) -> list[dict]:
+    """Model records from /api/v0/models (cached briefly). Empty if unreachable."""
+    global _models_cache
+    if _models_cache and _models_cache[1] == base_url and time.monotonic() - _models_cache[0] < _MODELS_CACHE_TTL:
+        return _models_cache[2]
+    records: list[dict] = []
+    try:
+        with httpx.Client(timeout=LMSTUDIO_HEALTH_TIMEOUT) as client:
+            response = client.get(f"{base_url}/api/v0/models")
+            if response.status_code == 200:
+                records = response.json().get("data", [])
+    except Exception:
+        return []  # transient failure: do not cache
+    _models_cache = (time.monotonic(), base_url, records)
+    return records
+
+
+def _invalidate_lmstudio_models() -> None:
+    """Forget the cached records after loading/unloading changes the state."""
+    global _models_cache
+    _models_cache = None
+
+
+def _loaded_llm_record(base_url: str, model: str) -> dict | None:
+    """The loaded LLM/VLM record for `model`, or None if it is not loaded."""
+    for m in _lmstudio_models(base_url):
+        if m.get("id") == model and m.get("state") == "loaded" and m.get("type") in ("llm", "vlm"):
+            return m
+    return None
+
+
+def _get_active_llms(base_url: str) -> list[str]:
+    """LLM/VLM model IDs LM Studio currently has loaded (not merely downloaded).
+
+    /v1/models lists everything downloaded; /api/v0/models carries the load state.
+    """
+    return [
+        m["id"] for m in _lmstudio_models(base_url)
+        if m.get("state") == "loaded" and m.get("type") in ("llm", "vlm")
+    ]
+
+
+def resolve_lmstudio_model(base_url: str, explicit: str | None = None) -> str:
+    """Pick the LM Studio model to use.
+
+    Order: explicit override -> a preferred model that is already loaded -> whatever
+    LLM is currently loaded -> first preferred model that is downloaded (it will be
+    loaded on demand) -> the legacy LMSTUDIO_MODEL pin.
+
+    Raises SummarizerError if nothing can be chosen.
+    """
+    if explicit:
+        return explicit
+
+    loaded = _get_active_llms(base_url)
+    for preferred in LMSTUDIO_PREFERRED_MODELS:
+        if preferred in loaded:
+            return preferred
+    if loaded:
+        logger.info("[lmstudio] No preferred model loaded; using what LM Studio has: %s", loaded[0])
+        return loaded[0]
+
+    downloaded = _get_loaded_models(base_url)
+    for preferred in LMSTUDIO_PREFERRED_MODELS:
+        if preferred in downloaded:
+            return preferred
+
+    if LMSTUDIO_MODEL:
+        return LMSTUDIO_MODEL
+    raise SummarizerError(
+        "No LM Studio model available: nothing loaded, none of "
+        f"LMSTUDIO_PREFERRED_MODELS ({', '.join(LMSTUDIO_PREFERRED_MODELS) or 'unset'}) downloaded, "
+        "and LMSTUDIO_MODEL not set"
+    )
+
+
+def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool, str]:
+    """Ensure the target model is loaded in LM Studio, loading it via `lms` if
+    it is downloaded but not active. Other loaded models are left alone.
 
     Args:
         base_url: LM Studio API base URL
-        target_model: Model identifier to load (from LMSTUDIO_MODEL)
+        target_model: Model identifier to load (see resolve_lmstudio_model)
 
     Returns:
         (success: bool, message: str)
     """
-    import time
-
-    loaded = _get_loaded_models(base_url)
-
-    # Model already available - no action needed
-    if target_model in loaded:
-        logger.info("[lmstudio] Model already available: %s", target_model)
+    # /v1/models lists downloaded models; only /api/v0/models says what is loaded.
+    if target_model in _get_active_llms(base_url):
+        logger.info("[lmstudio] Model already loaded: %s", target_model)
         return True, f"Using {target_model}"
 
-    # Model not available - load it (no need to unload others)
-    logger.info("[lmstudio] Model %s not in available list, loading...", target_model)
+    if target_model not in _get_loaded_models(base_url):
+        return False, f"Model '{target_model}' not found - check .env LMSTUDIO_PREFERRED_MODELS / LMSTUDIO_MODEL"
 
-    # Skip unload - LM Studio can have multiple models available
-    if False:  # Disabled: was causing issues with multi-model LM Studio setups
-        try:
-            result = subprocess.run(
-                [str(LMS_CLI), "unload", "--all"],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            if result.returncode != 0:
-                return False, f"Failed to unload models: {result.stderr[:100]}"
-            logger.info("[lmstudio] Unloaded all models")
-            time.sleep(1)  # Brief wait for unload to complete
-        except subprocess.TimeoutExpired:
-            return False, "Unload timed out"
-        except Exception as e:
-            return False, f"Unload error: {e}"
-    else:
-        logger.info("[lmstudio] No models loaded, loading: %s", target_model)
+    # Downloaded but not loaded - load it. Other loaded models are left alone;
+    # LM Studio can hold several at once.
+    logger.info("[lmstudio] Model %s downloaded but not loaded, loading...", target_model)
 
-    # Load target model
     try:
         result = subprocess.run(
-            [str(LMS_CLI), "load", "--yes", target_model],
+            [LMS, "load", "--yes", target_model],
             capture_output=True,
             text=True,
             timeout=90
@@ -445,12 +526,13 @@ def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool
         if result.returncode != 0:
             stderr = result.stderr.strip()
             if "not found" in stderr.lower() or "no model" in stderr.lower():
-                return False, f"Model '{target_model}' not found - check .env LMSTUDIO_MODEL"
+                return False, f"Model '{target_model}' not found - check .env LMSTUDIO_PREFERRED_MODELS / LMSTUDIO_MODEL"
             return False, f"Load failed: {stderr[:200]}"
 
         # Verify load succeeded
         time.sleep(2)
-        loaded = _get_loaded_models(base_url)
+        _invalidate_lmstudio_models()
+        loaded = _get_active_llms(base_url)
         if target_model in loaded:
             logger.info("[lmstudio] Successfully loaded: %s", target_model)
             return True, f"Loaded {target_model}"
@@ -489,17 +571,102 @@ def _test_lmstudio_availability(base_url: str) -> bool:
         return False
 
 
-def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig) -> str:
+def _lmstudio_context_length(base_url: str, model: str) -> int | None:
+    """Context length LM Studio granted the loaded model (None if unknown).
+
+    This is the per-instance `loaded_context_length`, not the model's
+    architectural `max_context_length` — the engine rejects requests against
+    the window it was actually loaded with.
+    """
+    record = _loaded_llm_record(base_url, model)
+    return (int(record.get("loaded_context_length") or 0) or None) if record else None
+
+
+# Tokens reserved in an LM Studio request for everything that is not article
+# content: the prompt template, the chat template, and the completion itself.
+_PROMPT_TEMPLATE_TOKENS = 400
+_CHAT_TEMPLATE_TOKENS = 256
+_MIN_COMPLETION_TOKENS = 256
+
+
+def _estimate_tokens(text: str) -> int:
+    """Conservative token estimate without a tokenizer: ~3 chars per token for
+    ASCII, one token per non-ASCII character (CJK and similar scripts tokenize
+    close to one character per token)."""
+    if text.isascii():
+        return len(text) // 3
+    non_ascii = len(text) - len(text.encode("ascii", "ignore"))
+    return (len(text) - non_ascii) // 3 + non_ascii
+
+
+def _truncate_to_tokens(content: str, token_budget: int) -> str:
+    """Truncate content so _estimate_tokens(result) <= token_budget."""
+    if _estimate_tokens(content) <= token_budget:
+        return content
+    budget = max(1, token_budget - _estimate_tokens(_TRUNCATION_MARKER))
+    if content.isascii():
+        return _truncate_content(content, budget * 3)
+    # Mixed scripts: walk to the cut point once, counting as _estimate_tokens does.
+    ascii_run = tokens = 0
+    for i, ch in enumerate(content):
+        if ch.isascii():
+            ascii_run += 1
+            if ascii_run == 3:
+                ascii_run, tokens = 0, tokens + 1
+        else:
+            tokens += 1
+        if tokens >= budget:
+            return _truncate_content(content, i + 1)
+    return content
+
+
+def _lmstudio_content_token_budget(base_url: str, model: str, completion_tokens: int = MAX_TOKENS) -> int:
+    """Article-content tokens that fit the model's granted context.
+
+    `completion_tokens` is the budget the request will actually ask for, so a
+    caller wanting a short completion keeps more of the article.
+    Falls back to the configured character limit when the context is unknown.
+    """
+    default = MAX_CONTENT_CHARS // 3
+    ctx = _lmstudio_context_length(base_url, model)
+    if not ctx:
+        return default
+    reserved = _PROMPT_TEMPLATE_TOKENS + _CHAT_TEMPLATE_TOKENS + completion_tokens
+    return max(_MIN_COMPLETION_TOKENS, min(default, ctx - reserved))
+
+
+def _fit_max_tokens(base_url: str, model: str, prompt: str, requested: int) -> int:
+    """Cap the completion budget so prompt + completion fits the granted context.
+
+    The content budget already sizes the prompt, so this is the backstop for a
+    prompt that is dense in a way the estimate under-counts. Raises
+    SummarizerError rather than sending a request the engine will reject.
+    """
+    ctx = _lmstudio_context_length(base_url, model)
+    if not ctx:
+        return requested
+    remaining = ctx - (_estimate_tokens(prompt) + _CHAT_TEMPLATE_TOKENS)
+    if remaining < _MIN_COMPLETION_TOKENS:
+        raise SummarizerError(
+            f"Prompt (~{_estimate_tokens(prompt)} tokens) leaves under {_MIN_COMPLETION_TOKENS} tokens "
+            f"of the {ctx}-token context loaded for {model}; load the model with a larger context "
+            "or lower MAX_CONTENT_CHARS"
+        )
+    return min(requested, remaining)
+
+
+def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: dict = SUMMARY_JSON_SCHEMA) -> str:
     """Call LM Studio API using OpenAI-compatible endpoint.
+
+    response_format defaults to the summary schema; pass another schema for
+    calls that expect a different shape (e.g. classification).
 
     Raises SummarizerError on any failure with informative error messages.
     """
     if not LMSTUDIO_BASE_URL:
         raise SummarizerError("LMSTUDIO_BASE_URL not configured in .env")
 
-    target_model = cfg.model or LMSTUDIO_MODEL
-    if not target_model:
-        raise SummarizerError("No model specified in config or .env LMSTUDIO_MODEL")
+    target_model = resolve_lmstudio_model(LMSTUDIO_BASE_URL, cfg.model)
 
     # Ensure correct model is loaded (auto-load if needed, unload others)
     success, message = _ensure_correct_model_loaded(LMSTUDIO_BASE_URL, target_model)
@@ -512,14 +679,16 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig) -> str:
     payload = {
         "model": target_model,  # Use the verified loaded model
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": MAX_TOKENS,
+        "max_tokens": _fit_max_tokens(LMSTUDIO_BASE_URL, target_model, prompt, cfg.max_tokens),
         "temperature": cfg.temperature,
-        "response_format": SUMMARY_JSON_SCHEMA,
+        "response_format": response_format,
     }
+    if LMSTUDIO_REASONING_EFFORT:
+        payload["reasoning_effort"] = LMSTUDIO_REASONING_EFFORT
 
     # Log prompt size for debugging oversized payloads
     prompt_chars = len(prompt)
-    estimated_tokens = prompt_chars // 4
+    estimated_tokens = _estimate_tokens(prompt)
     logger.debug(
         "[lmstudio] Sending request to %s (timeout: %.1fs, prompt: %d chars / ~%d tokens)",
         url, LMSTUDIO_TIMEOUT, prompt_chars, estimated_tokens
@@ -567,7 +736,7 @@ def _run_with_ollama(prompt: str, cfg: SummarizerConfig) -> str:
     args = [
         "ollama",
         "run",
-        cfg.model,
+        cfg.model or OLLAMA_MODEL,
     ]
 
     for attempt in range(2):

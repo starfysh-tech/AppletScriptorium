@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Summarizer:** classifier always returned NEWS because the summary JSON schema was forced
+  onto the classification request; it now uses its own enum schema, so the RESEARCH /
+  PRESS_RELEASE / OPINION prompts fire. The eval label metric now checks each gold
+  annotation's `expected_labels` instead of a hardcoded NEWS set.
+- **Summarizer:** `Summarizer/evals/` (the eval framework `cli.py eval` imports) was
+  gitignored as a runtime output and missing from the repo; it is now tracked, with
+  only its result folders (`evals/final-*/`) ignored.
+- **Summarizer:** LM Studio requests now size `max_tokens` and article truncation to the
+  context the model was actually loaded with, instead of a fixed 16k / 32k chars that
+  400'd on any smaller window.
+- **Summarizer evals:** metrics now score what they claim — labels must equal the gold
+  set, actionability must be an allowed category and match the annotation, tags must be
+  exactly one allowed emoji in a single bracket group, `article_type_correct` compares the
+  classifier's result (recorded on summaries as `article_type`, `None` when classification
+  failed and the NEWS fallback ran), a CONCERN on an article that has one is checked for
+  grounding in the article text (articles annotated as having none still reject any real
+  concern), comma-formatted numbers are not split, and consistency compares bullet bodies
+  only. Runner uses `~/.lmstudio/bin/lms`, rejects `runs < 1`, and reports success per
+  attempt. Gold articles are matched by the pipeline's filename slug across all run
+  directories instead of a title-prefix search of the newest one.
+
+### Changed
+
+- **Summarizer:** LM Studio model is resolved at run time — `--model` override, else a
+  preferred model that is loaded, else whatever is loaded, else the first preferred model
+  that is downloaded (`LMSTUDIO_PREFERRED_MODELS`, default `qwen/qwen3.5-9b,zai-org/glm-4.6v-flash`).
+  `LMSTUDIO_MODEL` is now an optional pin. `LMSTUDIO_REASONING_EFFORT` (default `none`)
+  is sent on every request so thinking models answer in seconds instead of minutes.
+
 ### Removed
 
 - **CommitCraft:** Extracted to its own repository and repackaged as a Claude Code plugin.
