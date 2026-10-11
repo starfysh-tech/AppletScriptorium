@@ -35,7 +35,6 @@ No hit means `FREE`. Free is a hint, not a guarantee. Confirm at a registrar bef
 
 - `domain_checker.py` — Flask server, checker, and the UI (inline `HTML_TEMPLATE`)
 - `tld_database.py` — TLD list grouped by theme
-- `domainchecker.html` — static UI mockup with random results; not used by the server
 
 ## Security
 
