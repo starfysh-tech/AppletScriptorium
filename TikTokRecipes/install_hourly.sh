@@ -1,5 +1,7 @@
 #!/bin/bash
-# Install a launchd agent that runs tiktok_recipes.py every hour, which also publishes the site.
+# Install a launchd agent that pulls main and runs tiktok_recipes.py every hour, which also publishes the site.
+# The pull is how merges to main reach the site. It is fast-forward only, so local edits or another branch
+# make it fail without touching the checkout; the run then uses the local code.
 # Usage: TikTokRecipes/install_hourly.sh '<collection-url>'
 # Remove: launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.starfysh.tiktokrecipes.plist
 set -euo pipefail
@@ -19,8 +21,11 @@ cat > "$PLIST" <<EOF
   <key>Label</key><string>$LABEL</string>
   <key>ProgramArguments</key>
   <array>
-    <string>$(command -v python3)</string>
-    <string>$DIR/tiktok_recipes.py</string>
+    <string>/bin/sh</string>
+    <string>-c</string>
+    <string>git -C "\$0" pull --ff-only --quiet origin main || echo "git pull skipped"; exec "\$1" "\$0/tiktok_recipes.py" "\$2"</string>
+    <string>$DIR</string>
+    <string>$(python3 -c "import sys; print(sys.executable)")</string>
     <string>$URL</string>
   </array>
   <key>WorkingDirectory</key><string>$DIR</string>
@@ -39,4 +44,4 @@ EOF
 
 launchctl bootout "gui/$(id -u)" "$PLIST" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
-echo "Installed $LABEL. Runs now and every hour. Log: $LOG"
+echo "Installed $LABEL. Pulls main and runs now and every hour. Log: $LOG"
