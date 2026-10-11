@@ -40,15 +40,27 @@ runs/<collection>/
 └── cache/<id>/      # video.info.json, captions, thumb.jpg, linked.json, extracted.json
 ```
 
-`site/` is a static website. Open `site/index.html` or host the folder. It has search, meal type and tag filters, a random pick, and an ingredient checklist. Each recipe has its own page (`#<recipe>`) with the TikTok video embedded in a collapsed section, a button that copies the recipe as Markdown, and links to the video and to any site linked in the description. Video covers are saved to the cache because TikTok's image links expire within days. Edit `site_template.html` to change the design.
+`site/` is a static website. Open `site/index.html` or host the folder. It has search, meal type and tag filters, a random pick, and an ingredient checklist. Each recipe has its own page (`#<recipe>`) with the TikTok video embedded in a collapsed section, a button that copies the recipe as Markdown, and links to the video and to any site linked in the description. Each card uses the photo from the linked recipe page when there is one, else the cover the creator picked on TikTok. Both are saved to the cache because TikTok's image links expire within days. Edit `site_template.html` to change the design.
 
 Meal types: breakfast, main, side, soup-salad, snack, dessert, drink, sauce-dip, other. Each recipe also gets 0–5 free tags.
 
-Re-runs reuse the cache, so an interrupted run picks up where it stopped. `runs/` is gitignored.
+Re-runs reuse the cache, so an interrupted run picks up where it stopped. TikTok returns a different number of collection entries from call to call, so every full run also includes all videos already in the cache. A video removed from the collection stays on the site until you delete its `cache/<id>/` folder. `runs/` is gitignored.
 
 ## Hosting
 
 Each full run publishes `site/` to Cloudflare Pages at https://tt-recipes.pages.dev/ with `wrangler pages deploy`. The site is public. Runs with `--limit` or `--no-deploy` do not publish, so a partial run never replaces the live site. Needs `wrangler` logged in to the Cloudflare account that owns the project.
+
+### Hourly updates
+
+```bash
+TikTokRecipes/install_hourly.sh 'https://www.tiktok.com/@user/collection/Name-123'
+```
+
+This installs a launchd agent (`com.starfysh.tiktokrecipes`) that runs the script now and every hour. New videos are extracted and published. Cached videos cost no LLM calls. The Mac must be awake and LM Studio running. Output goes to `TikTokRecipes/runs/hourly.log`. Remove it with:
+
+```bash
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.starfysh.tiktokrecipes.plist
+```
 
 ## How quantities are chosen
 

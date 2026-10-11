@@ -218,6 +218,7 @@ Requires LM Studio + Mail.app + SMTP setup.
 ├── TikTokRecipes/                # TikTok collection to recipe book (yt-dlp + LM Studio)
 │   ├── tiktok_recipes.py         # Fetch, extract, and write recipes
 │   ├── site_template.html        # Recipe book website template
+│   ├── install_hourly.sh         # launchd agent: run and publish hourly
 │   └── README.md                 # Usage documentation
 ├── CommitCraft/                  # Moved → starfysh-tech/nautilai (see README pointer)
 └── README.md                     # This file

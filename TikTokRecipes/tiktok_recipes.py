@@ -86,7 +86,8 @@ PROMPT = """You extract recipes from a TikTok video's description and spoken tra
 
 Rules:
 - If the video does not teach a dish someone could cook, set is_recipe false and recipes [].
-- A video can hold more than one recipe; return each one.
+- A video can hold more than one recipe; return each distinct dish once.
+- Variations of the same dish (a protein swap, a lighter version) go in that recipe's steps, not in a separate recipe.
 - Quantity priority: linked recipe page, then description, then transcript.
 - Never invent a quantity. If no amount is stated, set quantity to null.
 - Write steps as short imperative sentences in cooking order.
@@ -159,16 +160,31 @@ def fetch_video(url: str, folder: Path, cookies: str | None) -> None:
         raise RuntimeError(result.stderr.strip() or "yt-dlp returned no metadata")
 
 
-def fetch_thumbnail(info: dict, path: Path) -> None:
-    # TikTok cover URLs are signed and expire within days, so keep a local copy.
-    if not info.get("thumbnail"):
-        return
-    req = urllib.request.Request(info["thumbnail"], headers={"User-Agent": BROWSER_UA})
+def download(url: str, path: Path) -> None:
+    req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA})
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             path.write_bytes(resp.read())
     except (urllib.error.URLError, TimeoutError) as exc:
-        print(f"  no thumbnail: {exc}", file=sys.stderr)
+        print(f"  no image: {exc}", file=sys.stderr)
+
+
+def fetch_thumbnail(info: dict, path: Path) -> None:
+    # "cover" is the frame the creator picked; yt-dlp's default "thumbnail" is the first frame.
+    # The URLs are signed and expire within days, so keep a local copy.
+    covers = {t.get("id"): t.get("url") for t in info.get("thumbnails") or []}
+    url = covers.get("cover") or info.get("thumbnail")
+    if url:
+        download(url, path)
+
+
+def _recipe_image(recipe: dict) -> str | None:
+    image = recipe.get("image")
+    if isinstance(image, list):
+        image = image[0] if image else None
+    if isinstance(image, dict):
+        image = image.get("url")
+    return image if isinstance(image, str) and image.startswith("http") else None
 
 
 def vtt_to_text(path: Path) -> str:
@@ -242,7 +258,7 @@ def fetch_linked_recipe(url: str) -> dict:
             parts.append("Ingredients:\n" + "\n".join(f"- {i}" for i in recipe.get("recipeIngredient") or []))
             steps = [s for s in _instruction_lines(recipe.get("recipeInstructions")) if s]
             parts.append("Instructions:\n" + "\n".join(f"{n}. {s}" for n, s in enumerate(steps, 1)))
-            return {"url": url, "text": html.unescape("\n".join(parts))}
+            return {"url": url, "text": html.unescape("\n".join(parts)), "image": _recipe_image(recipe)}
     return {"url": url, "error": "no schema.org Recipe on page"}
 
 
@@ -340,10 +356,15 @@ def write_site(root: Path, recipes: list[dict], title: str = "TikTok Recipes") -
     site = root / "site"
     (site / "img").mkdir(parents=True, exist_ok=True)
     for recipe in recipes:
-        thumb = root / "cache" / recipe["video"]["id"] / "thumb.jpg"
+        folder = root / "cache" / recipe["video"]["id"]
+        # A recipe page photo shows the finished dish; the TikTok cover often shows the creator.
+        thumb = next((p for p in (folder / "food.jpg", folder / "thumb.jpg") if p.exists()), folder / "thumb.jpg")
         recipe["video"]["thumb"] = thumb.exists()
-        if thumb.exists():
-            shutil.copyfile(thumb, site / "img" / f"{recipe['video']['id']}.jpg")
+        out = site / "img" / f"{recipe['video']['id']}.jpg"
+        if thumb.exists() and (not out.exists() or out.stat().st_mtime < thumb.stat().st_mtime):
+            # Covers come at up to 2000px; 720px JPEG keeps the site fast. sips ships with macOS.
+            subprocess.run(["sips", "-Z", "720", "-s", "format", "jpeg", str(thumb), "--out", str(out)],
+                           capture_output=True)
     template = (Path(__file__).parent / "site_template.html").read_text()
     # "</" would end the <script> tag that holds the JSON.
     data = json.dumps(recipes, ensure_ascii=False).replace("</", "<\\/")
@@ -388,6 +409,14 @@ def main() -> None:
     (root / "recipes").mkdir(parents=True, exist_ok=True)
     model = None if args.fetch_only else lmstudio_model(args.model)
 
+    # TikTok's collection listing varies between calls (59 to 448 entries seen), so keep every video seen before.
+    if not args.limit:
+        listed = {e.get("id") for e in entries}
+        for info_path in sorted(cache.glob("*/video.info.json")):
+            if info_path.parent.name not in listed:
+                entries.append({"id": info_path.parent.name,
+                                "url": json.loads(info_path.read_text())["webpage_url"]})
+
     recipes, skipped, failed = [], [], []
     for n, entry in enumerate(entries, 1):
         url = entry["url"]
@@ -417,6 +446,9 @@ def main() -> None:
             linked = json.loads(linked_path.read_text())
             video["linked"] = [l["url"] for l in linked if l.get("text")]
             video["links"] = [l["url"] for l in linked]
+            image = next((l["image"] for l in linked if l.get("image")), None)
+            if image and (new_links or not (folder / "food.jpg").exists()):
+                download(image, folder / "food.jpg")
 
             extracted_path = folder / "extracted.json"
             # Videos extracted before linked pages existed get redone once a page is found.
@@ -428,8 +460,15 @@ def main() -> None:
             if not extracted["is_recipe"] or not extracted["recipes"]:
                 skipped.append(video)
                 continue
-            for i, recipe in enumerate(extracted["recipes"]):
-                suffix = f"-{i + 1}" if len(extracted["recipes"]) > 1 else ""
+            # The LLM sometimes returns the same dish twice for one video.
+            unique, seen = [], set()
+            for recipe in extracted["recipes"]:
+                keys = {slugify(recipe["title"]), frozenset(i["item"].lower() for i in recipe["ingredients"])}
+                if not keys & seen:
+                    unique.append(recipe)
+                seen |= keys
+            for i, recipe in enumerate(unique):
+                suffix = f"-{i + 1}" if len(unique) > 1 else ""
                 recipe = {**recipe, "file": f"{slugify(recipe['title'])}-{video_id[-6:]}{suffix}.md",
                           "video": video}
                 (root / "recipes" / recipe["file"]).write_text(render_recipe(recipe, video))
@@ -443,6 +482,10 @@ def main() -> None:
         print(f"Fetched {len(entries) - len(failed)} videos, {no_captions} without captions, {len(failed)} failed.")
         return
 
+    keep = {r["file"] for r in recipes}
+    for stale in (root / "recipes").glob("*.md"):
+        if stale.name not in keep and not args.limit:
+            stale.unlink()
     (root / "recipes.json").write_text(json.dumps(recipes, indent=2, ensure_ascii=False))
     (root / "index.md").write_text(render_index(collection.get("title") or "Recipes", recipes, skipped, failed))
     print(f"\n{len(recipes)} recipes, {len(skipped)} not recipes, {len(failed)} failed.")
