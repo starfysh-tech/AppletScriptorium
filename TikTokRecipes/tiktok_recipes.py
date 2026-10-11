@@ -91,8 +91,10 @@ PROMPT = """You extract recipes from a TikTok video's description and spoken tra
 Rules:
 - If the video is not about a dish or drink someone could make (vlog, science demo, product ad, restaurant visit), set is_recipe false and recipes [].
 - If the video makes a dish but the text gives few details (no captions, short description), still return it: name the dish, list only ingredients the text names, keep steps to what the text says (can be empty), and put "full recipe is only shown in the video" in missing.
-- A video can hold more than one recipe; return each distinct dish once.
-- Variations of the same dish (a protein swap, a lighter version) go in that recipe's steps, not in a separate recipe.
+- Usually return one recipe: the dish the video is about. Its parts (sauce, frosting, topping, drizzle, a side made for it) go into that recipe's ingredients and steps.
+- Return several recipes only when the video teaches separate dishes, each with its own ingredients (a compilation or "what I eat in a day"). Return each dish once.
+- Never return something that is only mentioned, store-bought, or shown for comparison (a drink on the side, plain rice, a bought dip, "two boiled eggs").
+- Variations of the same dish (a protein swap, a lighter or plain version) go in that recipe's steps, not in a separate recipe.
 - Quantity priority: linked recipe page, then description, then transcript.
 - Never invent a quantity. If no amount is stated, set quantity to null.
 - Write steps as short imperative sentences in cooking order.
@@ -609,9 +611,14 @@ def main() -> None:
                 if not keys & seen:
                     unique.append(recipe)
                 seen |= keys
+            # In a multi-dish video, 1-2 ingredient entries are mentions ("two boiled eggs"), not recipes.
+            if len(unique) > 1:
+                unique = [r for r in unique if len(r["ingredients"]) >= 3] or unique[:1]
             for i, recipe in enumerate(unique):
-                suffix = f"-{i + 1}" if len(unique) > 1 else ""
-                recipe = {**recipe, "file": f"{slugify(recipe['title'])}-{video_id[-6:]}{suffix}.md",
+                # The id is the shared link, so it depends on the title only, not on list position.
+                base = f"{slugify(recipe['title'])}-{video_id[-6:]}"
+                taken = sum(1 for u in unique[:i] if slugify(u["title"]) == slugify(recipe["title"]))
+                recipe = {**recipe, "file": f"{base}{f'-{taken + 1}' if taken else ''}.md",
                           "video": video}
                 (root / "recipes" / recipe["file"]).write_text(render_recipe(recipe, video))
                 recipes.append(recipe)

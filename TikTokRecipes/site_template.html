@@ -149,6 +149,8 @@ nav {
 .steps li { counter-increment: s; display: grid; grid-template-columns: 28px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .steps li:last-child { border-bottom: 0; }
 .steps li::before { content: counter(s); font: 700 .95rem Poppins, sans-serif; color: var(--coral); }
+.siblings { margin: 12px 0 0; font-size: .9rem; color: var(--muted); }
+.siblings a { color: var(--ink); font-weight: 700; }
 details.video { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 details.video summary { cursor: pointer; padding: 8px 14px; font: 600 .9rem Poppins, sans-serif; }
 .vfallback { display: grid; justify-items: center; gap: 8px; padding: 0 14px 14px; text-decoration: none; text-align: center; }
@@ -329,6 +331,7 @@ function recipeView(r) {
         r.tags.length ? el("div", { class: "tags" }, ...r.tags.map((t) => el("button", { class: "tag", text: "#" + t,
           onclick: () => { Object.assign(state, { tags: new Set([t]), cat: null, flavor: null, q: "", scroll: 0 }); q.value = ""; location.hash = ""; } })))
           : null,
+        siblingsNote(r),
         videoEmbed(r))),
     el("section", { class: "body" },
       el("div", { class: "panel ingredients" },
@@ -368,6 +371,14 @@ function videoEmbed(r) {
   return d;
 }
 
+// A compilation video teaches several dishes; say so, or the video looks like the wrong recipe.
+function siblingsNote(r) {
+  const others = recipes.filter((x) => x.video.id === r.video.id && x !== r);
+  if (!others.length) return null;
+  return el("p", { class: "siblings" }, `This video shows ${others.length + 1} recipes. Also in it: `,
+    ...others.flatMap((x, n) => [n ? ", " : "", el("a", { href: "#" + x.id, text: x.title })]));
+}
+
 function markdown(r) {
   const lines = [`# ${r.title}`, ""];
   const meta = [r.servings && `Servings: ${r.servings}`, r.nutrition && `Nutrition: ${r.nutrition}`].filter(Boolean);
@@ -391,7 +402,8 @@ async function copy(r, btn) {
 
 function render() {
   const id = decodeURIComponent(location.hash.slice(1));
-  const r = id && recipes.find((x) => x.id === id);
+  // Older links carried a position suffix (-2); fall back to the id without it.
+  const r = id && (recipes.find((x) => x.id === id) || recipes.find((x) => x.id === id.replace(/-\d+$/, "")));
   if (r) return recipeView(r);
   document.title = "__TITLE__";
   listView();
