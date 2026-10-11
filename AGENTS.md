@@ -24,6 +24,11 @@ Local web UI that checks which TLDs are taken for a name, using DNS, HTTP, and w
 
 **Tech:** Python, Flask, dnspython, requests
 
+### TikTokRecipes
+Extracts recipes from a TikTok collection using descriptions, captions, and linked recipe pages, organized by meal type and tags.
+
+**Tech:** Python stdlib, yt-dlp CLI, LM Studio
+
 ---
 
 Build the simplest solution that works on local macOS—avoid premature abstractions.

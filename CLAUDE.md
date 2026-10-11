@@ -12,8 +12,9 @@ AppletScriptorium is a macOS automation framework that uses AppleScript, shell s
 - **SegmentSalmon**: High-performance M3U8/HLS video stream downloader with concurrent segment downloading, smart retry logic, and lossless FFmpeg concatenation.
 - **SwiftHAL**: Halstead complexity metrics analyzer for Swift code with visual TUI, architecture insights, and CI/CD integration.
 - **DomainChecker**: Local Flask web UI that checks which TLDs are taken for a name via DNS, HTTP, and whois.
+- **TikTokRecipes**: Extracts recipes from a TikTok collection (descriptions, captions, linked recipe pages) via yt-dlp and LM Studio, into Markdown grouped by meal type.
 
-This file primarily documents Summarizer development patterns. For ExtensionAuditor usage, see `ExtensionAuditor/README.md`. For SegmentSalmon usage, see `SegmentSalmon/README.md`. For DomainChecker usage, see `DomainChecker/README.md`.
+This file primarily documents Summarizer development patterns. For ExtensionAuditor usage, see `ExtensionAuditor/README.md`. For SegmentSalmon usage, see `SegmentSalmon/README.md`. For DomainChecker usage, see `DomainChecker/README.md`. For TikTokRecipes usage, see `TikTokRecipes/README.md`.
 
 ## Architecture
 

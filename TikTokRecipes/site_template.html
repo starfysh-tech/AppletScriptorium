@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Nunito+Sans:wght@400;600;700&display=swap">
+<style>
+:root {
+  --teal: #01404e; --teal-2: #1f5763; --teal-3: #3e6e78; --coral: #ff283f; --gold: #f4b846;
+  --bg: #fffaf9; --surface: #ffffff; --soft: #f5f0ef; --line: #ebe6e5; --ink: #01404e; --muted: #5d7f86;
+  --shadow: 0 2px 10px rgb(1 64 78 / .08);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #021f26; --surface: #06303a; --soft: #0a3a45; --line: #14505c; --ink: #f5f0ef; --muted: #9fbcc2;
+    --shadow: 0 2px 12px rgb(0 0 0 / .35);
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 "Nunito Sans", system-ui, sans-serif; }
+h1, h2, h3, .poppins { font-family: Poppins, system-ui, sans-serif; }
+a { color: inherit; }
+button { font: inherit; cursor: pointer; color: inherit; }
+img { display: block; }
+
+nav {
+  position: sticky; top: 0; z-index: 5; background: var(--teal); color: #fff;
+  display: flex; align-items: center; gap: 16px; padding: 12px max(16px, calc(50% - 600px));
+}
+.logo { font: 700 1.25rem Poppins, sans-serif; text-decoration: none; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+.logo span { color: var(--gold); }
+.search { flex: 1; position: relative; max-width: 520px; margin-left: auto; }
+.search input {
+  width: 100%; font: inherit; padding: 9px 14px 9px 38px; border-radius: 999px; border: 0;
+  background: rgb(255 255 255 / .14); color: #fff;
+}
+.search input::placeholder { color: rgb(255 255 255 / .7); }
+.search input:focus { outline: 2px solid var(--gold); background: rgb(255 255 255 / .2); }
+.search::before { content: "⌕"; position: absolute; left: 14px; top: 50%; transform: translateY(-52%); font-size: 1.2rem; opacity: .8; }
+
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+.hero { padding: 36px 0 8px; }
+.hero h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 0; line-height: 1.15; }
+.hero p { margin: 6px 0 0; color: var(--muted); font-weight: 600; }
+
+.cats { display: flex; gap: 14px; overflow-x: auto; padding: 22px 0 6px; scrollbar-width: none; }
+.cat { background: none; border: 0; padding: 0; display: grid; justify-items: center; gap: 6px; min-width: 84px; }
+.cat .ring {
+  width: 72px; height: 72px; border-radius: 50%; overflow: hidden; border: 3px solid transparent;
+  background: var(--soft); transition: border-color .15s, transform .15s;
+}
+.cat img { width: 100%; height: 100%; object-fit: cover; }
+.cat:hover .ring { transform: translateY(-2px); }
+.cat[aria-pressed=true] .ring { border-color: var(--coral); }
+.cat .label { font: 600 .82rem Poppins, sans-serif; text-transform: capitalize; }
+.cat .n { font-size: .72rem; color: var(--muted); margin-top: -6px; }
+
+.tags { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 0 0; }
+.tag {
+  font: 600 .8rem "Nunito Sans", sans-serif; padding: 5px 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.tag[aria-pressed=true] { background: var(--teal); border-color: var(--teal); color: #fff; }
+@media (prefers-color-scheme: dark) { .tag[aria-pressed=true] { background: var(--gold); border-color: var(--gold); color: var(--teal); } }
+
+.bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 22px 0 12px; }
+.count { font: 600 1rem Poppins, sans-serif; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; font: 600 .9rem Poppins, sans-serif; text-decoration: none;
+  padding: 10px 20px; border-radius: 999px; border: 2px solid var(--coral); background: var(--coral); color: #fff;
+}
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn:hover { filter: brightness(1.07); }
+
+.grid { display: grid; gap: 22px 18px; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); padding-bottom: 60px; }
+.card { text-decoration: none; display: grid; gap: 8px; align-content: start; }
+.photo {
+  aspect-ratio: 4 / 5; border-radius: 12px; overflow: hidden; background: var(--soft);
+  box-shadow: var(--shadow); position: relative;
+}
+.photo img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
+.card:hover .photo img { transform: scale(1.04); }
+.photo .ph { display: grid; place-items: center; height: 100%; font-size: 3rem; }
+.kicker { font: 600 .72rem Poppins, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--coral); }
+.card h2 { font-size: 1rem; line-height: 1.3; margin: -4px 0 0; font-weight: 600; }
+.by { font-size: .85rem; color: var(--muted); }
+.empty { grid-column: 1 / -1; text-align: center; padding: 60px 0; color: var(--muted); }
+
+/* Recipe page */
+.back { display: inline-block; margin: 22px 0 14px; font-weight: 700; text-decoration: none; color: var(--muted); }
+.back:hover { color: var(--coral); }
+.top { display: grid; gap: 24px; grid-template-columns: 220px 1fr; align-items: start; }
+.top .photo { aspect-ratio: 4 / 5; }
+.title h1 { font-size: clamp(1.5rem, 3.4vw, 2.1rem); line-height: 1.15; margin: 4px 0 6px; }
+.creator { color: var(--muted); font-weight: 600; }
+.creator a { color: var(--ink); }
+.stats {
+  display: flex; flex-wrap: wrap; margin: 14px 0; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface); overflow: hidden;
+}
+.stat { flex: 1 1 110px; padding: 8px 14px; border-right: 1px solid var(--line); }
+.stat:last-child { border-right: 0; }
+.stat b { display: block; font: 600 1.05rem Poppins, sans-serif; }
+.stat span { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.links { display: flex; flex-wrap: wrap; gap: 10px; }
+.title .tags { padding-top: 12px; }
+.btn.small { padding: 7px 14px; font-size: .82rem; }
+.body { display: grid; gap: 20px; grid-template-columns: minmax(0, 320px) 1fr; align-items: start; margin: 24px 0 60px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px; box-shadow: var(--shadow); }
+.ingredients { position: sticky; top: 76px; }
+.panel h2 { font-size: 1.15rem; margin: 0 0 8px; }
+.ing { list-style: none; margin: 0; padding: 0; }
+.ing li { border-bottom: 1px solid var(--line); }
+.ing li:last-child { border-bottom: 0; }
+.ing label { display: flex; gap: 10px; align-items: baseline; padding: 5px 0; cursor: pointer; }
+.ing input { accent-color: var(--coral); transform: scale(1.2); flex: none; }
+.ing input:checked ~ span { text-decoration: line-through; opacity: .45; }
+.qty { font-weight: 700; }
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 28px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.steps li:last-child { border-bottom: 0; }
+.steps li::before { content: counter(s); font: 700 .95rem Poppins, sans-serif; color: var(--coral); }
+details.video { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+details.video summary { cursor: pointer; padding: 8px 14px; font: 600 .9rem Poppins, sans-serif; }
+details.video iframe { display: block; width: 100%; max-width: 340px; aspect-ratio: 9 / 16; border: 0; margin: 0 auto 14px; border-radius: 10px; }
+.note { margin-top: 18px; border-left: 4px solid var(--gold); background: var(--soft); border-radius: 8px; padding: 12px 16px; font-size: .92rem; }
+.note ul { margin: 6px 0 0; padding-left: 18px; }
+footer { border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; text-align: center; padding: 24px 16px 40px; }
+
+@media (max-width: 760px) {
+  .top, .body { grid-template-columns: 1fr; }
+  .top .photo { max-width: 260px; }
+  .ingredients { position: static; }
+  .grid { grid-template-columns: repeat(2, 1fr); gap: 18px 12px; }
+}
+</style>
+</head>
+<body>
+<nav>
+  <a class="logo" href="#">🍳 TikTok <span>Recipes</span></a>
+  <label class="search"><input type="search" id="q" placeholder="Search recipes or ingredients" aria-label="Search"></label>
+</nav>
+<div class="wrap" id="app"></div>
+<footer>Pulled from TikTok descriptions, captions, and linked recipe pages. Each recipe links to its original video. Blank quantities were not stated by the creator.</footer>
+<script type="application/json" id="data">__DATA__</script>
+<script>
+const recipes = JSON.parse(document.getElementById("data").textContent);
+const CATS = ["breakfast", "main", "side", "soup-salad", "snack", "dessert", "drink", "sauce-dip", "other"];
+const EMOJI = { breakfast: "🍳", main: "🍝", side: "🥦", "soup-salad": "🥗", snack: "🍿",
+  dessert: "🍰", drink: "🍹", "sauce-dip": "🫙", other: "🍴" };
+const state = { q: "", cat: null, tag: null, scroll: 0 };
+const app = document.getElementById("app");
+
+// Recipe text comes from TikTok and an LLM, so it only ever goes in via textContent.
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "text") n.textContent = v;
+    else if (k.startsWith("on")) n[k] = v;
+    else n.setAttribute(k, v);
+  }
+  n.append(...kids.filter((k) => k !== null && k !== undefined && k !== false));
+  return n;
+}
+const safeUrl = (u) => (/^https:\/\//.test(u) ? u : "#");
+const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u; } };
+const label = (c) => c.replace("-", " & ");
+const img = (r) => r.video.thumb ? `img/${r.video.id}.jpg` : null;
+const photo = (r, eager) => el("div", { class: "photo" }, img(r)
+  ? el("img", { src: img(r), alt: "", loading: eager ? "eager" : "lazy" })
+  : el("div", { class: "ph", text: EMOJI[r.category] || "🍴" }));
+
+recipes.forEach((r) => {
+  r.id = r.file.replace(/\.md$/, "");
+  r.hay = [r.title, r.category, ...r.tags, ...r.ingredients.map((i) => i.item), r.video.uploader, r.credit || ""]
+    .join(" ").toLowerCase();
+});
+const byTitle = (a, b) => a.title.localeCompare(b.title);
+const tagCounts = {};
+recipes.forEach((r) => r.tags.forEach((t) => (tagCounts[t] = (tagCounts[t] || 0) + 1)));
+const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 16).map(([t]) => t);
+
+function matches(r) {
+  if (state.cat && r.category !== state.cat) return false;
+  if (state.tag && !r.tags.includes(state.tag)) return false;
+  return state.q.split(/\s+/).every((w) => r.hay.includes(w));
+}
+
+function listView() {
+  const list = recipes.filter(matches).sort(byTitle);
+  const cats = CATS.filter((c) => recipes.some((r) => r.category === c)).map((c) => {
+    const sample = recipes.filter((r) => r.category === c && r.video.thumb).sort(byTitle)[0];
+    return el("button", { class: "cat", "aria-pressed": String(state.cat === c),
+      onclick: () => { state.cat = state.cat === c ? null : c; render(); } },
+      el("div", { class: "ring" }, sample ? el("img", { src: img(sample), alt: "" })
+        : el("div", { class: "ph", text: EMOJI[c] })),
+      el("div", { class: "label", text: label(c) }),
+      el("div", { class: "n", text: recipes.filter((r) => r.category === c).length }));
+  });
+  const tags = topTags.map((t) => el("button", { class: "tag", "aria-pressed": String(state.tag === t),
+    onclick: () => { state.tag = state.tag === t ? null : t; render(); }, text: "#" + t }));
+  const surprise = el("button", { class: "btn", text: "🎲 Surprise me", onclick: () => {
+    if (list.length) location.hash = list[Math.floor(Math.random() * list.length)].id;
+  } });
+  const heading = state.cat ? label(state.cat) : state.tag ? "#" + state.tag : "All recipes";
+  app.replaceChildren(
+    el("section", { class: "hero" },
+      el("h1", { text: "What are we cooking?" }),
+      el("p", { text: `${recipes.length} recipes saved from TikTok` })),
+    el("div", { class: "cats" }, ...cats),
+    el("div", { class: "tags" }, ...tags),
+    el("div", { class: "bar" },
+      el("div", { class: "count", text: `${heading} · ${list.length}` }), surprise),
+    el("div", { class: "grid" }, ...(list.length ? list.map(card)
+      : [el("p", { class: "empty", text: "No recipes match. Try another search." })])));
+}
+
+function card(r) {
+  return el("a", { class: "card", href: "#" + r.id },
+    photo(r),
+    el("div", { class: "kicker", text: label(r.category) }),
+    el("h2", { text: r.title }),
+    el("div", { class: "by", text: "by @" + r.video.uploader }));
+}
+
+function recipeView(r) {
+  const links = r.video.links || r.video.linked || [];
+  const stats = [
+    [r.ingredients.length, "ingredients"], [r.steps.length, "steps"],
+    r.servings && [r.servings, "servings"], r.nutrition && [r.nutrition, "nutrition"],
+  ].filter(Boolean).map(([v, k]) => el("div", { class: "stat" }, el("b", { text: v }), el("span", { text: k })));
+  app.replaceChildren(
+    el("a", { class: "back", href: "#", text: "← All recipes" }),
+    el("section", { class: "top" },
+      photo(r, true),
+      el("div", { class: "title" },
+        el("div", { class: "kicker", text: label(r.category) }),
+        el("h1", { text: r.title }),
+        el("div", { class: "creator" }, "Video by ",
+          el("a", { href: safeUrl(`https://www.tiktok.com/@${r.video.uploader}`), target: "_blank", rel: "noopener",
+            text: "@" + r.video.uploader }),
+          r.credit ? ` · recipe by ${r.credit}` : null),
+        el("div", { class: "stats" }, ...stats),
+        el("div", { class: "links" },
+          el("a", { class: "btn small", href: safeUrl(r.video.url), target: "_blank", rel: "noopener", text: "▶ Open on TikTok" }),
+          el("button", { class: "btn small ghost", text: "⧉ Copy recipe", onclick: (e) => copy(r, e.currentTarget) }),
+          ...links.map((u) => el("a", { class: "btn small ghost", href: safeUrl(u), target: "_blank", rel: "noopener",
+            text: "↗ " + host(u) }))),
+        r.tags.length ? el("div", { class: "tags" }, ...r.tags.map((t) => el("button", { class: "tag", text: "#" + t,
+          onclick: () => { Object.assign(state, { tag: t, cat: null, q: "", scroll: 0 }); q.value = ""; location.hash = ""; } })))
+          : null,
+        videoEmbed(r))),
+    el("section", { class: "body" },
+      el("div", { class: "panel ingredients" },
+        el("h2", { text: "Ingredients" }),
+        el("ul", { class: "ing" }, ...r.ingredients.map((i) => el("li", {}, el("label", {},
+          el("input", { type: "checkbox" }),
+          el("span", {}, i.quantity ? el("span", { class: "qty", text: i.quantity + " " }) : null, i.item)))))),
+      el("div", { class: "panel" },
+        el("h2", { text: "Instructions" }),
+        el("ol", { class: "steps" }, ...r.steps.map((s) => el("li", { text: s }))),
+        r.missing.length ? el("div", { class: "note" }, el("strong", { text: "Not stated in the video" }),
+          el("ul", {}, ...r.missing.map((m) => el("li", { text: m })))) : null)));
+  document.title = `${r.title} · __TITLE__`;
+  scrollTo(0, 0);
+}
+
+// The player iframe loads only when opened, so the list stays fast and TikTok is not contacted until asked.
+function videoEmbed(r) {
+  const d = el("details", { class: "video" }, el("summary", { text: "Watch the video" }));
+  d.addEventListener("toggle", () => {
+    if (d.open && !d.querySelector("iframe")) {
+      d.append(el("iframe", { src: `https://www.tiktok.com/player/v1/${encodeURIComponent(r.video.id)}?rel=0`,
+        allow: "encrypted-media; fullscreen; picture-in-picture", allowfullscreen: "", title: r.title }));
+    }
+  });
+  return d;
+}
+
+function markdown(r) {
+  const lines = [`# ${r.title}`, ""];
+  const meta = [r.servings && `Servings: ${r.servings}`, r.nutrition && `Nutrition: ${r.nutrition}`].filter(Boolean);
+  if (meta.length) lines.push(meta.join(" · "), "");
+  lines.push("## Ingredients", "", ...r.ingredients.map((i) => `- ${i.quantity ? i.quantity + " " : ""}${i.item}`), "");
+  lines.push("## Instructions", "", ...r.steps.map((s, n) => `${n + 1}. ${s}`), "");
+  lines.push(`Source: [@${r.video.uploader}](${r.video.url})` + (r.credit ? ` (recipe by ${r.credit})` : ""));
+  (r.video.links || []).forEach((u) => lines.push(`Recipe page: ${u}`));
+  return lines.join("\n") + "\n";
+}
+
+async function copy(r, btn) {
+  try {
+    await navigator.clipboard.writeText(markdown(r));
+    btn.textContent = "✓ Copied";
+  } catch {
+    btn.textContent = "Copy failed";
+  }
+  setTimeout(() => (btn.textContent = "⧉ Copy recipe"), 1800);
+}
+
+function render() {
+  const id = decodeURIComponent(location.hash.slice(1));
+  const r = id && recipes.find((x) => x.id === id);
+  if (r) return recipeView(r);
+  document.title = "__TITLE__";
+  listView();
+  scrollTo(0, state.scroll);
+}
+
+const q = document.getElementById("q");
+q.addEventListener("input", () => {
+  state.q = q.value.trim().toLowerCase();
+  state.scroll = 0;
+  if (location.hash) location.hash = ""; else render();
+});
+// Remember the list position so "back" from a recipe lands where you were.
+window.addEventListener("click", (e) => { if (e.target.closest(".card")) state.scroll = scrollY; }, true);
+window.addEventListener("hashchange", render);
+render();
+</script>
+</body>
+</html>

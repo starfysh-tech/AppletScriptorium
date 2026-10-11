@@ -79,6 +79,20 @@ python3 DomainChecker/domain_checker.py   # open http://127.0.0.1:5000
 
 ---
 
+### TikTokRecipes
+Turns a TikTok collection into a recipe book from video descriptions, captions, and linked recipe pages. Does not download the videos.
+
+**Use case:** Get the saved recipes out of a TikTok collection, grouped by meal type, with quantities.
+
+**Get started:**
+```bash
+brew install yt-dlp   # and start LM Studio with a model loaded
+python3 TikTokRecipes/tiktok_recipes.py 'https://www.tiktok.com/@user/collection/Name-123'
+```
+[Full documentation →](./TikTokRecipes/)
+
+---
+
 ### CommitCraft (🟡 5 minutes) — moved
 
 CommitCraft now ships as a Claude Code plugin in the **nautilai** marketplace:
@@ -200,6 +214,10 @@ Requires LM Studio + Mail.app + SMTP setup.
 ├── DomainChecker/                # TLD availability checker (Flask web UI)
 │   ├── domain_checker.py         # Server, checker, and UI
 │   ├── tld_database.py           # TLD list grouped by theme
+│   └── README.md                 # Usage documentation
+├── TikTokRecipes/                # TikTok collection to recipe book (yt-dlp + LM Studio)
+│   ├── tiktok_recipes.py         # Fetch, extract, and write recipes
+│   ├── site_template.html        # Recipe book website template
 │   └── README.md                 # Usage documentation
 ├── CommitCraft/                  # Moved → starfysh-tech/nautilai (see README pointer)
 └── README.md                     # This file
