@@ -347,7 +347,7 @@ crontab -e
 
 Add entry (weekdays at 7 AM):
 ```cron
-0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /Users/YOUR_USERNAME/Code/AppletScriptorium/Summarizer/bin/run_alert.sh'
+0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /path/to/AppletScriptorium/Summarizer/bin/run_alert.sh'
 ```
 
 **Replace `YOUR_USERNAME`** with your actual macOS username.

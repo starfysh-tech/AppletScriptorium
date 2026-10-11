@@ -2,8 +2,8 @@
 # Copy this file to ~/.alert-env and customize for your setup
 # Source in cron: 0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /path/to/run_alert.sh'
 
-# Output directory for pipeline runs (default: runs/<timestamp>)
-export ALERT_OUTPUT_DIR="$HOME/Code/AppletScriptorium/runs"
+# Output directory for pipeline runs (empty = <repo>/runs/<timestamp>)
+export ALERT_OUTPUT_DIR=""
 
 # Ollama model name (default: qwen3:latest)
 export ALERT_MODEL="qwen3:latest"

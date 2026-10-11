@@ -189,7 +189,7 @@ The project is initialized and partially implemented.
 ### Project Structure:
 
 ```
-/Users/randallnoval/Code/AppletScriptorium/SwiftHAL/
+SwiftHAL/
 ├── .build/
 ├── .git/
 ├── Package.swift

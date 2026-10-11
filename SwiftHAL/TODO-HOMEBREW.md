@@ -23,7 +23,7 @@ This document outlines the steps to make SwiftHAL available via Homebrew package
 ### 1.1 Create Git Tag
 
 ```bash
-cd /Users/randallnoval/Code/AppletScriptorium/SwiftHAL
+cd SwiftHAL
 
 # Tag the release
 git tag -a v2.1.0 -m "Release v2.1.0: Staff-level refactoring complete"

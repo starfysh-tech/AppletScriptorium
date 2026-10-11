@@ -297,8 +297,8 @@ grep -E "LMSTUDIO|OLLAMA" .env
 
 Check the log file:
 ```bash
-ls -lt ~/Code/AppletScriptorium/runs/
-cat ~/Code/AppletScriptorium/runs/alert-*/workflow.log
+ls -lt runs/
+cat runs/alert-*/workflow.log
 ```
 
 Common issues:
@@ -354,7 +354,7 @@ echo "test" | ollama run qwen3:latest
 2. **Verify SMTP credentials**: See [SMTP Authentication Fails](#smtp-authentication-fails) above
 3. **Check workflow log**:
    ```bash
-   cat ~/Code/AppletScriptorium/runs/alert-*/workflow.log
+   cat runs/alert-*/workflow.log
    ```
    Look for "Email sent successfully" or SMTP error messages
 4. **Verify email address**: Check recipient address in `process-alert.scpt` line 12
@@ -394,7 +394,7 @@ echo "test" | ollama run qwen3:latest
 5. Test rule manually:
    - Select a message with "Google Alert -" in subject
    - **Message** menu → **Apply Rules**
-   - Check for new directory: `ls -lt ~/Code/AppletScriptorium/runs | head -3`
+   - Check for new directory: `ls -lt runs | head -3`
    - If directory created, rule triggered successfully
 
 6. Check Console.app for error messages:
@@ -468,7 +468,7 @@ Both conditions match correctly when rules DO fire. This is not a configuration 
 **Solutions**:
 1. **Check workflow log**:
    ```bash
-   cat ~/Code/AppletScriptorium/runs/alert-*/workflow.log
+   cat runs/alert-*/workflow.log
    ```
    Look for the specific error that caused the failure
 

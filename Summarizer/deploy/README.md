@@ -65,7 +65,7 @@ Optional environment variables (set in `~/.alert-env`):
 1. Create `~/.alert-env` and export any of the variables above (or copy from `Summarizer/templates/alert-env.template`).
 2. Add the cron entry:
    ```cron
-   0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /Users/<you>/Code/AppletScriptorium/Summarizer/bin/run_alert.sh'
+   0 7 * * 1-5 /bin/bash -lc 'source ~/.alert-env; /path/to/AppletScriptorium/Summarizer/bin/run_alert.sh'
    ```
 3. Confirm with `crontab -l`.
 

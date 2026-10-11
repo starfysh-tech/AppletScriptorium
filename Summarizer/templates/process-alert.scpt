@@ -1,16 +1,15 @@
 using terms from application "Mail"
 	on perform mail action with messages theMessages for rule theRule
 		-- Log execution for debugging
-		set homePath to POSIX path of (path to home folder)
-		set logFile to homePath & "Code/AppletScriptorium/runs/mail-rule-execution.log"
+		set logFile to "{{REPO_PATH}}/runs/mail-rule-execution.log"
 		do shell script "echo \"$(date '+%Y-%m-%d %H:%M:%S') - Mail rule triggered\" >> " & quoted form of logFile
 
 		-- Generate timestamp for output directory
 		set timestamp to do shell script "date +%Y%m%d-%H%M%S"
-		set outputDir to homePath & "Code/AppletScriptorium/runs/alert-" & timestamp
+		set outputDir to "{{REPO_PATH}}/runs/alert-" & timestamp
 
 		-- Get absolute path to repository
-		set repoPath to homePath & "Code/AppletScriptorium"
+		set repoPath to "{{REPO_PATH}}"
 
 		-- Get recipient (customize this as needed)
 		set digestRecipient to "{{EMAIL}}"
