@@ -65,6 +65,20 @@ hal --path Sources
 
 ---
 
+### DomainChecker (🟢 5 minutes)
+Local web UI that checks which TLDs are taken for a name, using DNS, HTTP, and whois.
+
+**Use case:** Find a free domain for a project name across hundreds of TLDs at once.
+
+**Get started:**
+```bash
+python3 -m pip install --user flask dnspython requests
+python3 DomainChecker/domain_checker.py   # open http://127.0.0.1:5000
+```
+[Full documentation →](./DomainChecker/)
+
+---
+
 ### CommitCraft (🟡 5 minutes) — moved
 
 CommitCraft now ships as a Claude Code plugin in the **nautilai** marketplace:
@@ -182,6 +196,10 @@ Requires LM Studio + Mail.app + SMTP setup.
 │   ├── Sources/                  # Swift source code
 │   ├── Tests/                    # Test suite
 │   ├── Package.swift             # Swift package manifest
+│   └── README.md                 # Usage documentation
+├── DomainChecker/                # TLD availability checker (Flask web UI)
+│   ├── domain_checker.py         # Server, checker, and UI
+│   ├── tld_database.py           # TLD list grouped by theme
 │   └── README.md                 # Usage documentation
 ├── CommitCraft/                  # Moved → starfysh-tech/nautilai (see README pointer)
 └── README.md                     # This file

@@ -19,6 +19,11 @@ Analyzes Swift code complexity using Halstead metrics. Provides visual TUI with 
 
 **Tech:** Swift 5.9+, SwiftSyntax 602.0.0, ArgumentParser, native macOS CLI
 
+### DomainChecker
+Local web UI that checks which TLDs are taken for a name, using DNS, HTTP, and whois.
+
+**Tech:** Python, Flask, dnspython, requests
+
 ---
 
 Build the simplest solution that works on local macOS—avoid premature abstractions.
