@@ -33,18 +33,18 @@ Env: `PAGES_PROJECT` (default `tt-recipes`), `LMSTUDIO_BASE_URL`, `LMSTUDIO_TIME
 
 ```
 runs/<collection>/
-├── site/            # recipe website: index.html + img/ (video covers)
+├── site/            # website: index.html, img/, r/<id>.html|.md, recipes.json, llms.txt, sitemap.xml
 ├── index.md         # recipes grouped by meal type, with tags
 ├── recipes.json     # all recipes as data
 ├── recipes/*.md     # one file per recipe
 └── cache/<id>/      # video.info.json, captions, thumb.jpg, linked.json, extracted.json
 ```
 
-`site/` is a static website. Open `site/index.html` or host the folder. It has search, meal type and tag filters, a random pick, and an ingredient checklist. Each recipe has its own page (`#<recipe>`) with the TikTok video embedded in a collapsed section, a button that copies the recipe as Markdown, and links to the video and to any site linked in the description. Each card uses the photo from the linked recipe page when there is one, else the cover the creator picked on TikTok. Both are saved to the cache because TikTok's image links expire within days. Edit `site_template.html` to change the design.
+`site/` is a static website. Open `site/index.html` or host the folder. It has search, meal type filters, a sweet / savory toggle, a multi-select tag filter (recipes must have every selected tag), sorting by newest added, oldest added, or A–Z, a random pick, and an ingredient checklist. Filters and sort are kept in the URL (`?q=&cat=&flavor=&tags=a,b&sort=oldest`), so a filtered view can be shared. Each recipe has its own page (`#<recipe>`) with the TikTok video embedded in a collapsed section, a button that copies the recipe as Markdown, and links to the video and to any site linked in the description. Each card uses the photo from the linked recipe page when there is one, else the cover the creator picked on TikTok. Both are saved to the cache because TikTok's image links expire within days. Edit `site_template.html` to change the design.
 
 Meal types: breakfast, main, side, soup-salad, snack, dessert, drink, sauce-dip, other. Each recipe also gets 0–5 free tags.
 
-Re-runs reuse the cache, so an interrupted run picks up where it stopped. TikTok returns a different number of collection entries from call to call, so every full run also includes all videos already in the cache. A video removed from the collection stays on the site until you delete its `cache/<id>/` folder. `runs/` is gitignored.
+`order.json` keeps the order videos were saved to the collection, newest first. TikTok lists the collection newest-saved first, and each run puts videos it has not seen before on top. Re-runs reuse the cache, so an interrupted run picks up where it stopped. TikTok returns a different number of collection entries from call to call, so every full run also includes all videos already in the cache. A video removed from the collection stays on the site until you delete its `cache/<id>/` folder. `runs/` is gitignored.
 
 ## Hosting
 
@@ -61,6 +61,28 @@ This installs a launchd agent (`com.starfysh.tiktokrecipes`) that runs the scrip
 ```bash
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.starfysh.tiktokrecipes.plist
 ```
+
+## AI access
+
+Any AI or script can read the site without running its JavaScript:
+
+- `/llms.txt`: index of every recipe with links, plus how to search
+- `/api/search?q=chicken+-dairy&flavor=savory&tags=high-protein&format=md`: search (JSON by default). Served by `functions/api/search.js`, a Cloudflare Pages Function deployed with the site.
+- `/r/<id>.md` and `/r/<id>`: one recipe as Markdown, or as HTML with schema.org Recipe data
+- `/llms-full.txt`, `/recipes.json`: every recipe in one file
+- `/sitemap.xml`, `/robots.txt`: allow all crawlers
+
+## Local search
+
+
+```bash
+python3 TikTokRecipes/search_recipes.py chicken rice --flavor savory
+python3 TikTokRecipes/search_recipes.py --tag high-protein --tag air-fryer --category snack
+python3 TikTokRecipes/search_recipes.py cottage -dessert --max-ingredients 6
+python3 TikTokRecipes/search_recipes.py --show <id>
+```
+
+Words match title, ingredients, tags, category, and creator. `-word` excludes. It reads the newest local `runs/*/recipes.json`, or the live site's `/recipes.json` when there is no local run. The site also serves `/llms.txt`, which describes the data for AI tools.
 
 ## How quantities are chosen
 

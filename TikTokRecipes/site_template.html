@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>__TITLE__</title>
+<meta name="description" content="Recipes extracted from saved TikTok videos, with ingredients, steps, and links to each video. AI tools: see /llms.txt or GET /api/search?q=.">
+<link rel="alternate" type="text/markdown" href="/llms.txt" title="Recipe index for AI tools">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Nunito+Sans:wght@400;600;700&display=swap">
 <style>
@@ -65,7 +67,32 @@ nav {
 .tag[aria-pressed=true] { background: var(--teal); border-color: var(--teal); color: #fff; }
 @media (prefers-color-scheme: dark) { .tag[aria-pressed=true] { background: var(--gold); border-color: var(--gold); color: var(--teal); } }
 
-.bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 22px 0 12px; }
+.bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 22px 0 12px; }
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 18px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); padding: 3px; }
+.seg button { border: 0; background: none; padding: 6px 14px; border-radius: 999px; font: 600 .85rem Poppins, sans-serif; }
+.seg button[aria-pressed=true] { background: var(--teal); color: #fff; }
+@media (prefers-color-scheme: dark) { .seg button[aria-pressed=true] { background: var(--gold); color: var(--teal); } }
+.dd { position: relative; }
+.dd summary, .sort {
+  list-style: none; cursor: pointer; font: 600 .85rem Poppins, sans-serif; color: var(--ink);
+  padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+}
+.dd summary::-webkit-details-marker { display: none; }
+.dd summary::after { content: " ▾"; }
+.dd[open] summary { border-color: var(--teal-3); }
+.menu {
+  position: absolute; z-index: 4; top: calc(100% + 6px); left: 0; width: min(300px, 80vw); max-height: 340px;
+  overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 8px 24px rgb(1 64 78 / .18); padding: 6px;
+}
+.menu label { display: flex; gap: 10px; align-items: center; padding: 5px 8px; border-radius: 8px; cursor: pointer; font-size: .9rem; }
+.menu label:hover { background: var(--soft); }
+.menu input { accent-color: var(--coral); }
+.menu .n { margin-left: auto; color: var(--muted); font-size: .8rem; }
+.menu .clear { width: 100%; text-align: left; border: 0; background: none; padding: 6px 8px; color: var(--coral); font-weight: 700; }
+.sort { appearance: none; padding-right: 30px; background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 16px center, right 11px center; background-size: 5px 5px; background-repeat: no-repeat; }
 .count { font: 600 1rem Poppins, sans-serif; }
 .btn {
   display: inline-flex; align-items: center; gap: 8px; font: 600 .9rem Poppins, sans-serif; text-decoration: none;
@@ -124,6 +151,10 @@ nav {
 .steps li::before { content: counter(s); font: 700 .95rem Poppins, sans-serif; color: var(--coral); }
 details.video { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 details.video summary { cursor: pointer; padding: 8px 14px; font: 600 .9rem Poppins, sans-serif; }
+.vfallback { display: grid; justify-items: center; gap: 8px; padding: 0 14px 14px; text-decoration: none; text-align: center; }
+.vfallback img { width: 200px; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 10px; }
+.vfallback span { font: 600 .9rem Poppins, sans-serif; color: #fff; background: var(--coral); padding: 8px 18px; border-radius: 999px; }
+.vfallback small { color: var(--muted); max-width: 320px; }
 details.video iframe { display: block; width: 100%; max-width: 340px; aspect-ratio: 9 / 16; border: 0; margin: 0 auto 14px; border-radius: 10px; }
 .note { margin-top: 18px; border-left: 4px solid var(--gold); background: var(--soft); border-radius: 8px; padding: 12px 16px; font-size: .92rem; }
 .note ul { margin: 6px 0 0; padding-left: 18px; }
@@ -143,6 +174,7 @@ footer { border-top: 1px solid var(--line); color: var(--muted); font-size: .85r
   <label class="search"><input type="search" id="q" placeholder="Search recipes or ingredients" aria-label="Search"></label>
 </nav>
 <div class="wrap" id="app"></div>
+<noscript><p class="wrap">This site needs JavaScript. Without it, read the <a href="/llms.txt">recipe index</a>, the <a href="/sitemap.xml">sitemap</a>, or search with <a href="/api/search?q=chicken&amp;format=md">/api/search?q=</a>.</p></noscript>
 <footer>Pulled from TikTok descriptions, captions, and linked recipe pages. Each recipe links to its original video. Blank quantities were not stated by the creator.</footer>
 <script type="application/json" id="data">__DATA__</script>
 <script>
@@ -150,7 +182,10 @@ const recipes = JSON.parse(document.getElementById("data").textContent);
 const CATS = ["breakfast", "main", "side", "soup-salad", "snack", "dessert", "drink", "sauce-dip", "other"];
 const EMOJI = { breakfast: "🍳", main: "🍝", side: "🥦", "soup-salad": "🥗", snack: "🍿",
   dessert: "🍰", drink: "🍹", "sauce-dip": "🫙", other: "🍴" };
-const state = { q: "", cat: null, tag: null, scroll: 0 };
+const state = { q: "", cat: null, tags: new Set(), flavor: null, sort: "newest", tagsOpen: false, scroll: 0 };
+const SORTS = { newest: ["Newest added", (a, b) => a.video.added - b.video.added],
+  oldest: ["Oldest added", (a, b) => b.video.added - a.video.added],
+  az: ["A–Z", (a, b) => a.title.localeCompare(b.title)] };
 const app = document.getElementById("app");
 
 // Recipe text comes from TikTok and an LLM, so it only ever goes in via textContent.
@@ -180,16 +215,41 @@ recipes.forEach((r) => {
 const byTitle = (a, b) => a.title.localeCompare(b.title);
 const tagCounts = {};
 recipes.forEach((r) => r.tags.forEach((t) => (tagCounts[t] = (tagCounts[t] || 0) + 1)));
-const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 16).map(([t]) => t);
+// Tags used once are noise in a filter list.
+const allTags = Object.entries(tagCounts).filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 
 function matches(r) {
   if (state.cat && r.category !== state.cat) return false;
-  if (state.tag && !r.tags.includes(state.tag)) return false;
+  if (state.flavor && r.flavor !== state.flavor) return false;
+  for (const t of state.tags) if (!r.tags.includes(t)) return false;
   return state.q.split(/\s+/).every((w) => r.hay.includes(w));
 }
 
+// Filters and sort live in the query string so a filtered view can be shared; the hash holds an open recipe.
+function readURL() {
+  const p = new URLSearchParams(location.search);
+  state.q = (p.get("q") || "").trim().toLowerCase();
+  state.cat = CATS.includes(p.get("cat")) ? p.get("cat") : null;
+  state.flavor = ["sweet", "savory"].includes(p.get("flavor")) ? p.get("flavor") : null;
+  state.tags = new Set((p.get("tags") || "").split(",").filter(Boolean));
+  state.sort = p.get("sort") in SORTS ? p.get("sort") : "newest";
+  q.value = state.q;
+}
+
+function writeURL() {
+  const p = new URLSearchParams();
+  if (state.q) p.set("q", state.q);
+  if (state.cat) p.set("cat", state.cat);
+  if (state.flavor) p.set("flavor", state.flavor);
+  if (state.tags.size) p.set("tags", [...state.tags].join(","));
+  if (state.sort !== "newest") p.set("sort", state.sort);
+  const qs = p.toString().replaceAll("%2C", ",");
+  history.replaceState(null, "", (qs ? "?" + qs : location.pathname) + location.hash);
+}
+
 function listView() {
-  const list = recipes.filter(matches).sort(byTitle);
+  writeURL();
+  const list = recipes.filter(matches).sort(SORTS[state.sort][1]);
   const cats = CATS.filter((c) => recipes.some((r) => r.category === c)).map((c) => {
     const sample = recipes.filter((r) => r.category === c && r.video.thumb).sort(byTitle)[0];
     return el("button", { class: "cat", "aria-pressed": String(state.cat === c),
@@ -199,18 +259,36 @@ function listView() {
       el("div", { class: "label", text: label(c) }),
       el("div", { class: "n", text: recipes.filter((r) => r.category === c).length }));
   });
-  const tags = topTags.map((t) => el("button", { class: "tag", "aria-pressed": String(state.tag === t),
-    onclick: () => { state.tag = state.tag === t ? null : t; render(); }, text: "#" + t }));
+  const flavor = el("div", { class: "seg", role: "group", "aria-label": "Sweet or savory" },
+    ...[[null, "All"], ["sweet", "🍰 Sweet"], ["savory", "🧂 Savory"]].map(([v, t]) => el("button", {
+      "aria-pressed": String(state.flavor === v), text: t, onclick: () => { state.flavor = v; render(); } })));
+  const tagMenu = el("details", { class: "dd" },
+    el("summary", { text: state.tags.size ? `Tags (${state.tags.size})` : "Tags" }),
+    el("div", { class: "menu" },
+      state.tags.size ? el("button", { class: "clear", text: "Clear tags",
+        onclick: () => { state.tags.clear(); state.tagsOpen = true; render(); } }) : null,
+      ...allTags.map(([t, n]) => {
+        const box = el("input", { type: "checkbox" });
+        box.checked = state.tags.has(t);
+        box.onchange = () => { box.checked ? state.tags.add(t) : state.tags.delete(t); state.tagsOpen = true; render(); };
+        return el("label", {}, box, el("span", { text: t }), el("span", { class: "n", text: n }));
+      })));
+  if (state.tagsOpen) tagMenu.open = true;
+  tagMenu.addEventListener("toggle", () => (state.tagsOpen = tagMenu.open));
+  const sort = el("select", { class: "sort", "aria-label": "Sort by",
+    onchange: (e) => { state.sort = e.target.value; render(); } },
+    ...Object.entries(SORTS).map(([k, [t]]) => el("option", { value: k, text: t })));
+  sort.value = state.sort;
   const surprise = el("button", { class: "btn", text: "🎲 Surprise me", onclick: () => {
     if (list.length) location.hash = list[Math.floor(Math.random() * list.length)].id;
   } });
-  const heading = state.cat ? label(state.cat) : state.tag ? "#" + state.tag : "All recipes";
+  const heading = state.cat ? label(state.cat) : "All recipes";
   app.replaceChildren(
     el("section", { class: "hero" },
       el("h1", { text: "What are we cooking?" }),
       el("p", { text: `${recipes.length} recipes saved from TikTok` })),
     el("div", { class: "cats" }, ...cats),
-    el("div", { class: "tags" }, ...tags),
+    el("div", { class: "filters" }, flavor, tagMenu, sort),
     el("div", { class: "bar" },
       el("div", { class: "count", text: `${heading} · ${list.length}` }), surprise),
     el("div", { class: "grid" }, ...(list.length ? list.map(card)
@@ -249,17 +327,19 @@ function recipeView(r) {
           ...links.map((u) => el("a", { class: "btn small ghost", href: safeUrl(u), target: "_blank", rel: "noopener",
             text: "↗ " + host(u) }))),
         r.tags.length ? el("div", { class: "tags" }, ...r.tags.map((t) => el("button", { class: "tag", text: "#" + t,
-          onclick: () => { Object.assign(state, { tag: t, cat: null, q: "", scroll: 0 }); q.value = ""; location.hash = ""; } })))
+          onclick: () => { Object.assign(state, { tags: new Set([t]), cat: null, flavor: null, q: "", scroll: 0 }); q.value = ""; location.hash = ""; } })))
           : null,
         videoEmbed(r))),
     el("section", { class: "body" },
       el("div", { class: "panel ingredients" },
         el("h2", { text: "Ingredients" }),
+        r.ingredients.length ? null : el("p", { class: "by", text: "Not listed in the video's text. Watch the video." }),
         el("ul", { class: "ing" }, ...r.ingredients.map((i) => el("li", {}, el("label", {},
           el("input", { type: "checkbox" }),
           el("span", {}, i.quantity ? el("span", { class: "qty", text: i.quantity + " " }) : null, i.item)))))),
       el("div", { class: "panel" },
         el("h2", { text: "Instructions" }),
+        r.steps.length ? null : el("p", { class: "by", text: "Not written out in the video's text. Watch the video." }),
         el("ol", { class: "steps" }, ...r.steps.map((s) => el("li", { text: s }))),
         r.missing.length ? el("div", { class: "note" }, el("strong", { text: "Not stated in the video" }),
           el("ul", {}, ...r.missing.map((m) => el("li", { text: m })))) : null)));
@@ -271,10 +351,19 @@ function recipeView(r) {
 function videoEmbed(r) {
   const d = el("details", { class: "video" }, el("summary", { text: "Watch the video" }));
   d.addEventListener("toggle", () => {
-    if (d.open && !d.querySelector("iframe")) {
-      d.append(el("iframe", { src: `https://www.tiktok.com/player/v1/${encodeURIComponent(r.video.id)}?rel=0`,
-        allow: "encrypted-media; fullscreen; picture-in-picture", allowfullscreen: "", title: r.title }));
-    }
+    if (!d.open || d.querySelector("iframe, .vfallback")) return;
+    const frame = el("iframe", { src: `https://www.tiktok.com/player/v1/${encodeURIComponent(r.video.id)}?rel=0`,
+      allow: "encrypted-media; fullscreen; picture-in-picture", allowfullscreen: "", title: r.title });
+    d.append(frame);
+    // Privacy and ad-block extensions often remove TikTok frames, leaving a zero-size box. Offer the link instead.
+    setTimeout(() => {
+      if (frame.isConnected && frame.getBoundingClientRect().height > 0) return;
+      frame.remove();
+      d.append(el("a", { class: "vfallback", href: safeUrl(r.video.url), target: "_blank", rel: "noopener" },
+        img(r) ? el("img", { src: img(r), alt: "" }) : null,
+        el("span", { text: "▶ Play on TikTok" }),
+        el("small", { text: "Your browser blocked TikTok's embedded player, often a privacy or ad-block extension." })));
+    }, 2500);
   });
   return d;
 }
@@ -318,6 +407,12 @@ q.addEventListener("input", () => {
 // Remember the list position so "back" from a recipe lands where you were.
 window.addEventListener("click", (e) => { if (e.target.closest(".card")) state.scroll = scrollY; }, true);
 window.addEventListener("hashchange", render);
+window.addEventListener("popstate", () => { readURL(); render(); });
+document.addEventListener("click", (e) => {
+  const dd = document.querySelector(".dd[open]");
+  if (dd && !dd.contains(e.target)) dd.open = false;
+});
+readURL();
 render();
 </script>
 </body>

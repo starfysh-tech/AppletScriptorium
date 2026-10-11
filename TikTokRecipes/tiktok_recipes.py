@@ -12,6 +12,7 @@ Re-runs reuse both caches; pass --refresh to refetch or --reextract to redo LLM.
 """
 
 import argparse
+import hashlib
 import html
 import json
 import os
@@ -24,6 +25,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+FLAVORS = ["sweet", "savory"]
 CATEGORIES = [
     "breakfast", "main", "side", "soup-salad", "snack",
     "dessert", "drink", "sauce-dip", "other",
@@ -35,6 +37,7 @@ BROWSER_UA = (
 LMSTUDIO_BASE_URL = os.environ.get("LMSTUDIO_BASE_URL", "http://localhost:1234").rstrip("/")
 LMSTUDIO_TIMEOUT = float(os.environ.get("LMSTUDIO_TIMEOUT", "300"))
 PAGES_PROJECT = os.environ.get("PAGES_PROJECT", "tt-recipes")
+SITE_URL = f"https://{PAGES_PROJECT}.pages.dev"
 
 RECIPE_SCHEMA = {
     "type": "json_schema",
@@ -52,6 +55,7 @@ RECIPE_SCHEMA = {
                         "properties": {
                             "title": {"type": "string"},
                             "category": {"type": "string", "enum": CATEGORIES},
+                            "flavor": {"type": "string", "enum": FLAVORS},
                             "tags": {"type": "array", "items": {"type": "string"}},
                             "credit": {"type": ["string", "null"]},
                             "servings": {"type": ["string", "null"]},
@@ -71,7 +75,7 @@ RECIPE_SCHEMA = {
                             "missing": {"type": "array", "items": {"type": "string"}},
                         },
                         "required": [
-                            "title", "category", "tags", "credit", "servings",
+                            "title", "category", "flavor", "tags", "credit", "servings",
                             "nutrition", "ingredients", "steps", "missing",
                         ],
                     },
@@ -85,7 +89,8 @@ RECIPE_SCHEMA = {
 PROMPT = """You extract recipes from a TikTok video's description and spoken transcript.
 
 Rules:
-- If the video does not teach a dish someone could cook, set is_recipe false and recipes [].
+- If the video is not about a dish or drink someone could make (vlog, science demo, product ad, restaurant visit), set is_recipe false and recipes [].
+- If the video makes a dish but the text gives few details (no captions, short description), still return it: name the dish, list only ingredients the text names, keep steps to what the text says (can be empty), and put "full recipe is only shown in the video" in missing.
 - A video can hold more than one recipe; return each distinct dish once.
 - Variations of the same dish (a protein swap, a lighter version) go in that recipe's steps, not in a separate recipe.
 - Quantity priority: linked recipe page, then description, then transcript.
@@ -94,6 +99,7 @@ Rules:
 - credit: the original recipe author if the poster credits someone else (e.g. "@name"), else null.
 - servings / nutrition: only if stated (e.g. "450 calories, 40g protein"), else null.
 - category: one of {categories}.
+- flavor: sweet if the dish is mainly sweet (desserts, sweet breakfasts, most drinks), else savory.
 - tags: 0-5 short lowercase tags such as high-protein, air-fryer, meal-prep, vegetarian, gluten-free, one-pan, no-bake.
 - missing: list what a cook would need but the video did not give (e.g. "bake time", "sauce quantities").
 
@@ -283,12 +289,31 @@ def extract_recipes(info: dict, transcript: str, source: str, linked: list[dict]
         transcript=transcript or "(none)",
         transcript_source=source,
     )
+    return lmstudio_json(prompt, RECIPE_SCHEMA, model, 8000)
+
+
+def classify_flavors(recipes: list[dict], model: str) -> list[str]:
+    """Label recipes extracted before the flavor field existed."""
+    listing = "\n".join(f"{n}. {r['title']}: {', '.join(i['item'] for i in r['ingredients'])}"
+                         for n, r in enumerate(recipes, 1))
+    prompt = (f"For each recipe, answer sweet if the dish is mainly sweet (desserts, sweet breakfasts, "
+              f"most drinks), else savory. Return one answer per recipe, in order.\n\n{listing}")
+    schema = {"type": "json_schema", "json_schema": {"name": "flavors", "strict": True, "schema": {
+        "type": "object", "required": ["flavors"],
+        "properties": {"flavors": {"type": "array", "items": {"type": "string", "enum": FLAVORS}}}}}}
+    flavors = lmstudio_json(prompt, schema, model, 200)["flavors"]
+    if len(flavors) != len(recipes):
+        raise ValueError(f"expected {len(recipes)} flavors, got {len(flavors)}")
+    return flavors
+
+
+def lmstudio_json(prompt: str, schema: dict, model: str, max_tokens: int) -> dict:
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.1,
-        "max_tokens": 4000,
-        "response_format": RECIPE_SCHEMA,
+        "max_tokens": max_tokens,
+        "response_format": schema,
         # Thinking multiplies latency for little gain on structured extraction.
         "reasoning_effort": os.environ.get("LMSTUDIO_REASONING_EFFORT", "none"),
     }
@@ -368,20 +393,113 @@ def write_site(root: Path, recipes: list[dict], title: str = "TikTok Recipes") -
     template = (Path(__file__).parent / "site_template.html").read_text()
     # "</" would end the <script> tag that holds the JSON.
     data = json.dumps(recipes, ensure_ascii=False).replace("</", "<\\/")
+    write_ai_files(site, recipes, title)
     (site / "index.html").write_text(template.replace("__TITLE__", html.escape(title)).replace("__DATA__", data))
     return site / "index.html"
 
 
-def deploy_site(site: Path) -> None:
+def recipe_id(recipe: dict) -> str:
+    return recipe["file"].removesuffix(".md")
+
+
+def render_recipe_page(r: dict, title: str) -> str:
+    """Static recipe page so crawlers and AI tools that do not run JavaScript can read it."""
+    rid, video = recipe_id(r), r["video"]
+    ingredients = [f"{i['quantity']} {i['item']}" if i["quantity"] else i["item"] for i in r["ingredients"]]
+    ld = {
+        "@context": "https://schema.org", "@type": "Recipe", "name": r["title"],
+        "url": f"{SITE_URL}/r/{rid}", "recipeCategory": r["category"], "keywords": ", ".join(r["tags"]),
+        "author": {"@type": "Person", "name": r["credit"] or "@" + video["uploader"]},
+        "isBasedOn": video["url"], "recipeIngredient": ingredients,
+        "recipeInstructions": [{"@type": "HowToStep", "text": step} for step in r["steps"]],
+    }
+    if video.get("thumb"):
+        ld["image"] = f"{SITE_URL}/img/{video['id']}.jpg"
+    if r["servings"]:
+        ld["recipeYield"] = r["servings"]
+    e = html.escape
+    links = [f'<a href="{e(video["url"])}">Video by @{e(video["uploader"])} on TikTok</a>']
+    links += [f'<a href="{e(u)}">{e(u)}</a>' for u in video.get("links", [])]
+    meta = " · ".join(x for x in (r["category"], r.get("flavor"), r["servings"] and f"serves {r['servings']}",
+                                   r["nutrition"]) if x)
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{e(r['title'])} · {e(title)}</title>
+<meta name="description" content="{e(r['title'])}: {e(', '.join(ingredients)[:150])}">
+<link rel="canonical" href="{SITE_URL}/r/{rid}">
+<script type="application/ld+json">{json.dumps(ld, ensure_ascii=False).replace("</", "<\\/")}</script>
+<style>body{{font:16px/1.55 system-ui,sans-serif;max-width:720px;margin:0 auto;padding:16px;color:#01404e}}</style>
+</head><body>
+<p><a href="/#{rid}">Open in {e(title)}</a></p>
+<h1>{e(r['title'])}</h1>
+<p>{e(meta)}{' · ' + e(', '.join(r['tags'])) if r['tags'] else ''}</p>
+<p>{' · '.join(links)}{' · recipe by ' + e(r['credit']) if r['credit'] else ''}</p>
+<h2>Ingredients</h2>
+<ul>{''.join(f'<li>{e(i)}</li>' for i in ingredients) or '<li>Not listed in the video text.</li>'}</ul>
+<h2>Instructions</h2>
+<ol>{''.join(f'<li>{e(s)}</li>' for s in r['steps']) or '<li>Not written out in the video text.</li>'}</ol>
+{'<h2>Not stated in the video</h2><ul>' + ''.join(f'<li>{e(m)}</li>' for m in r['missing']) + '</ul>' if r['missing'] else ''}
+</body></html>
+"""
+
+
+def write_ai_files(site: Path, recipes: list[dict], title: str) -> None:
+    pages = site / "r"
+    if pages.exists():
+        shutil.rmtree(pages)
+    pages.mkdir()
+    for r in recipes:
+        (pages / f"{recipe_id(r)}.html").write_text(render_recipe_page(r, title))
+        (pages / f"{recipe_id(r)}.md").write_text(render_recipe(r, r["video"]))
+    (site / "recipes.json").write_text(json.dumps(recipes, ensure_ascii=False))
+    ordered = sorted(recipes, key=lambda r: (CATEGORIES.index(r["category"]), r["title"].lower()))
+    index = [f"# {title}", "", f"> {len(recipes)} recipes extracted from saved TikTok videos: ingredients, "
+             "quantities, steps, and a link to each original video. A missing quantity was not stated by the creator.",
+             "", "## Search", "",
+             f"- [Search API]({SITE_URL}/api/search?q=chicken+rice&flavor=savory): GET /api/search with "
+             "q (words; prefix - to exclude), cat, flavor (sweet|savory), tags (comma list, all required), "
+             "max_ingredients, limit. Returns JSON; add format=md for Markdown.",
+             f"- [All recipes as JSON]({SITE_URL}/recipes.json)",
+             f"- [All recipes as Markdown]({SITE_URL}/llms-full.txt)",
+             "- Each recipe: /r/<id>.md (Markdown) or /r/<id> (HTML with schema.org Recipe data).", ""]
+    for category in CATEGORIES:
+        group = [r for r in ordered if r["category"] == category]
+        if group:
+            index += [f"## {category}", ""]
+            index += [f"- [{r['title']}]({SITE_URL}/r/{recipe_id(r)}.md): {r.get('flavor', '')}"
+                      + (f"; {', '.join(r['tags'])}" if r["tags"] else "") for r in group]
+            index.append("")
+    (site / "llms.txt").write_text("\n".join(index))
+    (site / "llms-full.txt").write_text("\n\n---\n\n".join(render_recipe(r, r["video"]) for r in ordered))
+    urls = [f"{SITE_URL}/"] + [f"{SITE_URL}/r/{recipe_id(r)}" for r in recipes]
+    (site / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "".join(f"<url><loc>{html.escape(u)}</loc></url>\n" for u in urls) + "</urlset>\n")
+    (site / "robots.txt").write_text(f"User-agent: *\nAllow: /\n\nSitemap: {SITE_URL}/sitemap.xml\n")
+
+
+def site_digest(site: Path) -> str:
+    h = hashlib.sha256()
+    files = sorted(site.rglob("*")) + sorted((Path(__file__).parent / "functions").rglob("*"))
+    for f in files:
+        if f.is_file():
+            h.update(str(f).encode())
+            h.update(f.read_bytes())
+    return h.hexdigest()
+
+
+def deploy_site(site: Path) -> bool:
     if not shutil.which("wrangler"):
         print("Deploy skipped: wrangler not installed.", file=sys.stderr)
-        return
-    result = subprocess.run(["wrangler", "pages", "deploy", str(site), "--project-name", PAGES_PROJECT,
-                             "--branch", "main", "--commit-dirty=true"], capture_output=True, text=True)
+        return False
+    result = subprocess.run(["wrangler", "pages", "deploy", str(site.resolve()), "--project-name", PAGES_PROJECT,
+                             "--branch", "main", "--commit-dirty=true"], capture_output=True, text=True,
+                            cwd=Path(__file__).parent)
     if result.returncode:
         print(f"Deploy failed:\n{result.stderr.strip() or result.stdout.strip()}", file=sys.stderr)
-    else:
-        print(f"Live:  https://{PAGES_PROJECT}.pages.dev/")
+        return False
+    print(f"Live:  {SITE_URL}/")
+    return True
 
 
 def main() -> None:
@@ -417,6 +535,17 @@ def main() -> None:
                 entries.append({"id": info_path.parent.name,
                                 "url": json.loads(info_path.read_text())["webpage_url"]})
 
+    # The collection lists newest-saved first. Listings are partial, so keep the order across runs:
+    # ids never seen before go on top, in listing order.
+    order_path = root / "order.json"
+    order = json.loads(order_path.read_text()) if order_path.exists() else []
+    seen = set(order)
+    new_ids = list(dict.fromkeys(e["id"] for e in entries if e.get("id") and e["id"] not in seen))
+    order = new_ids + order
+    if not args.limit:
+        order_path.write_text(json.dumps(order))
+    added = {video_id: n for n, video_id in enumerate(order)}
+
     recipes, skipped, failed = [], [], []
     for n, entry in enumerate(entries, 1):
         url = entry["url"]
@@ -433,7 +562,7 @@ def main() -> None:
             video = {
                 "id": video_id, "url": url, "uploader": info.get("uploader") or "unknown",
                 "title": info.get("title") or info.get("description") or video_id,
-                "transcript_source": source,
+                "transcript_source": source, "added": added.get(video_id, len(added)),
             }
             if args.fetch_only:
                 continue
@@ -452,10 +581,23 @@ def main() -> None:
 
             extracted_path = folder / "extracted.json"
             # Videos extracted before linked pages existed get redone once a page is found.
+            failed_path = folder / "extract_failed.txt"
+            # A video the LLM cannot handle would otherwise cost a full timeout every hour.
+            if failed_path.exists() and not args.reextract:
+                raise RuntimeError(f"extraction failed before, skipped (--reextract retries): {failed_path.read_text()}")
             if args.reextract or not extracted_path.exists() or (new_links and video["linked"]):
-                extracted = extract_recipes(info, transcript, source, linked, model)
+                try:
+                    extracted = extract_recipes(info, transcript, source, linked, model)
+                except Exception as exc:
+                    failed_path.write_text(str(exc))
+                    raise
+                failed_path.unlink(missing_ok=True)
                 extracted_path.write_text(json.dumps(extracted, indent=2, ensure_ascii=False))
             extracted = json.loads(extracted_path.read_text())
+            if any("flavor" not in r for r in extracted["recipes"]):
+                for recipe, flavor in zip(extracted["recipes"], classify_flavors(extracted["recipes"], model)):
+                    recipe["flavor"] = flavor
+                extracted_path.write_text(json.dumps(extracted, indent=2, ensure_ascii=False))
 
             if not extracted["is_recipe"] or not extracted["recipes"]:
                 skipped.append(video)
@@ -486,6 +628,8 @@ def main() -> None:
     for stale in (root / "recipes").glob("*.md"):
         if stale.name not in keep and not args.limit:
             stale.unlink()
+    # TikTok's listing order varies between calls; a stable order keeps unchanged runs byte-identical.
+    recipes.sort(key=lambda r: (r["video"]["added"], r["file"]))
     (root / "recipes.json").write_text(json.dumps(recipes, indent=2, ensure_ascii=False))
     (root / "index.md").write_text(render_index(collection.get("title") or "Recipes", recipes, skipped, failed))
     print(f"\n{len(recipes)} recipes, {len(skipped)} not recipes, {len(failed)} failed.")
@@ -495,8 +639,14 @@ def main() -> None:
     # A --limit run holds a partial collection and would replace the full live site.
     if args.no_deploy or args.limit:
         print("Deploy skipped.")
-    else:
-        deploy_site(site.parent)
+        return
+    # Most hourly runs find nothing new; skip the upload when the built site is byte-identical.
+    digest = site_digest(site.parent)
+    stamp = root / "deployed.sha256"
+    if stamp.exists() and stamp.read_text() == digest:
+        print("Site unchanged, deploy skipped.")
+    elif deploy_site(site.parent):
+        stamp.write_text(digest)
 
 
 if __name__ == "__main__":

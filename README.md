@@ -219,6 +219,8 @@ Requires LM Studio + Mail.app + SMTP setup.
 │   ├── tiktok_recipes.py         # Fetch, extract, and write recipes
 │   ├── site_template.html        # Recipe book website template
 │   ├── install_hourly.sh         # launchd agent: run and publish hourly
+│   ├── search_recipes.py         # Search recipes from the command line
+│   ├── functions/api/search.js   # Search API on the hosted site
 │   └── README.md                 # Usage documentation
 ├── CommitCraft/                  # Moved → starfysh-tech/nautilai (see README pointer)
 └── README.md                     # This file
