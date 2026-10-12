@@ -104,9 +104,6 @@ osascript -s Summarizer/templates/process-alert.scpt
 
 # Validate system Python packages
 python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
-
-# Run sequential workflow (alternative to CLI)
-./run_workflow.sh
 ```
 
 ## Key Technical Details

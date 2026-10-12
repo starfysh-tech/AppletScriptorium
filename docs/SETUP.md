@@ -160,7 +160,7 @@ ollama pull qwen3:latest
 npm install -g url-to-markdown-cli-tool
 
 # 5. Make scripts executable
-chmod +x install.sh setup-mail-rule.sh validate.sh run_workflow.sh
+chmod +x install.sh setup-mail-rule.sh validate.sh
 chmod +x Summarizer/fetch-alert-source.applescript Summarizer/bin/run_alert.sh
 
 # 6. Create output directory
@@ -194,7 +194,7 @@ macOS requires permissions for AppleScript to interact with Mail.app:
 
 **What it enables:** AppleScript can capture inbox messages
 
-**Note:** Mail rule automation uses SMTP for digest delivery, but Mail.app still needs Accessibility permission to run the AppleScript rule.
+**Note:** Mail rule automation needs no extra permission. The rule script does no UI scripting, and the digest goes out over SMTP.
 
 ---
 

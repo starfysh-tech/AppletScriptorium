@@ -51,14 +51,13 @@ echo "=================================================="
 echo ""
 
 # Step 1: Check prerequisites
-log_info "Step 1/8: Checking prerequisites..."
+log_info "Step 1/6: Checking prerequisites..."
 echo ""
 
 PREREQ_OK=true
 
 check_prereq "brew" "Homebrew" "/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"" || PREREQ_OK=false
 check_prereq "python3" "Python 3" "brew install python@3.11" || PREREQ_OK=false
-check_prereq "ollama" "Ollama" "brew install ollama" || PREREQ_OK=false
 check_prereq "git" "Git" "brew install git" || PREREQ_OK=false
 
 if [ "$PREREQ_OK" = false ]; then
@@ -70,7 +69,7 @@ fi
 echo ""
 
 # Step 2: Verify Python version
-log_info "Step 2/8: Verifying Python version..."
+log_info "Step 2/6: Verifying Python version..."
 PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}')
 PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
 PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
@@ -86,7 +85,7 @@ fi
 echo ""
 
 # Step 3: Install Python dependencies
-log_info "Step 3/8: Installing Python dependencies..."
+log_info "Step 3/6: Installing Python dependencies..."
 if $PYTHON_CMD -m pip install --user -r "$REPO_ROOT/Summarizer/requirements.txt"; then
     log_success "Python dependencies installed"
 else
@@ -97,37 +96,10 @@ fi
 
 echo ""
 
-# Step 4: Start Ollama and pull model
-log_info "Step 4/7: Setting up Ollama..."
-
-# Start Ollama service if not running
-if ! pgrep -x "ollama" >/dev/null; then
-    log_info "Starting Ollama service..."
-    brew services start ollama >/dev/null 2>&1
-    sleep 3
-fi
-
-# Check if model exists
-if ollama list | grep -q "qwen3:latest"; then
-    log_success "Ollama model 'qwen3:latest' already installed"
-else
-    log_info "Pulling Ollama model 'qwen3:latest' (this may take a few minutes)..."
-    if ollama pull qwen3:latest; then
-        log_success "Ollama model installed"
-    else
-        log_error "Failed to pull Ollama model"
-        log_info "Try manually: ollama pull qwen3:latest"
-        exit 1
-    fi
-fi
-
-echo ""
-
-# Step 5: Make scripts executable and create directories
-log_info "Step 5/7: Configuring filesystem..."
+# Step 4: Make scripts executable and create directories
+log_info "Step 4/6: Configuring filesystem..."
 
 chmod +x "$REPO_ROOT/Summarizer/fetch-alert-source.applescript" 2>/dev/null || true
-chmod +x "$REPO_ROOT/run_workflow.sh" 2>/dev/null || true
 chmod +x "$REPO_ROOT/Summarizer/bin/run_alert.sh" 2>/dev/null || true
 chmod +x "$REPO_ROOT/install.sh" 2>/dev/null || true
 chmod +x "$REPO_ROOT/setup-mail-rule.sh" 2>/dev/null || true
@@ -139,8 +111,8 @@ log_success "Scripts made executable, runs/ directory created"
 
 echo ""
 
-# Step 6: Run tests
-log_info "Step 6/7: Running test suite..."
+# Step 5: Run tests
+log_info "Step 5/6: Running test suite..."
 if $PYTHON_CMD -m pytest "$REPO_ROOT/Summarizer/tests" -q; then
     log_success "All tests passed"
 else
@@ -150,8 +122,8 @@ fi
 
 echo ""
 
-# Step 7: Summary and next steps
-log_info "Step 7/7: Installation complete!"
+# Step 6: Summary and next steps
+log_info "Step 6/6: Installation complete!"
 echo ""
 log_success "Google Alert Intelligence is installed and ready!"
 echo ""
@@ -163,7 +135,7 @@ echo ""
 echo "  2. Set up Mail rule automation (recommended):"
 echo "     ./setup-mail-rule.sh"
 echo ""
-echo "  3. Validate setup:"
+echo "  3. Validate setup (also checks the LM Studio server):"
 echo "     ./validate.sh"
 echo ""
 echo "  4. Run manual test:"

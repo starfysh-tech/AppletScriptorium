@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-export PYTHONPATH="${REPO_ROOT}/Summarizer:${PYTHONPATH:-}"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$REPO_ROOT"
 
 OUTPUT_DIR_VAR="${ALERT_OUTPUT_DIR:-}"
 MODEL_VAR="${ALERT_MODEL:-}"
@@ -17,6 +17,7 @@ OUTPUT_DIR="${OUTPUT_DIR_VAR:-${REPO_ROOT}/runs/${TIMESTAMP}}"
 mkdir -p "$OUTPUT_DIR"
 LOG_FILE="$OUTPUT_DIR/workflow.log"
 
+STATUS=0
 ARGS=(--output-dir "$OUTPUT_DIR")
 [[ -n "${MODEL_VAR}" ]] && ARGS+=(--model "$MODEL_VAR")
 [[ -n "${MAX_ARTICLES_VAR}" ]] && ARGS+=(--max-articles "$MAX_ARTICLES_VAR")
@@ -33,8 +34,7 @@ fi
 {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting run with args: ${ARGS[*]}"
   python3 -m Summarizer.cli run "${ARGS[@]}"
-} >> "$LOG_FILE" 2>&1
-STATUS=$?
+} >> "$LOG_FILE" 2>&1 || STATUS=$?
 
 notify() {
   local message="$1"
