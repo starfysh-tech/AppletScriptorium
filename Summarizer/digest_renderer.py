@@ -176,7 +176,8 @@ def generate_cross_article_insights(articles: list[dict]) -> list[str]:
         logger.info("[insights] Generating cross-article insights for %d articles", len(article_list))
 
         try:
-            raw_output = _run_with_lmstudio(prompt, cfg)
+            # Insights are "- " lines, not the summary JSON schema
+            raw_output = _run_with_lmstudio(prompt, cfg, response_format=None)
 
             # Parse insights (one per line starting with "- ")
             for line in raw_output.strip().split('\n'):
@@ -251,11 +252,11 @@ def _format_header_stats(articles: list[dict]) -> str:
     return f" • {count} {article_word} from {source_count} {source_word}"
 
 
-def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None, topic: str | None = None) -> str:
+def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None, topic: str | None = None, insights: list[str] | None = None) -> str:
     generated_at = generated_at or datetime.now()
     missing = missing or []
     article_list = list(articles)
-    topic_text = f": {topic}" if topic else ""
+    topic_text = f": {html.escape(topic)}" if topic else ""
     header_stats = _format_header_stats(article_list)
 
     # Generate executive summary section (skip for single articles - redundant)
@@ -274,7 +275,8 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
             )
 
     # Generate cross-article insights section
-    insights = generate_cross_article_insights(article_list)
+    if insights is None:
+        insights = generate_cross_article_insights(article_list)
     insights_block = ""
     if insights:
         insight_items = "\n".join(f"    <li>{html.escape(insight)}</li>" for insight in insights)
@@ -309,12 +311,8 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
         for block in bullets[:4]:  # Show all 4 bullets
             text = block.get("text", "")
             if text:
-                # Parse **LABEL**: format and make labels bold
-                # Convert **LABEL**: to <b>LABEL:</b>
-                text_html = re.sub(r'\*\*(.*?)\*\*:', r'<b>\1:</b>', text)
-                text_html = html.escape(text_html)
-                # Unescape the b tags we just added
-                text_html = text_html.replace('&lt;b&gt;', '<b>').replace('&lt;/b&gt;', '</b>')
+                # Escape first so only the **LABEL**: markup becomes a tag
+                text_html = re.sub(r'\*\*(.*?)\*\*:', r'<b>\1:</b>', html.escape(text))
                 lines.append(f"<li>{text_html}</li>")
         lines_html = "\n".join(lines)
         meta_line = " • ".join(filter(None, [publisher, snippet]))
@@ -382,7 +380,7 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
     )
 
 
-def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None, topic: str | None = None) -> str:
+def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None, topic: str | None = None, insights: list[str] | None = None) -> str:
     generated_at = generated_at or datetime.now()
     missing = missing or []
     article_list = list(articles)
@@ -401,7 +399,8 @@ def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | Non
             lines.append("")
 
     # Add cross-article insights
-    insights = generate_cross_article_insights(article_list)
+    if insights is None:
+        insights = generate_cross_article_insights(article_list)
     if insights:
         lines.append("📊 Cross-Article Insights:")
         for insight in insights:
@@ -453,4 +452,4 @@ def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | Non
     return "\n".join(lines).strip() + "\n"
 
 
-__all__ = ["render_digest_html", "render_digest_text"]
+__all__ = ["generate_cross_article_insights", "render_digest_html", "render_digest_text"]

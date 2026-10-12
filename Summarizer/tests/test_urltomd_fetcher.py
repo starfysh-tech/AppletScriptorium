@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 
 import pytest
@@ -7,20 +8,38 @@ import pytest
 from Summarizer.urltomd_fetcher import UrlToMdConfig, UrlToMdError, fetch_with_urltomd
 
 
-def test_urltomd_builds_command(monkeypatch: pytest.MonkeyPatch):
+def fake_popen(monkeypatch: pytest.MonkeyPatch, *, returncode=0, stdout="", stderr="", communicate_error=None, popen_error=None):
     captured = {}
 
-    def fake_run(args, **kwargs):
-        captured["args"] = args
+    class FakePopen:
+        pid = 999999
 
-        class FakeResult:
-            returncode = 0
-            stdout = "# Title\n\nBody"
-            stderr = ""
+        def __init__(self, args, **kwargs):
+            if popen_error:
+                raise popen_error
+            captured["args"] = args
+            self.returncode = returncode
 
-        return FakeResult()
+        def communicate(self, timeout=None):
+            if communicate_error:
+                raise communicate_error
+            return stdout, stderr
 
-    monkeypatch.setattr(subprocess, "run", fake_run)
+        def wait(self, timeout=None):
+            return self.returncode
+
+        def kill(self):
+            pass
+
+    monkeypatch.setattr(subprocess, "Popen", FakePopen)
+    # The timeout path signals the process group; keep it off real processes
+    monkeypatch.setattr(os, "getpgid", lambda pid: pid)
+    monkeypatch.setattr(os, "killpg", lambda pgid, sig: None)
+    return captured
+
+
+def test_urltomd_builds_command(monkeypatch: pytest.MonkeyPatch):
+    captured = fake_popen(monkeypatch, stdout="# Title\n\nBody")
 
     fetch_with_urltomd("https://example.com", UrlToMdConfig(timeout=5))
 
@@ -34,10 +53,7 @@ def test_urltomd_builds_command(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_urltomd_timeout(monkeypatch: pytest.MonkeyPatch):
-    def fake_run(args, **kwargs):
-        raise subprocess.TimeoutExpired(args, timeout=5)
-
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    fake_popen(monkeypatch, communicate_error=subprocess.TimeoutExpired("url-to-md", timeout=5))
 
     with pytest.raises(UrlToMdError) as exc:
         fetch_with_urltomd("https://slow.example", UrlToMdConfig(timeout=5))
@@ -46,10 +62,7 @@ def test_urltomd_timeout(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_urltomd_missing_binary(monkeypatch: pytest.MonkeyPatch):
-    def fake_run(args, **kwargs):
-        raise FileNotFoundError("url-to-md")
-
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    fake_popen(monkeypatch, popen_error=FileNotFoundError("url-to-md"))
 
     with pytest.raises(UrlToMdError) as exc:
         fetch_with_urltomd("https://example.com", UrlToMdConfig())
@@ -58,15 +71,7 @@ def test_urltomd_missing_binary(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_urltomd_nonzero_exit(monkeypatch: pytest.MonkeyPatch):
-    def fake_run(args, **kwargs):
-        class FakeResult:
-            returncode = 1
-            stdout = ""
-            stderr = "Blocked"
-
-        return FakeResult()
-
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    fake_popen(monkeypatch, returncode=1, stderr="Blocked")
 
     with pytest.raises(UrlToMdError) as exc:
         fetch_with_urltomd("https://blocked.example", UrlToMdConfig())
@@ -75,15 +80,7 @@ def test_urltomd_nonzero_exit(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_urltomd_returns_markdown(monkeypatch: pytest.MonkeyPatch):
-    def fake_run(args, **kwargs):
-        class FakeResult:
-            returncode = 0
-            stdout = "# Success\n\nMarkdown"
-            stderr = ""
-
-        return FakeResult()
-
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    fake_popen(monkeypatch, stdout="# Success\n\nMarkdown")
 
     result = fetch_with_urltomd("https://example.com", UrlToMdConfig())
     assert result == "# Success\n\nMarkdown"

@@ -655,11 +655,12 @@ def _fit_max_tokens(base_url: str, model: str, prompt: str, requested: int) -> i
     return min(requested, remaining)
 
 
-def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: dict = SUMMARY_JSON_SCHEMA) -> str:
+def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: dict | None = SUMMARY_JSON_SCHEMA) -> str:
     """Call LM Studio API using OpenAI-compatible endpoint.
 
     response_format defaults to the summary schema; pass another schema for
-    calls that expect a different shape (e.g. classification).
+    calls that expect a different shape (e.g. classification), or None for
+    free text.
 
     Raises SummarizerError on any failure with informative error messages.
     """
@@ -668,7 +669,7 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: d
 
     target_model = resolve_lmstudio_model(LMSTUDIO_BASE_URL, cfg.model)
 
-    # Ensure correct model is loaded (auto-load if needed, unload others)
+    # Ensure correct model is loaded (auto-load if needed)
     success, message = _ensure_correct_model_loaded(LMSTUDIO_BASE_URL, target_model)
     if not success:
         raise SummarizerError(f"Model setup failed: {message}")
@@ -681,8 +682,9 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: d
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": _fit_max_tokens(LMSTUDIO_BASE_URL, target_model, prompt, cfg.max_tokens),
         "temperature": cfg.temperature,
-        "response_format": response_format,
     }
+    if response_format is not None:
+        payload["response_format"] = response_format
     if LMSTUDIO_REASONING_EFFORT:
         payload["reasoning_effort"] = LMSTUDIO_REASONING_EFFORT
 
@@ -706,6 +708,8 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: d
                 raise SummarizerError("LM Studio returned empty response")
 
             content = data["choices"][0]["message"]["content"]
+            if not content:
+                raise SummarizerError("LM Studio returned no content")
             logger.debug("[lmstudio] Received %d chars from model", len(content))
             return content.strip()
 

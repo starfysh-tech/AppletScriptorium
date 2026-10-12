@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import smtplib
+import ssl
 import subprocess
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -23,6 +24,7 @@ from dotenv import load_dotenv
 # config.py reads environment variables during import, so .env must be loaded first
 PACKAGE_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGE_ROOT.parent
+STATUS_LOG = REPO_ROOT / "runs" / "summarizer-status.log"
 load_dotenv(REPO_ROOT / '.env', override=True)
 
 from .article_fetcher import (
@@ -34,7 +36,7 @@ from .article_fetcher import (
 )
 from .config import DEFAULT_MODEL, DIGEST_SUBJECT_TEMPLATE, LMSTUDIO_BASE_URL, MAX_WORKERS, OLLAMA_ENABLED
 from .content_cleaner import extract_content, strip_cruft
-from .digest_renderer import render_digest_html, render_digest_text
+from .digest_renderer import generate_cross_article_insights, render_digest_html, render_digest_text
 from .link_extractor import extract_links_from_eml
 from .markdown_cleanup import validate_markdown_content
 from .summarizer import SummarizerConfig, SummarizerError, summarize_article
@@ -470,8 +472,10 @@ def render_outputs(summaries: List[dict], failures: List[dict], output_dir: Path
         logging.warning("No summaries generated; skipping digest rendering")
         return
     generated_at = datetime.now()
-    html_output = render_digest_html(summaries, missing=failures, generated_at=generated_at, topic=topic)
-    text_output = render_digest_text(summaries, missing=failures, generated_at=generated_at, topic=topic)
+    # One LLM call, so the HTML and text digests show the same insights
+    insights = generate_cross_article_insights(summaries)
+    html_output = render_digest_html(summaries, missing=failures, generated_at=generated_at, topic=topic, insights=insights)
+    text_output = render_digest_text(summaries, missing=failures, generated_at=generated_at, topic=topic, insights=insights)
     (output_dir / "digest.html").write_text(html_output, encoding="utf-8")
     (output_dir / "digest.txt").write_text(text_output, encoding="utf-8")
     (output_dir / "summaries.json").write_text(json.dumps(summaries, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -503,7 +507,7 @@ def write_status_log(
         error_msg: Optional error message to append to FAILED status
         failures: Optional list of failure dicts with 'url' and 'reason' keys
     """
-    status_log = REPO_ROOT / "runs" / "summarizer-status.log"
+    status_log = STATUS_LOG
     status_log.parent.mkdir(parents=True, exist_ok=True)
 
     # Truncate long subjects for readability
@@ -587,6 +591,10 @@ def parse_args(argv=None) -> argparse.Namespace:
     )
 
     return parser.parse_args(argv)
+
+
+class PipelineFailed(Exception):
+    pass
 
 
 def run_pipeline(args: argparse.Namespace) -> Path:
@@ -765,6 +773,9 @@ def run_pipeline(args: argparse.Namespace) -> Path:
             failures=failures,
         )
 
+    # A run that produced no summaries completes without raising; callers still need a failure
+    if status == "FAILED":
+        raise PipelineFailed(error_msg)
     return output_dir
 
 
@@ -867,7 +878,11 @@ def run_eval(args: argparse.Namespace) -> int:
 def main(argv=None) -> int:
     args = parse_args(argv)
     if args.command == "run":
-        run_pipeline(args)
+        try:
+            run_pipeline(args)
+        except PipelineFailed as exc:
+            logging.error("Run failed: %s", exc)
+            return 1
         return 0
     elif args.command == "eval":
         return run_eval(args)
@@ -942,16 +957,17 @@ def send_digest_via_smtp(eml_path: Path, recipients: List[str]) -> None:
             server.set_debuglevel(0)
 
             logging.info("[smtp] Starting TLS encryption")
-            server.starttls()
+            # Without a context, smtplib skips certificate and hostname checks
+            server.starttls(context=ssl.create_default_context())
 
             logging.info("[smtp] Authenticating as: %s", smtp_user)
             try:
                 server.login(smtp_user, smtp_password)
             except smtplib.SMTPAuthenticationError as exc:
-                error_msg = f"Authentication failed. Check GMAIL_APP_PASSWORD (use app password, not account password)"
+                error_msg = "Authentication failed. Check SMTP_PASSWORD (Gmail needs an app password, not the account password)"
                 if exc.smtp_error:
                     error_msg += f": {exc.smtp_error.decode()}"
-                raise smtplib.SMTPAuthenticationError(exc.smtp_code, error_msg)
+                raise smtplib.SMTPAuthenticationError(exc.smtp_code, error_msg) from exc
 
             logging.info("[smtp] Sending email to: %s", ", ".join(recipients))
             server.sendmail(from_addr, recipients, msg.as_string())
@@ -959,11 +975,9 @@ def send_digest_via_smtp(eml_path: Path, recipients: List[str]) -> None:
             logging.info("[smtp] Email sent successfully!")
 
     except smtplib.SMTPConnectError as exc:
-        raise ConnectionError(f"Failed to connect to SMTP server: {exc}")
+        raise ConnectionError(f"Failed to connect to SMTP server: {exc}") from exc
     except smtplib.SMTPServerDisconnected as exc:
-        raise ConnectionError(f"SMTP server disconnected unexpectedly: {exc}")
-    except smtplib.SMTPException as exc:
-        raise smtplib.SMTPException(f"SMTP error: {exc}")
+        raise ConnectionError(f"SMTP server disconnected unexpectedly: {exc}") from exc
 
 
 def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[str], topic: Optional[str] = None, article_count: int = 0) -> None:
@@ -1004,7 +1018,8 @@ def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[
         date=datetime.now().strftime('%B %d, %Y')
     )
     msg['Subject'] = subject
-    msg['From'] = sender if sender else recipients[0]
+    # Providers reject a From address the SMTP account does not own
+    msg['From'] = sender or os.environ.get("SMTP_FROM_EMAIL") or os.environ.get("SMTP_USERNAME") or recipients[0]
     msg['To'] = ", ".join(recipients)
 
     # Attach HTML part
