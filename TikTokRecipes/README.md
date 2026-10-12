@@ -4,6 +4,7 @@ Turns a TikTok collection into a recipe book, published at https://tt-recipes.pa
 
 ## Requirements
 
+- Python 3.12 or later
 - `yt-dlp` CLI (`brew install yt-dlp`)
 - `wrangler` CLI logged in to Cloudflare, for publishing
 - LM Studio running at `http://localhost:1234` with an LLM loaded
@@ -22,8 +23,8 @@ Short `/t/` links work too. Options:
 - `--limit N` — only the first N videos
 - `--model ID` — LM Studio model (default: first loaded LLM)
 - `--cookies-from-browser chrome` — if TikTok needs your login
-- `--refresh` — refetch metadata and captions
-- `--reextract` — rerun the LLM on cached videos, including ones that failed before
+- `--refresh` — refetch metadata, captions, and linked pages of videos without a saved recipe
+- `--reextract` — rerun the LLM on cached videos, including ones that failed before. This is the only way a saved recipe changes. If the LLM fails on a saved video, the saved recipe stays.
 - `--fetch-only` — cache metadata and captions, skip the LLM
 - `--no-deploy` — build `site/` but do not publish it
 
@@ -47,7 +48,7 @@ runs/<collection>/
 
 Meal types: breakfast, main, side, soup-salad, snack, dessert, drink, sauce-dip, other. Each recipe also gets 0–5 free tags.
 
-`order.json` keeps the order videos were saved to the collection, newest first. TikTok lists the collection newest-saved first, and each run puts videos it has not seen before on top. Re-runs reuse the cache, so an interrupted run picks up where it stopped. TikTok returns a different number of collection entries from call to call, so every full run also includes all videos already in the cache. A video removed from the collection stays on the site until you delete its `cache/<id>/` folder. `runs/` is gitignored.
+`order.json` keeps the order videos were saved to the collection, newest first. TikTok lists the collection newest-saved first, and each run puts videos it has not seen before on top. Re-runs reuse the cache, so an interrupted run picks up where it stopped. TikTok returns a different number of collection entries from call to call, so every full run also includes all videos already in the cache. Once the LLM writes `extracted.json` for a video, its recipe is saved and the site only adds recipes. A video removed from the collection or deleted from TikTok keeps its saved recipe, and a saved video is not downloaded again, also under `--refresh`. Only `--reextract` changes a saved recipe. To drop one, delete its `cache/<id>/` folder. `runs/` is gitignored.
 
 ## Hosting
 
@@ -84,7 +85,7 @@ Each log line starts with a timestamp. A run with nothing new writes about 4 lin
 - `code` is the git commit the run used. `-dirty` means local edits were included.
 - `fetch` and `extract` lines appear only for new videos. `extract` shows the time, caption source, and recipe titles.
 - `FAILED <url>: <reason>` is one video. Videos whose extraction failed before repeat this line each run until you rerun with `--reextract`.
-- `ERROR` means the whole run stopped, for example when TikTok cannot be reached. `LM Studio not reachable` appears only when there are new videos to extract.
+- `ERROR` means the whole run stopped, for example when TikTok cannot be reached. `LM Studio not reachable` appears only when there are new videos to extract, or on a `--reextract` run.
 - `git pull failed, running local code` means main could not fast-forward, usually because of local edits.
 - `DEPLOY FAILED` is followed by wrangler's output. A common cause is an expired login; run `wrangler login`.
 - `-v` logs every video, for a manual run.
@@ -126,4 +127,5 @@ The LLM prefers the linked recipe page, then the description, then the captions.
 - "Link in bio" pages are not in TikTok's data, so they are not read.
 - Videos without captions (often music-only) use the description alone.
 - Some recipe sites block scripts (HTTP 403). Those pages are skipped.
+- Linked pages and images are read only over `https`, up to 5 MB, and only from hosts with public IP addresses.
 - Comments are not read. yt-dlp returns none for TikTok.
