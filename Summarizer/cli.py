@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import smtplib
+import ssl
 import subprocess
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -23,6 +24,7 @@ from dotenv import load_dotenv
 # config.py reads environment variables during import, so .env must be loaded first
 PACKAGE_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGE_ROOT.parent
+STATUS_LOG = REPO_ROOT / "runs" / "summarizer-status.log"
 load_dotenv(REPO_ROOT / '.env', override=True)
 
 from .article_fetcher import (
@@ -30,14 +32,21 @@ from .article_fetcher import (
     FetchError,
     clear_cache,
     fetch_article,
+    fetch_markdown_fallback,
     get_last_fetch_outcome,
 )
-from .config import DEFAULT_MODEL, DIGEST_SUBJECT_TEMPLATE, LMSTUDIO_BASE_URL, MAX_WORKERS, OLLAMA_ENABLED
+from .config import DIGEST_SUBJECT_TEMPLATE, LMSTUDIO_BASE_URL, MAX_WORKERS, OLLAMA_ENABLED
 from .content_cleaner import extract_content, strip_cruft
-from .digest_renderer import render_digest_html, render_digest_text
+from .digest_renderer import generate_cross_article_insights, render_digest_html, render_digest_text
 from .link_extractor import extract_links_from_eml
 from .markdown_cleanup import validate_markdown_content
-from .summarizer import SummarizerConfig, SummarizerError, summarize_article
+from .summarizer import (
+    SummarizerConfig,
+    SummarizerError,
+    ensure_correct_model_loaded,
+    resolve_lmstudio_model,
+    summarize_article,
+)
 
 APPLESCRIPT = PACKAGE_ROOT / "fetch-alert-source.applescript"
 
@@ -302,8 +311,7 @@ def _fetch_and_extract_article(
     if should_retry and outcome.format == "html":
         logging.warning("[clean][RETRY] %s -> %s, trying markdown fallback", url, retry_reason)
         try:
-            from .article_fetcher import _fetch_markdown_fallback
-            fallback_outcome = _fetch_markdown_fallback(url, allow_cache=False)
+            fallback_outcome = fetch_markdown_fallback(url, allow_cache=False)
             content_text = strip_cruft(fallback_outcome.content)
 
             # Update tracking
@@ -361,9 +369,9 @@ def _summarize_article(
     article_data: dict,
     sum_cfg: SummarizerConfig,
 ) -> Tuple[Optional[dict], Optional[dict]]:
-    """Summarize a single article using Ollama.
+    """Summarize a single article with the configured LLM backend.
 
-    This function runs sequentially to prevent Ollama daemon overload.
+    This function runs sequentially so the local LLM handles one request at a time.
 
     Returns: (summary_dict, failure_dict) - one will be None
     """
@@ -396,10 +404,10 @@ def process_articles(
     sum_cfg: SummarizerConfig,
     max_articles: int | None = None,
 ) -> Tuple[List[dict], List[dict]]:
-    """Process articles in two phases to prevent Ollama daemon overload.
+    """Process articles in two phases: parallel fetch, then sequential summarization.
 
     Phase 1: Parallel fetch and content extraction (I/O-bound, uses MAX_WORKERS)
-    Phase 2: Sequential summarization (CPU-bound, prevents Ollama deadlock)
+    Phase 2: Sequential summarization (one request at a time to the local LLM)
     """
     articles_dir = output_dir / "articles"
     articles_dir.mkdir(exist_ok=True)
@@ -448,7 +456,7 @@ def process_articles(
         summary_parts = ", ".join(f"{key}={count}" for key, count in sorted(strategy_counter.items()))
         logging.info("Fetch summary: %s", summary_parts)
 
-    # PHASE 2: Sequential summarization (prevent Ollama daemon overload)
+    # PHASE 2: Sequential summarization (one request at a time to the local LLM)
     for article_data in article_data_list:
         try:
             summary, failure = _summarize_article(article_data, sum_cfg)
@@ -470,8 +478,10 @@ def render_outputs(summaries: List[dict], failures: List[dict], output_dir: Path
         logging.warning("No summaries generated; skipping digest rendering")
         return
     generated_at = datetime.now()
-    html_output = render_digest_html(summaries, missing=failures, generated_at=generated_at, topic=topic)
-    text_output = render_digest_text(summaries, missing=failures, generated_at=generated_at, topic=topic)
+    # One LLM call, so the HTML and text digests show the same insights
+    insights = generate_cross_article_insights(summaries)
+    html_output = render_digest_html(summaries, missing=failures, generated_at=generated_at, topic=topic, insights=insights)
+    text_output = render_digest_text(summaries, missing=failures, generated_at=generated_at, topic=topic, insights=insights)
     (output_dir / "digest.html").write_text(html_output, encoding="utf-8")
     (output_dir / "digest.txt").write_text(text_output, encoding="utf-8")
     (output_dir / "summaries.json").write_text(json.dumps(summaries, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -503,8 +513,7 @@ def write_status_log(
         error_msg: Optional error message to append to FAILED status
         failures: Optional list of failure dicts with 'url' and 'reason' keys
     """
-    status_log = REPO_ROOT / "runs" / "summarizer-status.log"
-    status_log.parent.mkdir(parents=True, exist_ok=True)
+    STATUS_LOG.parent.mkdir(parents=True, exist_ok=True)
 
     # Truncate long subjects for readability
     display_subject = subject if len(subject) <= 40 else subject[:37] + "..."
@@ -526,10 +535,10 @@ def write_status_log(
         f'Digest: {digest_str} | SMTP: {smtp_str} | Status: {status_str}\n'
     )
 
-    with open(status_log, "a", encoding="utf-8") as f:
+    with open(STATUS_LOG, "a", encoding="utf-8") as f:
         f.write(log_entry)
 
-    logging.info("[status-log] Entry written to %s", status_log)
+    logging.info("[status-log] Entry written to %s", STATUS_LOG)
 
 
 def parse_args(argv=None) -> argparse.Namespace:
@@ -551,7 +560,7 @@ def parse_args(argv=None) -> argparse.Namespace:
     )
     run_parser.add_argument(
         "--email-sender",
-        help="Optional sender address when emailing the digest (defaults to first recipient unless ALERT_EMAIL_SENDER is set)",
+        help="Sender address for the digest (default: ALERT_EMAIL_SENDER, then SMTP_FROM_EMAIL, then SMTP_USERNAME, then the first recipient)",
     )
     run_parser.add_argument(
         "--smtp-send",
@@ -587,6 +596,10 @@ def parse_args(argv=None) -> argparse.Namespace:
     )
 
     return parser.parse_args(argv)
+
+
+class PipelineFailed(Exception):
+    pass
 
 
 def run_pipeline(args: argparse.Namespace) -> Path:
@@ -642,11 +655,10 @@ def run_pipeline(args: argparse.Namespace) -> Path:
 
         # Pre-flight check: Ensure LM Studio model is ready before fetching articles
         if LMSTUDIO_BASE_URL:
-            from .summarizer import SummarizerError, _ensure_correct_model_loaded, resolve_lmstudio_model
             logging.info("[preflight] Verifying LM Studio model is loaded...")
             try:
                 target_model = resolve_lmstudio_model(LMSTUDIO_BASE_URL, sum_cfg.model)
-                success, message = _ensure_correct_model_loaded(LMSTUDIO_BASE_URL, target_model)
+                success, message = ensure_correct_model_loaded(LMSTUDIO_BASE_URL, target_model)
             except SummarizerError as exc:  # LM Studio unreachable / nothing to pick: let Ollama fallback decide
                 success, message = False, str(exc)
             if not success:
@@ -765,6 +777,9 @@ def run_pipeline(args: argparse.Namespace) -> Path:
             failures=failures,
         )
 
+    # A run that produced no summaries completes without raising; callers still need a failure
+    if status == "FAILED":
+        raise PipelineFailed(error_msg)
     return output_dir
 
 
@@ -777,8 +792,9 @@ def run_eval(args: argparse.Namespace) -> int:
     Returns:
         Exit code (0 on success)
     """
-    from .evals import ModelEvaluator, GOLD_ANNOTATIONS
-    from .evals.report import generate_markdown_report, save_report
+    from .evals import ModelEvaluator
+    from .evals.report import save_report
+    from .evals.runner import format_score, ranked_by_accuracy
 
     # Setup logging
     logging.basicConfig(
@@ -840,8 +856,6 @@ def run_eval(args: argparse.Namespace) -> int:
         logging.error("No evaluation results generated")
         return 1
 
-    # Generate and save report
-    report = generate_markdown_report(results)
     save_report(results, args.output)
 
     # Print summary to console
@@ -852,14 +866,10 @@ def run_eval(args: argparse.Namespace) -> int:
     print(f"\nEvaluated {len(results)} models on {len(articles)} articles")
     print("\nTop 3 Models by Accuracy:")
 
-    sorted_models = sorted(
-        results.items(),
-        key=lambda x: x[1].avg_accuracy,
-        reverse=True,
-    )[:3]
+    sorted_models = ranked_by_accuracy(results)[:3]
 
     for rank, (model, model_results) in enumerate(sorted_models, 1):
-        print(f"  {rank}. {model}: {model_results.avg_accuracy:.1%}")
+        print(f"  {rank}. {model}: {format_score(model_results.avg_accuracy, '.1%')}")
 
     return 0
 
@@ -867,7 +877,11 @@ def run_eval(args: argparse.Namespace) -> int:
 def main(argv=None) -> int:
     args = parse_args(argv)
     if args.command == "run":
-        run_pipeline(args)
+        try:
+            run_pipeline(args)
+        except PipelineFailed as exc:
+            logging.error("Run failed: %s", exc)
+            return 1
         return 0
     elif args.command == "eval":
         return run_eval(args)
@@ -942,16 +956,17 @@ def send_digest_via_smtp(eml_path: Path, recipients: List[str]) -> None:
             server.set_debuglevel(0)
 
             logging.info("[smtp] Starting TLS encryption")
-            server.starttls()
+            # Without a context, smtplib skips certificate and hostname checks
+            server.starttls(context=ssl.create_default_context())
 
             logging.info("[smtp] Authenticating as: %s", smtp_user)
             try:
                 server.login(smtp_user, smtp_password)
             except smtplib.SMTPAuthenticationError as exc:
-                error_msg = f"Authentication failed. Check GMAIL_APP_PASSWORD (use app password, not account password)"
+                error_msg = "Authentication failed. Check SMTP_PASSWORD (Gmail needs an app password, not the account password)"
                 if exc.smtp_error:
                     error_msg += f": {exc.smtp_error.decode()}"
-                raise smtplib.SMTPAuthenticationError(exc.smtp_code, error_msg)
+                raise smtplib.SMTPAuthenticationError(exc.smtp_code, error_msg) from exc
 
             logging.info("[smtp] Sending email to: %s", ", ".join(recipients))
             server.sendmail(from_addr, recipients, msg.as_string())
@@ -959,11 +974,9 @@ def send_digest_via_smtp(eml_path: Path, recipients: List[str]) -> None:
             logging.info("[smtp] Email sent successfully!")
 
     except smtplib.SMTPConnectError as exc:
-        raise ConnectionError(f"Failed to connect to SMTP server: {exc}")
+        raise ConnectionError(f"Failed to connect to SMTP server: {exc}") from exc
     except smtplib.SMTPServerDisconnected as exc:
-        raise ConnectionError(f"SMTP server disconnected unexpectedly: {exc}")
-    except smtplib.SMTPException as exc:
-        raise smtplib.SMTPException(f"SMTP error: {exc}")
+        raise ConnectionError(f"SMTP server disconnected unexpectedly: {exc}") from exc
 
 
 def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[str], topic: Optional[str] = None, article_count: int = 0) -> None:
@@ -1004,7 +1017,8 @@ def send_digest_email(output_dir: Path, recipients: List[str], sender: Optional[
         date=datetime.now().strftime('%B %d, %Y')
     )
     msg['Subject'] = subject
-    msg['From'] = sender if sender else recipients[0]
+    # Providers reject a From address the SMTP account does not own
+    msg['From'] = sender or os.environ.get("SMTP_FROM_EMAIL") or os.environ.get("SMTP_USERNAME") or recipients[0]
     msg['To'] = ", ".join(recipients)
 
     # Attach HTML part

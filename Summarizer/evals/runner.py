@@ -1,13 +1,10 @@
 """Model evaluation runner for testing different LLM models."""
 
-import httpx
 import logging
 import shutil
 import subprocess
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import List, Optional
-import json
+from typing import Dict, List, Optional, Tuple
 
 from ..summarizer import summarize_article, SummarizerConfig
 from ..config import LMSTUDIO_BASE_URL
@@ -25,6 +22,20 @@ from .gold_standard import get_annotation_by_url
 logger = logging.getLogger(__name__)
 
 
+def format_score(value: Optional[float], spec: str = ".2%") -> str:
+    """Format a score, or "n/a" when the model produced nothing to score."""
+    return "n/a" if value is None else format(value, spec)
+
+
+def ranked_by_accuracy(results: Dict[str, "ModelResults"]) -> List[Tuple[str, "ModelResults"]]:
+    """(model, results) pairs, best accuracy first; unscored models rank last."""
+    return sorted(
+        results.items(),
+        key=lambda x: x[1].avg_accuracy if x[1].avg_accuracy is not None else -1.0,
+        reverse=True,
+    )
+
+
 @dataclass
 class ModelResults:
     """Evaluation results for a single model."""
@@ -37,27 +48,29 @@ class ModelResults:
     total_articles: int = 0
     runs_per_article: int = 1
 
+    # The score averages are None when nothing was scored, so a model that
+    # failed every run cannot rank as best (e.g. 0% hallucinations).
     @property
-    def avg_accuracy(self) -> float:
+    def avg_accuracy(self) -> Optional[float]:
         """Calculate average accuracy score across all articles."""
         if not self.accuracy_scores:
-            return 0.0
+            return None
         scores = [m.accuracy_score for m in self.accuracy_scores]
         return sum(scores) / len(scores)
 
     @property
-    def avg_consistency(self) -> float:
+    def avg_consistency(self) -> Optional[float]:
         """Calculate average consistency score across all articles."""
         if not self.consistency_scores:
-            return 0.0
+            return None
         scores = [m.consistency_score for m in self.consistency_scores]
         return sum(scores) / len(scores)
 
     @property
-    def hallucination_rate(self) -> float:
+    def hallucination_rate(self) -> Optional[float]:
         """Calculate proportion of summaries with hallucinations."""
         if not self.hallucination_scores:
-            return 0.0
+            return None
         has_hallucinations = [m.has_hallucinations for m in self.hallucination_scores]
         return sum(has_hallucinations) / len(has_hallucinations)
 
@@ -91,8 +104,7 @@ class ModelEvaluator:
         Returns:
             List of model identifiers available in LM Studio
         """
-        models_info = discover_lmstudio_models()
-        return [m.name for m in models_info]
+        return discover_lmstudio_models()
 
     def load_model(self, model: str) -> bool:
         """Load a specific model in LM Studio.
@@ -143,25 +155,25 @@ class ModelEvaluator:
         """
         if runs < 1:
             raise ValueError(f"runs must be >= 1, got {runs}")
-        logger.info("Evaluating model: %s (runs=%d, articles=%d)", model, runs, len(articles))
+        scored = []
+        for article in articles:
+            gold = get_annotation_by_url(article.get("url", ""))
+            if gold:
+                scored.append((article, gold))
+            else:
+                logger.warning("No gold standard for %s, skipping", article.get("url", ""))
+        logger.info("Evaluating model: %s (runs=%d, articles=%d)", model, runs, len(scored))
 
-        # Load model
+        results = ModelResults(model=model, total_articles=len(scored), runs_per_article=runs)
         if not self.load_model(model):
             logger.error("Failed to load model %s, skipping evaluation", model)
-            return ModelResults(model=model, total_articles=len(articles), error_count=len(articles))
-
-        results = ModelResults(model=model, total_articles=len(articles), runs_per_article=runs)
+            results.error_count = len(scored) * runs
+            return results
 
         # For each article, run multiple times
-        for article in articles:
+        for article, gold in scored:
             url = article.get("url", "")
             logger.info("Evaluating article: %s", url)
-
-            gold = get_annotation_by_url(url)
-            if not gold:
-                logger.warning("No gold standard for %s, skipping", url)
-                results.error_count += 1
-                continue
 
             # Run summarization multiple times
             summaries = []
@@ -200,65 +212,12 @@ class ModelEvaluator:
                 results.consistency_scores.append(consistency)
 
         logger.info(
-            "Model %s evaluation complete: accuracy=%.2f, consistency=%.2f, hallucination_rate=%.2f, success_rate=%.2f",
+            "Model %s evaluation complete: accuracy=%s, consistency=%s, hallucination_rate=%s, success_rate=%s",
             model,
-            results.avg_accuracy,
-            results.avg_consistency,
-            results.hallucination_rate,
-            results.success_rate,
+            format_score(results.avg_accuracy),
+            format_score(results.avg_consistency),
+            format_score(results.hallucination_rate),
+            format_score(results.success_rate),
         )
 
         return results
-
-    def evaluate_all_models(
-        self,
-        articles: List[dict],
-        runs: int = 3,
-    ) -> dict[str, ModelResults]:
-        """Evaluate all available models.
-
-        Args:
-            articles: List of article dicts with "url", "title", "content" keys
-            runs: Number of times to run each article (for consistency testing)
-
-        Returns:
-            Dict mapping model name to ModelResults
-        """
-        models = self.get_available_models()
-        if not models:
-            logger.error("No models available in LM Studio")
-            return {}
-
-        logger.info("Found %d models to evaluate", len(models))
-
-        results = {}
-        for model in models:
-            try:
-                model_results = self.evaluate_model(model, articles, runs=runs)
-                results[model] = model_results
-            except Exception as exc:
-                logger.error("Failed to evaluate model %s: %s", model, exc)
-                results[model] = ModelResults(
-                    model=model,
-                    total_articles=len(articles),
-                    error_count=len(articles),
-                )
-
-        return results
-
-
-def load_test_articles(articles_dir: Path = None) -> List[dict]:
-    """Load test articles from gold standard annotations.
-
-    Args:
-        articles_dir: Directory containing article content files (defaults to runs/)
-
-    Returns:
-        List of article dicts with "url", "title", "content" keys
-    """
-    from .load_articles import load_articles_from_directory, load_articles_from_runs
-
-    if articles_dir is not None:
-        return load_articles_from_directory(articles_dir)
-    else:
-        return load_articles_from_runs()

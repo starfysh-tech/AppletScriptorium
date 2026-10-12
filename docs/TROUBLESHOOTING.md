@@ -53,10 +53,10 @@ url-to-md https://example.com --wait 2 | head
 **Solutions**:
 ```bash
 # Run with verbose output
-python3 -m pytest Summarizer/tests -v -s
+.venv/bin/python3 -m pytest Summarizer/tests -v -s
 
 # Run specific test file
-python3 -m pytest Summarizer/tests/test_link_extractor.py -v
+.venv/bin/python3 -m pytest Summarizer/tests/test_link_extractor.py -v
 
 # Check if fixtures are outdated (rebuild)
 Summarizer/refresh-fixtures.py
@@ -77,7 +77,7 @@ python3 --version
 
 **2. Verify Python Packages**
 ```bash
-python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
+.venv/bin/python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 ```
 
 Expected output:
@@ -155,7 +155,7 @@ lms load qwen/qwen3.5-9b
 LMSTUDIO_PREFERRED_MODELS=qwen/qwen3.5-9b,zai-org/glm-4.6v-flash
 
 # 3. Pin one explicitly for a single run
-python3 -m Summarizer.cli run --output-dir runs/test --model qwen/qwen3.5-9b
+.venv/bin/python3 -m Summarizer.cli run --output-dir runs/test --model qwen/qwen3.5-9b
 ```
 
 **Listing what you have**: `lms ls` (downloaded) and `lms ps` (loaded).
@@ -250,7 +250,7 @@ grep -E "LMSTUDIO|OLLAMA" .env
 2. Check subject filter matches actual email subjects:
    ```bash
    # Remove subject filter to capture any inbox message
-   python3 -m Summarizer.cli run --output-dir runs/test
+   .venv/bin/python3 -m Summarizer.cli run --output-dir runs/test
    ```
 3. Check Mail.app permissions:
    - **System Settings** → **Privacy & Security** → **Automation**
@@ -274,7 +274,7 @@ grep -E "LMSTUDIO|OLLAMA" .env
 
 3. **Test SMTP connection manually**:
    ```bash
-   python3 -m Summarizer.cli run \
+   .venv/bin/python3 -m Summarizer.cli run \
      --output-dir runs/test \
      --max-articles 1 \
      --email-digest your-email@example.com \
@@ -479,7 +479,7 @@ Both conditions match correctly when rules DO fire. This is not a configuration 
 
 3. **Test manually** to isolate the issue:
    ```bash
-   python3 -m Summarizer.cli run \
+   .venv/bin/python3 -m Summarizer.cli run \
      --output-dir runs/debug \
      --max-articles 1 \
      --smtp-send
@@ -524,7 +524,7 @@ set pythonCmd to "export ALERT_HTTP_HEADERS_JSON='{...}' && cd " & quoted form o
 
 If issues persist:
 1. Check `runs/*/workflow.log` for detailed error messages
-2. Run with verbose output: `python3 -m Summarizer.cli run --output-dir runs/test --max-articles 1`
+2. Run with verbose output: `.venv/bin/python3 -m Summarizer.cli run --output-dir runs/test --max-articles 1`
 3. Review Console.app logs when Mail rule runs
 4. Verify all prerequisites in SETUP.md
 5. Check configuration in `Summarizer/config.py`

@@ -236,17 +236,9 @@ def _extract_from_dom(soup: BeautifulSoup) -> List[LinkRecord]:
         if not href:
             continue
 
-        parsed = urlparse(href)
-        if parsed.netloc != "www.google.com" or parsed.path != "/url":
-            # Skip feedback links, unsubscribe links, and other non-article chrome.
-            continue
-
-        params = parse_qs(parsed.query)
-        target = params.get("url") or params.get("q") or params.get("u")
-        if not target:
-            continue
-        canonical_url = target[0]
-        if canonical_url in seen_urls:
+        canonical_url = _extract_canonical_url(href)
+        # None means feedback, unsubscribe, or other non-article chrome.
+        if not canonical_url or canonical_url in seen_urls:
             continue
 
         # For metadata, search up the tree for structured data containers

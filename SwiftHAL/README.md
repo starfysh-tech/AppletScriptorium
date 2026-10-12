@@ -116,11 +116,15 @@ hal --path Sources --threshold "volume>800"
 hal --path Sources --threshold "volume>800,difficulty>25"
 ```
 
+A threshold names the failing condition: `volume>800` fails when any file's volume is over 800. Thresholds apply to each file, not to the project totals.
+
 Supported comparators: `>`, `>=`, `<`, `<=`, `==`
 
 Supported metrics: `volume`, `difficulty`, `effort`, `riskScore`, `time`, `vocabulary`, `length`, `n1`, `n2`
 
 ### Advanced Options
+
+By default, files ending in `Tests.swift` and folders named `Tests` below `--path` are skipped. A single file passed as `--path` is always analyzed.
 
 ```bash
 # Write output to file
@@ -134,15 +138,14 @@ hal --path Sources --verbose
 
 # Show metric explanations
 hal --explain
-
-# Include/exclude patterns (not yet implemented)
-# hal --path . --include "**/*.swift" --exclude "Tests/**"
 ```
+
+Progress lines, errors, and threshold violations go to stderr, so `--format json > file` writes valid JSON.
 
 ### Exit Codes
 
 - `0`: Success
-- `1`: Error (file not found, parse error, etc.)
+- `1`: Error (path not found, no Swift files found, invalid threshold, etc.)
 - `2`: Threshold violations
 
 ## JSON Output Schema
@@ -185,7 +188,8 @@ Counted as operators:
 - Comparison: `<`, `>`, `<=`, `>=`, `==`, `!=`
 - Logical: `!`, `&&`, `||`
 - Control flow keywords: `if`, `else`, `for`, `while`, `switch`, `case`, `guard`, etc.
-- Declaration keywords: `func`, `class`, `struct`, `enum`, `protocol`, `let`, `var`
+- Declaration keywords: `func`, `class`, `struct`, `enum`, `protocol`, `extension`, `init`, `subscript`, `let`, `var`, etc.
+- Modifiers: `static`, `private`, `public`, `override`, `mutating`, `async`, `await`, etc.
 - Other keywords: `import`, `return`, `break`, `continue`, `throw`, `try`, `catch`, etc.
 - Punctuation: `:`, `;`, `,`, `.`, `->`, etc.
 - Custom operators: `infix operator ⊕` counts as an operator
@@ -194,7 +198,8 @@ Counted as operators:
 
 Counted as operands:
 - Identifiers: variable and function names
-- Literals: integers, floats, strings, booleans (`true`, `false`)
+- `self`, `Self`, `super`
+- Literals: integers, floats, strings, booleans (`true`, `false`); the string `"1"` and the integer `1` are distinct operands
 - `nil`
 
 ### What's Ignored

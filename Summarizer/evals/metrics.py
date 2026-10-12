@@ -373,7 +373,11 @@ def detect_hallucinations(summary: dict, article_content: str, gold: dict) -> Ha
                                "risk", "need", "require", "further", "may", "might", "unclear"]
         concern_body = _body_of(concern_bullet).lower()
         has_benefit = any(word in concern_body for word in benefit_words)
-        has_negative = any(word in concern_body for word in negative_qualifiers)
+        # Whole words so "no" does not match "economic"; "not"/"no" take no inflections ("noted", "nod")
+        has_negative = any(
+            re.search(rf"\b{word}\b" if word in ("not", "no") else rf"\b{word}(?:s|es|ed|d|ing)?\b", concern_body)
+            for word in negative_qualifiers
+        )
         # Only flag if purely positive (benefit words present but no negative qualifiers)
         if has_benefit and not has_negative:
             concern_is_benefit = True

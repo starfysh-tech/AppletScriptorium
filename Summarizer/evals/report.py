@@ -2,7 +2,16 @@
 
 from pathlib import Path
 from typing import Dict
-from .runner import ModelResults
+from .runner import ModelResults, format_score, ranked_by_accuracy
+
+
+def _best(results: Dict[str, ModelResults], metric: str, lowest: bool = False) -> str:
+    """`model` (score) for the best scored model on `metric`, or "n/a" if none was scored."""
+    scored = [r for r in results.values() if getattr(r, metric) is not None]
+    if not scored:
+        return "n/a"
+    pick = (min if lowest else max)(scored, key=lambda r: getattr(r, metric))
+    return f"`{pick.model}` ({format_score(getattr(pick, metric))})"
 
 
 def generate_markdown_report(results: Dict[str, ModelResults]) -> str:
@@ -18,11 +27,7 @@ def generate_markdown_report(results: Dict[str, ModelResults]) -> str:
         return "# Model Evaluation Report\n\nNo results to report.\n"
 
     # Sort models by accuracy (descending)
-    sorted_models = sorted(
-        results.items(),
-        key=lambda x: x[1].avg_accuracy,
-        reverse=True,
-    )
+    sorted_models = ranked_by_accuracy(results)
 
     lines = [
         "# Model Evaluation Report",
@@ -38,10 +43,10 @@ def generate_markdown_report(results: Dict[str, ModelResults]) -> str:
     for rank, (model, model_results) in enumerate(sorted_models, 1):
         lines.append(
             f"| {rank} | `{model}` | "
-            f"{model_results.avg_accuracy:.2%} | "
-            f"{model_results.avg_consistency:.2%} | "
-            f"{model_results.hallucination_rate:.2%} | "
-            f"{model_results.success_rate:.2%} |"
+            f"{format_score(model_results.avg_accuracy)} | "
+            f"{format_score(model_results.avg_consistency)} | "
+            f"{format_score(model_results.hallucination_rate)} | "
+            f"{format_score(model_results.success_rate)} |"
         )
 
     lines.extend([
@@ -50,19 +55,13 @@ def generate_markdown_report(results: Dict[str, ModelResults]) -> str:
         "",
     ])
 
-    # Find best performers for each metric
-    best_accuracy = max(results.values(), key=lambda r: r.avg_accuracy)
-    best_consistency = max(results.values(), key=lambda r: r.avg_consistency)
-    lowest_hallucination = min(results.values(), key=lambda r: r.hallucination_rate)
-    best_success = max(results.values(), key=lambda r: r.success_rate)
-
     lines.extend([
         "### Best Performers",
         "",
-        f"- **Best Accuracy**: `{best_accuracy.model}` ({best_accuracy.avg_accuracy:.2%})",
-        f"- **Best Consistency**: `{best_consistency.model}` ({best_consistency.avg_consistency:.2%})",
-        f"- **Lowest Hallucination Rate**: `{lowest_hallucination.model}` ({lowest_hallucination.hallucination_rate:.2%})",
-        f"- **Best Success Rate**: `{best_success.model}` ({best_success.success_rate:.2%})",
+        f"- **Best Accuracy**: {_best(results, 'avg_accuracy')}",
+        f"- **Best Consistency**: {_best(results, 'avg_consistency')}",
+        f"- **Lowest Hallucination Rate**: {_best(results, 'hallucination_rate', lowest=True)}",
+        f"- **Best Success Rate**: {_best(results, 'success_rate')}",
         "",
     ])
 
@@ -73,11 +72,11 @@ def generate_markdown_report(results: Dict[str, ModelResults]) -> str:
             "",
             "**Overall Metrics:**",
             "",
-            f"- Accuracy Score: {model_results.avg_accuracy:.2%}",
-            f"- Consistency Score: {model_results.avg_consistency:.2%}",
-            f"- Hallucination Rate: {model_results.hallucination_rate:.2%}",
-            f"- Success Rate: {model_results.success_rate:.2%}",
-            f"- Errors: {model_results.error_count}/{model_results.total_articles}",
+            f"- Accuracy Score: {format_score(model_results.avg_accuracy)}",
+            f"- Consistency Score: {format_score(model_results.avg_consistency)}",
+            f"- Hallucination Rate: {format_score(model_results.hallucination_rate)}",
+            f"- Success Rate: {format_score(model_results.success_rate)}",
+            f"- Errors: {model_results.error_count}/{model_results.total_articles * model_results.runs_per_article} runs",
             "",
         ])
 
@@ -92,6 +91,10 @@ def generate_markdown_report(results: Dict[str, ModelResults]) -> str:
             has_4_bullets = sum(m.has_4_bullets for m in model_results.accuracy_scores)
             labels_match = sum(m.labels_match_type for m in model_results.accuracy_scores)
             actionability_valid = sum(m.actionability_valid for m in model_results.accuracy_scores)
+            actionability_correct = sum(m.actionability_correct for m in model_results.accuracy_scores)
+            # None when the summary did not report its classified type
+            type_checked = [m.article_type_correct for m in model_results.accuracy_scores
+                            if m.article_type_correct is not None]
             tag_selected = sum(m.tag_selected for m in model_results.accuracy_scores)
             avg_facts = sum(m.facts_present for m in model_results.accuracy_scores)
 
@@ -101,7 +104,15 @@ def generate_markdown_report(results: Dict[str, ModelResults]) -> str:
                 f"- Has 4 bullets: {has_4_bullets}/{total} ({has_4_bullets/total:.1%})",
                 f"- Labels match type: {labels_match}/{total} ({labels_match/total:.1%})",
                 f"- Actionability valid: {actionability_valid}/{total} ({actionability_valid/total:.1%})",
+                f"- Actionability matches gold: {actionability_correct}/{total} ({actionability_correct/total:.1%})",
                 f"- Tag selected (not placeholder): {tag_selected}/{total} ({tag_selected/total:.1%})",
+            ])
+            if type_checked:
+                type_ok = sum(type_checked)
+                lines.append(
+                    f"- Article type matches gold: {type_ok}/{len(type_checked)} ({type_ok/len(type_checked):.1%})"
+                )
+            lines.extend([
                 f"- Average fact coverage: {avg_facts/total:.1%}",
                 "",
             ])
@@ -159,7 +170,7 @@ def generate_markdown_report(results: Dict[str, ModelResults]) -> str:
         "",
         "**Accuracy Score** (higher is better):",
         "- Measures structural correctness and fact coverage",
-        "- Weighted: 50% structure (bullets, labels, tags, actionability) + 50% content (facts)",
+        "- Weighted: 50% structure (bullets, labels, tags, actionability format and category, article type when reported) + 50% content (facts)",
         "",
         "**Consistency Score** (higher is better):",
         "- Measures output stability across multiple runs",
@@ -170,7 +181,7 @@ def generate_markdown_report(results: Dict[str, ModelResults]) -> str:
         "- Checks for invented concerns, misclassified benefits, duplicates, and invented numbers",
         "",
         "**Success Rate** (higher is better):",
-        "- Proportion of articles successfully summarized without errors",
+        "- Proportion of runs (gold-annotated articles x runs) that produced a summary",
         "- Models with low success rates may timeout or fail frequently",
         "",
         "### Common Issues to Look For",

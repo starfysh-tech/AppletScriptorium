@@ -183,3 +183,36 @@ def test_evaluate_model_rejects_nonpositive_runs(monkeypatch):
     monkeypatch.setattr(runner.ModelEvaluator, "__init__", lambda self: None)
     with pytest.raises(ValueError):
         runner.ModelEvaluator().evaluate_model("m", [], runs=0)
+
+
+def test_concern_qualifiers_match_whole_words():
+    # "no" inside "economic" must not count as a negative qualifier
+    flagged = detect_hallucinations(_summary(["**CONCERN**: Higher economic output for clinics."]), ARTICLE, RESEARCH)
+    assert flagged.concern_is_benefit
+    # inflected qualifiers ("risks") still count
+    ok = detect_hallucinations(_summary(["**CONCERN**: Higher costs raise risks for clinics."]), ARTICLE, RESEARCH)
+    assert not ok.concern_is_benefit
+
+
+def test_success_rate_ignores_articles_without_gold(monkeypatch):
+    from Summarizer.evals import runner
+    monkeypatch.setattr(runner.ModelEvaluator, "__init__", lambda self: None)
+    monkeypatch.setattr(runner.ModelEvaluator, "load_model", lambda self, model: True)
+    monkeypatch.setattr(runner, "get_annotation_by_url", lambda url: RESEARCH if url == RESEARCH.url else None)
+    monkeypatch.setattr(runner, "summarize_article", lambda article, config, backend: _summary(GOOD_RESEARCH))
+    articles = [{"url": RESEARCH.url, "content": ARTICLE}, {"url": "https://example.org/no-gold", "content": "x"}]
+    r = runner.ModelEvaluator().evaluate_model("m", articles, runs=3)
+    assert r.total_articles == 1
+    assert r.success_rate == 1.0
+
+
+def test_report_best_performers_skip_models_without_scores():
+    from Summarizer.evals.metrics import HallucinationMetrics
+    from Summarizer.evals.report import generate_markdown_report
+    good = ModelResults(model="good", total_articles=1, hallucination_scores=[
+        HallucinationMetrics(concern_is_fabricated=True, concern_is_benefit=False,
+                             concern_duplicates_other=False, invented_numbers=False)])
+    broken = ModelResults(model="broken", total_articles=1, error_count=1)
+    report = generate_markdown_report({"good": good, "broken": broken})
+    assert "**Lowest Hallucination Rate**: `good`" in report
+    assert "**Best Accuracy**: n/a" in report

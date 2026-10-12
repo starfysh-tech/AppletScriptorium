@@ -61,60 +61,34 @@ final class RecommendationTests: XCTestCase {
 
     // MARK: - Health Status Tests
 
+    private func file(risk: Double) -> HalsteadMetrics {
+        var metrics = HalsteadMetrics(path: "f.swift")
+        metrics.n1 = 10
+        metrics.n2 = 20
+        metrics.N1 = Int(risk * 3000 / log2(30.0))
+        return metrics
+    }
+
     func test_health_status_good_below_1() {
-        var totals = HalsteadMetrics(path: "TOTALS")
-        totals.n1 = 50
-        totals.n2 = 100
-        totals.N1 = 500
-        totals.N2 = 1000
-
-        // volume = 1500 * log2(150) ≈ 10859, risk ≈ 3.6
-        // For 5 files: avgRisk = 3.6 / 5 = 0.72
-
-        let status = getHealthStatus(totals: totals, fileCount: 5)
-        XCTAssertEqual(status, "Good")
+        XCTAssertEqual(getHealthStatus([file(risk: 0.5), file(risk: 0.8)]), "Good")
     }
 
     func test_health_status_fair_below_2() {
-        var totals = HalsteadMetrics(path: "TOTALS")
-        totals.n1 = 50
-        totals.n2 = 100
-        totals.N1 = 800
-        totals.N2 = 1600
-
-        // volume = 2400 * log2(150) ≈ 17375, risk ≈ 5.8
-        // For 5 files: avgRisk = 5.8 / 5 = 1.16
-
-        let status = getHealthStatus(totals: totals, fileCount: 5)
-        XCTAssertEqual(status, "Fair")
+        XCTAssertEqual(getHealthStatus([file(risk: 1.2), file(risk: 1.6)]), "Fair")
     }
 
     func test_health_status_needs_review_below_5() {
-        var totals = HalsteadMetrics(path: "TOTALS")
-        totals.n1 = 80
-        totals.n2 = 150
-        totals.N1 = 1200
-        totals.N2 = 2400
-
-        // volume = 3600 * log2(230) ≈ 28226, risk ≈ 9.4
-        // For 3 files: avgRisk = 9.4 / 3 = 3.13
-
-        let status = getHealthStatus(totals: totals, fileCount: 3)
-        XCTAssertEqual(status, "Needs Review")
+        XCTAssertEqual(getHealthStatus([file(risk: 2.5), file(risk: 3.5)]), "Needs Review")
     }
 
     func test_health_status_critical_above_5() {
-        var totals = HalsteadMetrics(path: "TOTALS")
-        totals.n1 = 100
-        totals.n2 = 200
-        totals.N1 = 2000
-        totals.N2 = 4000
+        XCTAssertEqual(getHealthStatus([file(risk: 6.0), file(risk: 7.0)]), "Critical")
+    }
 
-        // volume = 6000 * log2(300) ≈ 49811, risk ≈ 16.6
-        // For 3 files: avgRisk = 16.6 / 3 = 5.53
-
-        let status = getHealthStatus(totals: totals, fileCount: 3)
-        XCTAssertEqual(status, "Critical")
+    func test_averageRisk_isMeanOfPerFileRisk() {
+        let files = [file(risk: 1.0), file(risk: 3.0)]
+        let expected = (files[0].riskScore + files[1].riskScore) / 2
+        XCTAssertEqual(averageRisk(files), expected, accuracy: 0.0001)
     }
 
     // MARK: - Filtering Tests

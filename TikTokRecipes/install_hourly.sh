@@ -12,6 +12,8 @@ LABEL="com.starfysh.tiktokrecipes"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOG="$DIR/runs/hourly.log"
 mkdir -p "$DIR/runs"
+# TikTok share links carry "&", which is invalid raw XML.
+xml() { printf '%s' "$1" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g'; }
 
 cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -24,11 +26,11 @@ cat > "$PLIST" <<EOF
     <string>/bin/sh</string>
     <string>-c</string>
     <string>git -C "\$0" pull --ff-only --quiet origin main || echo "\$(date '+%Y-%m-%d %H:%M:%S') git pull failed, running local code"; exec "\$1" "\$0/tiktok_recipes.py" "\$2"</string>
-    <string>$DIR</string>
+    <string>$(xml "$DIR")</string>
     <string>$(python3 -c "import sys; print(sys.executable)")</string>
-    <string>$URL</string>
+    <string>$(xml "$URL")</string>
   </array>
-  <key>WorkingDirectory</key><string>$DIR</string>
+  <key>WorkingDirectory</key><string>$(xml "$DIR")</string>
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
@@ -36,8 +38,8 @@ cat > "$PLIST" <<EOF
   </dict>
   <key>StartInterval</key><integer>3600</integer>
   <key>RunAtLoad</key><true/>
-  <key>StandardOutPath</key><string>$LOG</string>
-  <key>StandardErrorPath</key><string>$LOG</string>
+  <key>StandardOutPath</key><string>$(xml "$LOG")</string>
+  <key>StandardErrorPath</key><string>$(xml "$LOG")</string>
 </dict>
 </plist>
 EOF

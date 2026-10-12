@@ -4,7 +4,7 @@ Chrome Extension Security Scanner
 
 Analyzes installed Chrome extensions and generates a comprehensive CSV report
 for security scanning. The scanner uses a hybrid approach:
-  1. Extracts metadata from local Chrome profile manifests (fast, 100% accurate versions)
+  1. Extracts metadata from local Chrome profile manifests (fast; version from the newest version folder)
   2. Enriches missing data via Chrome Web Store scraping (developer websites, names)
   3. Generates CRXplorer-compatible CSV for security analysis
 
@@ -42,8 +42,6 @@ def get_extensions_dir():
         return windows_path
 
     raise FileNotFoundError("Chrome extensions directory not found")
-
-EXTENSIONS_DIR = get_extensions_dir()
 
 def extract_hostname(url):
     """Extract hostname from URL."""
@@ -84,9 +82,9 @@ def resolve_i18n_message(message, version_dir):
 
     return message
 
-def get_local_manifest_data(extension_id):
+def get_local_manifest_data(extensions_dir, extension_id):
     """Extract data from local manifest.json."""
-    ext_dir = EXTENSIONS_DIR / extension_id
+    ext_dir = extensions_dir / extension_id
 
     if not ext_dir.exists():
         return None
@@ -95,7 +93,8 @@ def get_local_manifest_data(extension_id):
     if not version_dirs:
         return None
 
-    version_dir = version_dirs[0]
+    # Chrome can leave an old version folder behind after an update; compare numerically so 1.10.0_0 beats 1.9.0_0
+    version_dir = max(version_dirs, key=lambda d: [int(n) for n in re.findall(r'\d+', d.name)])
     manifest_path = version_dir / "manifest.json"
 
     if not manifest_path.exists():
@@ -162,13 +161,10 @@ def scrape_web_data(extension_id):
     except Exception:
         return None
 
-def get_installed_extension_ids():
+def get_installed_extension_ids(extensions_dir):
     """Get list of installed extension IDs from Chrome profile."""
-    if not EXTENSIONS_DIR.exists():
-        raise FileNotFoundError(f"Chrome extensions directory not found: {EXTENSIONS_DIR}")
-
     extension_ids = []
-    for item in EXTENSIONS_DIR.iterdir():
+    for item in extensions_dir.iterdir():
         if item.is_dir() and not item.name.startswith('.'):
             # Chrome extension IDs are 32-character lowercase letters
             if len(item.name) == 32 and item.name.isalnum():
@@ -195,13 +191,14 @@ def main():
 
     # Get extension IDs from Chrome profile
     try:
-        extension_ids = get_installed_extension_ids()
+        extensions_dir = get_extensions_dir()
+        extension_ids = get_installed_extension_ids(extensions_dir)
     except FileNotFoundError as e:
         print(f"Error: {e}")
         return 1
 
     print(f"Scanning {len(extension_ids)} extensions from:")
-    print(f"  {EXTENSIONS_DIR}")
+    print(f"  {extensions_dir}")
     print()
 
     # Phase 1: Extract from local manifests
@@ -210,7 +207,7 @@ def main():
     needs_scraping = []
 
     for ext_id in extension_ids:
-        data = get_local_manifest_data(ext_id)
+        data = get_local_manifest_data(extensions_dir, ext_id)
         if data:
             local_data[ext_id] = data
             # Check if we need web scraping
@@ -292,7 +289,8 @@ def main():
     print("=" * 60)
     print()
     print(f"Total scanned:       {len(extension_ids)} extensions")
-    print(f"Complete records:    {complete} ({int(complete/len(extension_ids)*100)}%)")
+    percent = int(complete / len(extension_ids) * 100) if extension_ids else 0
+    print(f"Complete records:    {complete} ({percent}%)")
     if incomplete:
         print(f"Incomplete records:  {len(incomplete)} (missing developer website)")
 

@@ -8,17 +8,20 @@ Stage 1 (fetch) caches each video's metadata and captions via the yt-dlp CLI.
 Stage 2 (extract) reads any recipe page linked in the description (schema.org
 Recipe data), sends description + transcript + page to LM Studio, and writes
 Markdown recipes, an index grouped by category, recipes.json, and a static site in site/.
-Re-runs reuse both caches; pass --refresh to refetch or --reextract to redo LLM.
+Re-runs reuse both caches. A video with a saved recipe (extracted.json) is never
+refetched; --refresh refetches the others, and --reextract redoes the LLM from the cache.
 """
 
 import argparse
 import datetime
 import hashlib
 import html
+import ipaddress
 import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -41,6 +44,7 @@ LMSTUDIO_BASE_URL = os.environ.get("LMSTUDIO_BASE_URL", "http://localhost:1234")
 LMSTUDIO_TIMEOUT = float(os.environ.get("LMSTUDIO_TIMEOUT", "300"))
 PAGES_PROJECT = os.environ.get("PAGES_PROJECT", "tt-recipes")
 SITE_URL = f"https://{PAGES_PROJECT}.pages.dev"
+MAX_FETCH_BYTES = 5 * 1024 * 1024
 
 RECIPE_SCHEMA = {
     "type": "json_schema",
@@ -154,7 +158,7 @@ def yt_dlp(args: list[str], cookies: str | None) -> subprocess.CompletedProcess:
 
 
 def list_videos(collection_url: str, cookies: str | None) -> dict:
-    result = yt_dlp(["--flat-playlist", "-J", collection_url], cookies)
+    result = yt_dlp(["--flat-playlist", "-J", "--", collection_url], cookies)
     if result.returncode != 0:
         raise SystemExit(f"Collection discovery failed:\n{result.stderr.strip()}")
     return json.loads(result.stdout)
@@ -165,7 +169,7 @@ def fetch_video(url: str, folder: Path, cookies: str | None) -> None:
     result = yt_dlp([
         "--skip-download", "--write-info-json",
         "--write-subs", "--write-auto-subs", "--sub-langs", "all", "--sub-format", "vtt/srt/best",
-        "-o", str(folder / "video.%(ext)s"), url,
+        "-o", str(folder / "video.%(ext)s"), "--", url,
     ], cookies)
     if not (folder / "video.info.json").exists():
         raise RuntimeError(result.stderr.strip() or "yt-dlp returned no metadata")
@@ -181,12 +185,43 @@ def git_version() -> str:
     return result.stdout.strip() or "unknown"
 
 
-def download(url: str, path: Path) -> None:
-    req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA})
+def _public_https(url: str) -> bool:
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme != "https" or not parts.hostname:
+        return False
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            path.write_bytes(resp.read())
-    except (urllib.error.URLError, TimeoutError) as exc:
+        return all(ipaddress.ip_address(a[4][0]).is_global for a in socket.getaddrinfo(parts.hostname, 443))
+    except (OSError, ValueError):
+        return False
+
+
+class _PublicRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not _public_https(newurl):
+            raise urllib.error.URLError(f"redirect to non-public URL blocked: {newurl[:80]}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def fetch_public(url: str) -> bytes:
+    """GET at most 5 MB from a public https URL.
+
+    Description links and the image URLs in linked pages are chosen by strangers,
+    so refuse anything that would reach this Mac or its local network.
+    """
+    if not _public_https(url):
+        raise ValueError("not a public https URL")
+    request = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA})
+    with urllib.request.build_opener(_PublicRedirect).open(request, timeout=30) as response:
+        data = response.read(MAX_FETCH_BYTES + 1)
+    if len(data) > MAX_FETCH_BYTES:
+        raise ValueError("larger than 5 MB")
+    return data
+
+
+def download(url: str, path: Path) -> None:
+    try:
+        path.write_bytes(fetch_public(url))
+    except (OSError, ValueError) as exc:
         log(f"  image download failed {url[:80]}: {exc}")
 
 
@@ -258,9 +293,7 @@ def _instruction_lines(node) -> list[str]:
 def fetch_linked_recipe(url: str) -> dict:
     """Read the schema.org Recipe block from a linked recipe page, if it has one."""
     try:
-        request = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA})
-        with urllib.request.urlopen(request, timeout=30) as response:
-            page = response.read().decode("utf-8", "replace")
+        page = fetch_public(url).decode("utf-8", "replace")
     except Exception as exc:
         return {"url": url, "error": str(exc)}
     for block in re.findall(r"<script[^>]*application/ld\+json[^>]*>(.*?)</script>", page, re.S):
@@ -524,7 +557,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, help="Only process the first N videos")
     parser.add_argument("--model", help="LM Studio model ID (default: first loaded LLM)")
     parser.add_argument("--cookies-from-browser", metavar="BROWSER", help="e.g. chrome, if TikTok needs your login")
-    parser.add_argument("--refresh", action="store_true", help="Refetch metadata and captions")
+    parser.add_argument("--refresh", action="store_true", help="Refetch metadata and captions of videos without a saved recipe")
     parser.add_argument("--reextract", action="store_true", help="Rerun the LLM on cached videos")
     parser.add_argument("--fetch-only", action="store_true", help="Stop after caching metadata and captions")
     parser.add_argument("--no-deploy", action="store_true", help="Build site/ but do not publish it")
@@ -553,6 +586,10 @@ def main() -> None:
                 raise RuntimeError(f"LM Studio not reachable at {LMSTUDIO_BASE_URL}: {exc}") from exc
         return model_cache["id"]
 
+    # Stop before the loop: per-video failures would drop every saved recipe from the published site.
+    if args.reextract and not args.fetch_only:
+        model()
+
     # TikTok's collection listing varies between calls (59 to 448 entries seen), so keep every video seen before.
     if not args.limit:
         listed = {e.get("id") for e in entries}
@@ -579,18 +616,30 @@ def main() -> None:
         url = entry["url"]
         video_id = entry.get("id") or url.rstrip("/").split("/")[-1]
         folder = cache / video_id
+        extracted_path = folder / "extracted.json"
+        # A saved recipe is permanent: never refetched (not even by --refresh), so a video deleted
+        # from TikTok keeps its recipe. Only --reextract changes it, from the cached text.
+        saved = extracted_path.exists()
         if args.verbose:
             log(f"[{n}/{len(entries)}] {url}")
         try:
-            if args.refresh or not (folder / "video.info.json").exists():
+            info_path = folder / "video.info.json"
+            if (args.refresh and not saved) or not info_path.exists():
                 log(f"fetch {url}")
-                fetch_video(url, folder, args.cookies_from_browser)
-            info = json.loads((folder / "video.info.json").read_text())
+                try:
+                    fetch_video(url, folder, args.cookies_from_browser)
+                except Exception as exc:
+                    if not saved or args.fetch_only:
+                        raise
+                    log(f"fetch failed {url}, kept saved recipe: {exc}")
+            info = json.loads(info_path.read_text()) if info_path.exists() else {}
             transcript, source = pick_transcript(folder)
-            if args.refresh or not (folder / "thumb.jpg").exists():
+            if not saved and (args.refresh or not (folder / "thumb.jpg").exists()):
                 fetch_thumbnail(info, folder / "thumb.jpg")
             video = {
-                "id": video_id, "url": url, "uploader": info.get("uploader") or "unknown",
+                "id": video_id, "url": url,
+                # Without metadata (video deleted from TikTok) the handle in the URL still credits the poster.
+                "uploader": info.get("uploader") or next(iter(re.findall(r"/@([^/?]+)", url)), "unknown"),
                 "title": info.get("title") or info.get("description") or video_id,
                 "transcript_source": source, "added": added.get(video_id, len(added)),
             }
@@ -598,39 +647,45 @@ def main() -> None:
                 continue
 
             linked_path = folder / "linked.json"
-            new_links = args.refresh or not linked_path.exists()
+            new_links = not saved and (args.refresh or not linked_path.exists())
             if new_links:
                 urls = re.findall(r"https?://[^\s<>\"]+", info.get("description") or "")
                 linked_path.write_text(json.dumps([fetch_linked_recipe(u) for u in urls], indent=2))
-            linked = json.loads(linked_path.read_text())
+            linked = json.loads(linked_path.read_text()) if linked_path.exists() else []
             video["linked"] = [l["url"] for l in linked if l.get("text")]
             video["links"] = [l["url"] for l in linked]
             image = next((l["image"] for l in linked if l.get("image")), None)
-            if image and (new_links or not (folder / "food.jpg").exists()):
+            if image and not saved and (new_links or not (folder / "food.jpg").exists()):
                 download(image, folder / "food.jpg")
 
-            extracted_path = folder / "extracted.json"
-            # Videos extracted before linked pages existed get redone once a page is found.
             failed_path = folder / "extract_failed.txt"
             # A video the LLM cannot handle would otherwise cost a full timeout every hour.
-            if failed_path.exists() and not args.reextract:
+            if not saved and failed_path.exists() and not args.reextract:
                 raise RuntimeError(f"extraction failed before, skipped (--reextract retries): {failed_path.read_text().strip()}")
-            if args.reextract or not extracted_path.exists() or (new_links and video["linked"]):
+            if args.reextract or not saved:
+                # Outside the try: a closed LM Studio is not this video's fault.
+                llm = model()
                 t0 = time.monotonic()
                 try:
-                    extracted = extract_recipes(info, transcript, source, linked, model())
+                    extracted = extract_recipes(info, transcript, source, linked, llm)
                 except Exception as exc:
-                    failed_path.write_text(str(exc))
-                    raise
-                failed_path.unlink(missing_ok=True)
-                extracted_path.write_text(json.dumps(extracted, indent=2, ensure_ascii=False))
-                titles = ", ".join(r["title"] for r in extracted["recipes"]) or "not a recipe"
-                log(f"extract {url} ({time.monotonic() - t0:.0f}s, captions: {source}): {titles}")
+                    if not saved:
+                        failed_path.write_text(str(exc))
+                        raise
+                    log(f"reextract failed {url}, kept saved recipe: {exc}")
+                else:
+                    failed_path.unlink(missing_ok=True)
+                    extracted_path.write_text(json.dumps(extracted, indent=2, ensure_ascii=False))
+                    titles = ", ".join(r["title"] for r in extracted["recipes"]) or "not a recipe"
+                    log(f"extract {url} ({time.monotonic() - t0:.0f}s, captions: {source}): {titles}")
             extracted = json.loads(extracted_path.read_text())
             if any("flavor" not in r for r in extracted["recipes"]):
-                for recipe, flavor in zip(extracted["recipes"], classify_flavors(extracted["recipes"], model())):
-                    recipe["flavor"] = flavor
-                extracted_path.write_text(json.dumps(extracted, indent=2, ensure_ascii=False))
+                try:
+                    for recipe, flavor in zip(extracted["recipes"], classify_flavors(extracted["recipes"], model())):
+                        recipe["flavor"] = flavor
+                    extracted_path.write_text(json.dumps(extracted, indent=2, ensure_ascii=False))
+                except Exception as exc:
+                    log(f"flavor labels skipped {url}: {exc}")
 
             if not extracted["is_recipe"] or not extracted["recipes"]:
                 skipped.append(video)
@@ -662,10 +717,6 @@ def main() -> None:
         log(f"fetched {len(entries) - len(failed)} videos, {no_captions} without captions, {len(failed)} failed")
         return
 
-    keep = {r["file"] for r in recipes}
-    for stale in (root / "recipes").glob("*.md"):
-        if stale.name not in keep and not args.limit:
-            stale.unlink()
     # TikTok's listing order varies between calls; a stable order keeps unchanged runs byte-identical.
     recipes.sort(key=lambda r: (r["video"]["added"], r["file"]))
     (root / "recipes.json").write_text(json.dumps(recipes, indent=2, ensure_ascii=False))

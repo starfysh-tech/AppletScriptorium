@@ -125,7 +125,7 @@ class NestingAnalyzer: SyntaxVisitor {
         depthSamples.append(currentDepth)
 
         if currentDepth > 3 {
-            let location = converter.location(for: node.position)
+            let location = converter.location(for: node.positionAfterSkippingLeadingTrivia)
             locations.append(NestingLocation(
                 line: location.line,
                 column: location.column,
@@ -230,17 +230,17 @@ class ConditionalAnalyzer: SyntaxVisitor {
     }
 
     override func visit(_ node: IfExprSyntax) -> SyntaxVisitorContinueKind {
-        analyzeConditions(node.conditions, context: "if", position: node.position)
+        analyzeConditions(node.conditions, context: "if", position: node.positionAfterSkippingLeadingTrivia)
         return .visitChildren
     }
 
     override func visit(_ node: GuardStmtSyntax) -> SyntaxVisitorContinueKind {
-        analyzeConditions(node.conditions, context: "guard", position: node.position)
+        analyzeConditions(node.conditions, context: "guard", position: node.positionAfterSkippingLeadingTrivia)
         return .visitChildren
     }
 
     override func visit(_ node: WhileStmtSyntax) -> SyntaxVisitorContinueKind {
-        analyzeConditions(node.conditions, context: "while", position: node.position)
+        analyzeConditions(node.conditions, context: "while", position: node.positionAfterSkippingLeadingTrivia)
         return .visitChildren
     }
 
@@ -262,27 +262,25 @@ class ConditionalAnalyzer: SyntaxVisitor {
                 } else {
                     operatorCount += 1
                 }
-            case .exclamationMark, .leftAngle, .rightAngle, .equal:
+            // `<`, `>` and `=` in conditions are generic brackets and `if let` bindings, not operators
+            case .exclamationMark:
                 operatorCount += 1
             default:
                 break
             }
         }
 
-        // Record if it's complex (> 3 operators) or has mixed operators
-        if operatorCount > 3 || (hasAnd && hasOr) {
-            let snippet = String(conditions.description.prefix(60))
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+        let snippet = String(conditions.description.prefix(60))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
 
-            let location = converter.location(for: position)
-            conditionals.append(ConditionalLocation(
-                line: location.line,
-                column: location.column,
-                operatorCount: operatorCount,
-                hasMixedOperators: hasAnd && hasOr,
-                snippet: snippet
-            ))
-        }
+        let location = converter.location(for: position)
+        conditionals.append(ConditionalLocation(
+            line: location.line,
+            column: location.column,
+            operatorCount: operatorCount,
+            hasMixedOperators: hasAnd && hasOr,
+            snippet: snippet
+        ))
     }
 
     func calculateMetrics() -> ConditionalMetrics {
@@ -294,8 +292,9 @@ class ConditionalAnalyzer: SyntaxVisitor {
             ? Double(conditionals.map { $0.operatorCount }.reduce(0, +)) / Double(totalCount)
             : 0.0
 
-        // Sort by operator count descending
-        let sortedLocations = conditionals.sorted { lhs, rhs in
+        // Report only notable conditions: more than 3 operators or mixed &&/||
+        let notable = conditionals.filter { $0.operatorCount > 3 || $0.hasMixedOperators }
+        let sortedLocations = notable.sorted { lhs, rhs in
             if lhs.operatorCount != rhs.operatorCount {
                 return lhs.operatorCount > rhs.operatorCount
             }
@@ -346,8 +345,9 @@ class LivenessAnalyzer: SyntaxVisitor {
         var lastUseLine: Int
     }
 
-    private var variables: [String: VariableInfo] = [:]
-    private var functionDepth = 0  // Track if we're inside a function
+    // One scope per enclosing function, so same-named locals in different functions stay separate
+    private var scopes: [[String: VariableInfo]] = []
+    private var finished: [(name: String, info: VariableInfo)] = []
     private let converter: SourceLocationConverter
 
     init(viewMode: SyntaxTreeViewMode, converter: SourceLocationConverter) {
@@ -356,27 +356,27 @@ class LivenessAnalyzer: SyntaxVisitor {
     }
 
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
-        functionDepth += 1
+        scopes.append([:])
         return .visitChildren
     }
 
     override func visitPost(_ node: FunctionDeclSyntax) {
-        functionDepth -= 1
+        guard let scope = scopes.popLast() else { return }
+        finished.append(contentsOf: scope.map { (name: $0.key, info: $0.value) })
     }
 
     override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
         // Only track variables inside functions
-        guard functionDepth > 0 else { return .visitChildren }
+        guard !scopes.isEmpty else { return .visitChildren }
 
         for binding in node.bindings {
             if let identifier = binding.pattern.as(IdentifierPatternSyntax.self) {
                 let varName = identifier.identifier.text
-                let location = converter.location(for: node.position)
-                let line = location.line
+                let line = converter.location(for: node.positionAfterSkippingLeadingTrivia).line
 
-                // Record or update declaration
-                if variables[varName] == nil {
-                    variables[varName] = VariableInfo(declLine: line, lastUseLine: line)
+                // Record the first declaration in this function
+                if scopes[scopes.count - 1][varName] == nil {
+                    scopes[scopes.count - 1][varName] = VariableInfo(declLine: line, lastUseLine: line)
                 }
             }
         }
@@ -384,13 +384,11 @@ class LivenessAnalyzer: SyntaxVisitor {
     }
 
     override func visit(_ node: DeclReferenceExprSyntax) -> SyntaxVisitorContinueKind {
-        // Track variable usage
-        guard functionDepth > 0 else { return .visitChildren }
-
+        // Track usage against the innermost function that declares the name
         let varName = node.baseName.text
-        if variables[varName] != nil {
-            let location = converter.location(for: node.position)
-            variables[varName]?.lastUseLine = location.line
+        if let index = scopes.lastIndex(where: { $0[varName] != nil }) {
+            let location = converter.location(for: node.positionAfterSkippingLeadingTrivia)
+            scopes[index][varName]?.lastUseLine = location.line
         }
 
         return .visitChildren
@@ -400,7 +398,7 @@ class LivenessAnalyzer: SyntaxVisitor {
         var lifespans: [Int] = []
         var locations: [LivenessLocation] = []
 
-        for (name, info) in variables {
+        for (name, info) in finished {
             let lifespan = info.lastUseLine - info.declLine
             lifespans.append(lifespan)
 
@@ -463,7 +461,6 @@ class GroupingAnalyzer: SyntaxVisitor {
     private var chains: [ChainLocation] = []
     private var closureDepth = 0
     private var maxClosureDepth = 0
-    private var processedRoots: Set<Int> = []  // Track already-processed chain roots
     private let converter: SourceLocationConverter
 
     init(viewMode: SyntaxTreeViewMode, converter: SourceLocationConverter) {
@@ -479,13 +476,8 @@ class GroupingAnalyzer: SyntaxVisitor {
         let chainLength = countChainLength(node)
 
         if chainLength > 3 {
-            let location = converter.location(for: node.position)
+            let location = converter.location(for: node.positionAfterSkippingLeadingTrivia)
             let rootLine = location.line
-            let rootIdentifier = abs(node.position.utf8Offset)
-
-            // Avoid duplicate counting
-            guard !processedRoots.contains(rootIdentifier) else { return .visitChildren }
-            processedRoots.insert(rootIdentifier)
 
             let snippet = String(node.description.prefix(60))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -528,22 +520,17 @@ class GroupingAnalyzer: SyntaxVisitor {
         return false
     }
 
+    /// Counts member-access hops: `a.b().c.d()` is 3.
     private func countChainLength(_ node: MemberAccessExprSyntax) -> Int {
-        var count = 1
+        var count = 0
         var current: Syntax? = Syntax(node)
 
-        // Count member accesses and function calls
         while let syntax = current {
-            if syntax.is(MemberAccessExprSyntax.self) {
-                count += 1
-            } else if syntax.is(FunctionCallExprSyntax.self) {
-                count += 1
-            }
-
-            // Check if base is another chained expression
             if let memberAccess = syntax.as(MemberAccessExprSyntax.self) {
-                current = Syntax(memberAccess.base)
+                count += 1
+                current = memberAccess.base.map { Syntax($0) }
             } else if let functionCall = syntax.as(FunctionCallExprSyntax.self) {
+                // A call is not a hop; walk through to the member access it wraps
                 current = Syntax(functionCall.calledExpression)
             } else {
                 break
@@ -601,7 +588,7 @@ enum MetricKey: String, CaseIterable {
 
     init?(string: String) {
         let normalized = string.lowercased()
-        if let key = MetricKey(rawValue: normalized) {
+        if let key = MetricKey.allCases.first(where: { $0.rawValue.lowercased() == normalized }) {
             self = key
         } else if normalized == "n" {
             self = .vocabulary
@@ -662,10 +649,24 @@ struct TokenClassifier {
              .keyword(.do), .keyword(.catch), .keyword(.where), .keyword(.as), .keyword(.is):
             return .operator
 
+        case .keyword(.`init`), .keyword(.deinit), .keyword(.subscript), .keyword(.extension),
+             .keyword(.typealias), .keyword(.associatedtype), .keyword(.actor), .keyword(.operator),
+             .keyword(.fallthrough), .keyword(.static), .keyword(.inout), .keyword(.async),
+             .keyword(.await), .keyword(.some), .keyword(.any), .keyword(.mutating),
+             .keyword(.override), .keyword(.private), .keyword(.fileprivate), .keyword(.internal),
+             .keyword(.public), .keyword(.open), .keyword(.final), .keyword(.lazy),
+             .keyword(.weak), .keyword(.unowned), .keyword(.get), .keyword(.set),
+             .keyword(.willSet), .keyword(.didSet):
+            return .operator
+
         // MARK: Operands
 
         // Identifiers
         case .identifier(_), .dollarIdentifier(_):
+            return .operand
+
+        // Self references
+        case .keyword(.`self`), .keyword(.`Self`), .keyword(.`super`):
             return .operand
 
         // Literals
@@ -679,6 +680,17 @@ struct TokenClassifier {
         // MARK: Ignored
         default:
             return .ignored
+        }
+    }
+
+    /// Distinct-operand key. Literals are prefixed by kind so the string "1" and the integer 1 count as different operands.
+    static func operandKey(_ token: TokenSyntax) -> String {
+        switch token.tokenKind {
+        case .integerLiteral(_): return "int:" + token.text
+        case .floatLiteral(_): return "float:" + token.text
+        case .stringSegment(_): return "str:" + token.text
+        case .regexLiteralPattern(_): return "regex:" + token.text
+        default: return token.text
         }
     }
 }
@@ -706,16 +718,13 @@ class MetricsCalculator {
         var distinctOperands = Set<String>()
 
         for token in tree.tokens(viewMode: .sourceAccurate) {
-            let classification = TokenClassifier.classify(token)
-            let tokenText = token.text
-
-            switch classification {
+            switch TokenClassifier.classify(token) {
             case .operator:
                 metrics.N1 += 1
-                distinctOperators.insert(tokenText)
+                distinctOperators.insert(token.text)
             case .operand:
                 metrics.N2 += 1
-                distinctOperands.insert(tokenText)
+                distinctOperands.insert(TokenClassifier.operandKey(token))
             case .ignored:
                 continue
             }
@@ -807,7 +816,7 @@ func parseThreshold(_ string: String) throws -> Threshold {
             let metric = String(string[..<range.lowerBound])
             let valueString = String(string[range.upperBound...])
 
-            guard let value = Double(valueString) else {
+            guard MetricKey(string: metric) != nil, let value = Double(valueString) else {
                 throw CLIError.invalid_threshold(string)
             }
 
@@ -827,9 +836,8 @@ func checkThresholds(_ metrics: HalsteadMetrics, thresholds: [Threshold]) -> [St
             continue
         }
 
-        let passes = compareValues(actualValue, threshold.comparator, threshold.value)
-
-        if !passes {
+        // A threshold names the failing condition: "volume>800" fails when volume is over 800.
+        if compareValues(actualValue, threshold.comparator, threshold.value) {
             let violation = "\(metrics.path): \(threshold.metric) = \(String(format: "%.2f", actualValue)), threshold: \(threshold.metric)\(threshold.comparator.rawValue)\(threshold.value)"
             violations.append(violation)
         }
@@ -881,12 +889,6 @@ struct RiskThresholds {
     }
 }
 
-struct DifficultyThresholds {
-    static let veryHigh: Double = 60.0
-    static let high: Double = 40.0
-    static let moderate: Double = 25.0
-}
-
 struct DirectoryStats {
     let file_count: Int
     let avg_risk: Double
@@ -897,8 +899,7 @@ struct DirectoryStats {
 
     init(files: [HalsteadMetrics]) {
         self.file_count = files.count
-        let totalRisk = files.reduce(0.0) { $0 + $1.riskScore }
-        self.avg_risk = file_count > 0 ? totalRisk / Double(file_count) : 0.0
+        self.avg_risk = averageRisk(files)
 
         var critical = 0
         var high = 0
@@ -924,37 +925,28 @@ struct DirectoryStats {
     }
 }
 
-/// Extracts the top-level directory from a file path.
-/// Examples:
-/// - /Users/foo/Code/project/App/File.swift -> App/
-/// - App/Views/File.swift -> App/
-/// - main.swift -> .
-func extractDirectory(from path: String) -> String {
-    if path.hasPrefix("/") {
-        // Absolute path - find project directory (last non-file component)
-        if let lastSlashIndex = path.lastIndex(of: "/"),
-           let secondLastSlashIndex = path[..<lastSlashIndex].lastIndex(of: "/") {
-            let startIndex = path.index(after: secondLastSlashIndex)
-            return String(path[startIndex...lastSlashIndex])
-        } else {
-            return "."
-        }
-    } else {
-        // Relative path
-        let components = path.split(separator: "/")
-        if components.count > 1 {
-            return String(components[0]) + "/"
-        } else {
-            return "."
+/// Extracts the first folder under `root` from a file path.
+/// Examples (root "/Users/foo/project"):
+/// - /Users/foo/project/App/Views/File.swift -> App/
+/// - /Users/foo/project/main.swift -> .
+/// With an empty root the path is treated as already relative (App/Views/File.swift -> App/).
+func extractDirectory(from path: String, root: String = "") -> String {
+    var relative = path
+    if !root.isEmpty {
+        let prefix = root.hasSuffix("/") ? root : root + "/"
+        if relative.hasPrefix(prefix) {
+            relative = String(relative.dropFirst(prefix.count))
         }
     }
+    let components = relative.split(separator: "/")
+    return components.count > 1 ? String(components[0]) + "/" : "."
 }
 
-func groupByDirectory(_ fileMetrics: [HalsteadMetrics]) -> [String: [HalsteadMetrics]] {
+func groupByDirectory(_ fileMetrics: [HalsteadMetrics], root: String = "") -> [String: [HalsteadMetrics]] {
     var grouped: [String: [HalsteadMetrics]] = [:]
 
     for metrics in fileMetrics {
-        let directory = extractDirectory(from: metrics.path)
+        let directory = extractDirectory(from: metrics.path, root: root)
 
         if grouped[directory] == nil {
             grouped[directory] = []
@@ -965,7 +957,7 @@ func groupByDirectory(_ fileMetrics: [HalsteadMetrics]) -> [String: [HalsteadMet
     return grouped
 }
 
-func formatArchitectureHotspots(_ fileMetrics: [HalsteadMetrics]) -> String {
+func formatArchitectureHotspots(_ fileMetrics: [HalsteadMetrics], root: String = "") -> String {
     var output = ""
 
     output += """
@@ -975,7 +967,7 @@ ARCHITECTURE HOTSPOTS
 
 """
 
-    let grouped = groupByDirectory(fileMetrics)
+    let grouped = groupByDirectory(fileMetrics, root: root)
 
     var directoryStats: [(directory: String, stats: DirectoryStats)] = []
     for (directory, files) in grouped {
@@ -1020,12 +1012,6 @@ ARCHITECTURE HOTSPOTS
         let avgRiskStr = String(format: "%.2f", stats.avg_risk)
         let warningIndicator = stats.avg_risk >= RiskThresholds.high ? "  ⚠️  Priority" : (stats.avg_risk >= RiskThresholds.moderate ? "  ⚠️" : "")
 
-        // Build output line with manual padding
-        func pad(_ s: String, to width: Int) -> String {
-            let paddingNeeded = width - s.count
-            return paddingNeeded > 0 ? s + String(repeating: " ", count: paddingNeeded) : s
-        }
-
         let directoryCol = pad(directory, to: 13)
         let priorityCol = pad(priorityText, to: 20)
         let avgCol = pad(avgRiskStr, to: 6)
@@ -1056,13 +1042,13 @@ func formatAsJSON(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics) -> 
     return json
 }
 
-func formatAsTable(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics) -> String {
-    func pad(_ string: String, to width: Int, rightAlign: Bool = false) -> String {
-        if string.count >= width { return string }
-        let padding = String(repeating: " ", count: width - string.count)
-        return rightAlign ? padding + string : string + padding
-    }
+func pad(_ string: String, to width: Int, rightAlign: Bool = false) -> String {
+    if string.count >= width { return string }
+    let padding = String(repeating: " ", count: width - string.count)
+    return rightAlign ? padding + string : string + padding
+}
 
+func formatAsTable(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics) -> String {
     func formatRow(path: String, vocab: Int, length: Int, volume: Double,
                    difficulty: Double, effort: Double, time: Double, riskScore: Double) -> String {
         return pad(path, to: 50) + " " +
@@ -1376,17 +1362,11 @@ func formatGroupingAnalysis(_ fileMetrics: [HalsteadMetrics]) -> String {
     return output
 }
 
-extension Int {
-    func clamped(to range: ClosedRange<Int>) -> Int {
-        return Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
-    }
-}
-
 func formatProjectSummary(avgRisk: Double, medianRisk: Double, maxRisk: Double, vocabulary: Int, needsAttentionCount: Int, needsAttentionPct: Int, focusAreas: [String]) -> String {
     var output = "────────────────────────────────────────────────────────────\n"
     output += "📊 PROJECT SUMMARY\n\n"
     output += "  Complexity    \(String(format: "%.2f", avgRisk)) avg  │  \(String(format: "%.2f", medianRisk)) median  │  \(String(format: "%.2f", maxRisk)) max\n"
-    output += "  Vocabulary    \(String(vocabulary).replacingOccurrences(of: "(\\d)(?=(\\d{3})+$)", with: "$1,", options: .regularExpression)) distinct symbols\n"
+    output += "  Vocabulary    \(formatWithThousandsSeparator(vocabulary)) distinct symbols\n"
     output += "  Health        \(needsAttentionCount) files need attention (\(needsAttentionPct)% of codebase)\n"
     if !focusAreas.isEmpty {
         output += "  Focus Areas   \(focusAreas.joined(separator: ", "))\n"
@@ -1394,7 +1374,13 @@ func formatProjectSummary(avgRisk: Double, medianRisk: Double, maxRisk: Double, 
     return output
 }
 
-func formatAsSummary(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics, verbose: Bool) -> String {
+/// Mean of per-file risk scores. The totals' risk is computed over the merged vocabulary, so dividing it by the file count is not an average.
+func averageRisk(_ fileMetrics: [HalsteadMetrics]) -> Double {
+    guard !fileMetrics.isEmpty else { return 0.0 }
+    return fileMetrics.reduce(0.0) { $0 + $1.riskScore } / Double(fileMetrics.count)
+}
+
+func formatAsSummary(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics, verbose: Bool, root: String = "") -> String {
     var output = ""
 
     // Files needing attention: risk >= moderate (for count), but display only >= high
@@ -1402,14 +1388,14 @@ func formatAsSummary(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics, 
     let criticalAndHighFiles = fileMetrics.filter { $0.riskScore >= RiskThresholds.high }
     let needsAttentionCount = filesNeedingAttention.count
     let needsAttentionText = needsAttentionCount == 1 ? "1 file needs attention" : "\(needsAttentionCount) files need attention"
-    let projectAvg = totals.riskScore / Double(fileMetrics.count)
+    let projectAvg = averageRisk(fileMetrics)
 
     // Header
     output += formatSummaryHeader(fileCount: fileMetrics.count, projectAvg: projectAvg, needsAttentionText: needsAttentionText)
 
     // Risk distribution and architecture hotspots
     output += "\n" + formatRiskDistribution(fileMetrics) + "\n"
-    output += formatArchitectureHotspots(fileMetrics) + "\n"
+    output += formatArchitectureHotspots(fileMetrics, root: root) + "\n"
 
     // Readability patterns
     output += formatNestingAnalysis(fileMetrics)
@@ -1431,14 +1417,13 @@ func formatAsSummary(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics, 
     }
 
     // Project Summary
-    let avgRisk = totals.riskScore / Double(fileMetrics.count)
     let medianRisk = calculateMedianRisk(fileMetrics)
     let maxRisk = calculateMaxRisk(fileMetrics)
-    let focusAreas = extractFocusAreas(fileMetrics)
+    let focusAreas = extractFocusAreas(fileMetrics, root: root)
     let needsAttentionPct = filesNeedingAttention.count * 100 / fileMetrics.count
 
     output += formatProjectSummary(
-        avgRisk: avgRisk,
+        avgRisk: projectAvg,
         medianRisk: medianRisk,
         maxRisk: maxRisk,
         vocabulary: totals.vocabulary,
@@ -1450,8 +1435,8 @@ func formatAsSummary(_ fileMetrics: [HalsteadMetrics], totals: HalsteadMetrics, 
     return output
 }
 
-func getHealthStatus(totals: HalsteadMetrics, fileCount: Int) -> String {
-    let avgRisk = totals.riskScore / Double(fileCount)
+func getHealthStatus(_ fileMetrics: [HalsteadMetrics]) -> String {
+    let avgRisk = averageRisk(fileMetrics)
     if avgRisk < RiskThresholds.moderate { return "Good" }
     if avgRisk < RiskThresholds.high { return "Fair" }
     if avgRisk < RiskThresholds.critical { return "Needs Review" }
@@ -1473,12 +1458,12 @@ func calculateMaxRisk(_ fileMetrics: [HalsteadMetrics]) -> Double {
     return fileMetrics.map { $0.riskScore }.max() ?? 0.0
 }
 
-func extractFocusAreas(_ fileMetrics: [HalsteadMetrics]) -> [String] {
+func extractFocusAreas(_ fileMetrics: [HalsteadMetrics], root: String = "") -> [String] {
     let high_risk_files = fileMetrics.filter { $0.riskScore >= RiskThresholds.high }
     var directories = Set<String>()
 
     for metrics in high_risk_files {
-        let directory = extractDirectory(from: metrics.path)
+        let directory = extractDirectory(from: metrics.path, root: root)
 
         if directory != "." {
             directories.insert(directory)
@@ -1486,13 +1471,6 @@ func extractFocusAreas(_ fileMetrics: [HalsteadMetrics]) -> [String] {
     }
 
     return Array(directories).sorted()
-}
-
-func difficultyLabel(_ difficulty: Double) -> String {
-    if difficulty > DifficultyThresholds.veryHigh { return "Very High" }
-    if difficulty > DifficultyThresholds.high { return "High" }
-    if difficulty > DifficultyThresholds.moderate { return "Moderate" }
-    return "Low"
 }
 
 func shortPath(_ path: String) -> String {
@@ -1543,59 +1521,16 @@ struct CLIOptions {
     var thresholds: [String]? = nil
     var output_path: String? = nil
     var include_tests: Bool = false
-    var show_help: Bool = false
-    var show_explanation: Bool = false
     var verbose: Bool = false
-    var include: String? = nil
-    var exclude: String? = nil
 }
 
 enum CLIError: Error {
-    case invalid_format(String)
-    case missing_value(String)
     case invalid_threshold(String)
 }
 
-// parseArguments removed - replaced by ArgumentParser in @main SwiftHAL struct
-// For tests, use: SwiftHAL.parseAsRoot(["arg1", "arg2"]) or create CLIOptions directly
-func parseArguments(_ args: [String]) throws -> CLIOptions {
-    // Stub for test compatibility
-    // Note: --help and --explain will cause ArgumentParser to exit, so handle those specially
-    let argsArray = Array(args.dropFirst())
-
-    // Check for help or explain flags
-    if argsArray.contains("--help") || argsArray.contains("-h") {
-        return CLIOptions(path: ".", format: .summary, thresholds: nil, output_path: nil,
-                         include_tests: false, show_help: true, show_explanation: false,
-                         verbose: false, include: nil, exclude: nil)
-    }
-    if argsArray.contains("--explain") {
-        return CLIOptions(path: ".", format: .summary, thresholds: nil, output_path: nil,
-                         include_tests: false, show_help: false, show_explanation: true,
-                         verbose: false, include: nil, exclude: nil)
-    }
-
-    // Parse normally for other args
-    guard let command = try SwiftHAL.parseAsRoot(argsArray) as? SwiftHAL else {
-        fatalError("parseAsRoot should return SwiftHAL instance")
-    }
-    // Use the computed path property that handles pathOption ?? pathArgument ?? "."
-    let resolvedPath = command.pathOption ?? command.pathArgument ?? "."
-    return CLIOptions(
-        path: resolvedPath,
-        format: command.format,
-        thresholds: command.threshold?.split(separator: ",").map(String.init),
-        output_path: command.output,
-        include_tests: command.includeTests,
-        show_help: false,  // ArgumentParser handles help automatically
-        show_explanation: command.explain,
-        verbose: command.verbose,
-        include: command.include,
-        exclude: command.exclude
-    )
+func printError(_ message: String) {
+    FileHandle.standardError.write(Data((message + "\n").utf8))
 }
-
-// printUsage removed - ArgumentParser provides automatic --help generation
 
 func printMetricsExplanation() {
     print("""
@@ -1667,7 +1602,7 @@ struct SwiftHAL: ParsableCommand {
     @Argument(help: "Path to analyze (directory or file) [deprecated: use --path]")
     var pathArgument: String?
 
-    private var path: String {
+    var path: String {
         return pathOption ?? pathArgument ?? "."
     }
 
@@ -1680,12 +1615,6 @@ struct SwiftHAL: ParsableCommand {
     @Option(name: .long, help: "Write output to file instead of stdout")
     var output: String?
 
-    @Option(name: .long, help: "Include glob pattern (e.g., '**/*.swift')")
-    var include: String?
-
-    @Option(name: .long, help: "Exclude glob pattern (e.g., 'Tests/**')")
-    var exclude: String?
-
     @Flag(name: .long, help: "Include test files (default: excluded)")
     var includeTests = false
 
@@ -1695,24 +1624,24 @@ struct SwiftHAL: ParsableCommand {
     @Flag(name: .long, help: "Show detailed explanation of metrics")
     var explain = false
 
+    /// `--threshold` takes a comma-separated list.
+    var thresholdList: [String]? {
+        threshold?.split(separator: ",").map(String.init)
+    }
+
     mutating func run() throws {
         if explain {
             printMetricsExplanation()
             return
         }
 
-        // Convert to CLIOptions for compatibility with helper functions
         let options = CLIOptions(
             path: path,
             format: format,
-            thresholds: threshold?.split(separator: ",").map(String.init),
+            thresholds: thresholdList,
             output_path: output,
             include_tests: includeTests,
-            show_help: false,
-            show_explanation: false,
-            verbose: verbose,
-            include: include,
-            exclude: exclude
+            verbose: verbose
         )
 
         try SwiftHAL.runAnalysis(options: options)
@@ -1720,28 +1649,40 @@ struct SwiftHAL: ParsableCommand {
 
     static func runAnalysis(options: CLIOptions) throws {
         let fileManager = FileManager.default
-        let rootURL = URL(fileURLWithPath: options.path)
+        // realpath, not standardizedFileURL or resolvingSymlinksInPath: the enumerator yields
+        // /private/tmp/... and those Foundation calls strip /private, so hotspot grouping would miss the root prefix
+        let resolvedPath = realpath(options.path, nil).map { pointer -> String in
+            defer { free(pointer) }
+            return String(cString: pointer)
+        } ?? options.path
+        let rootURL = URL(fileURLWithPath: resolvedPath)
 
         // Validate path exists
         var isDirectory: ObjCBool = false
         guard fileManager.fileExists(atPath: rootURL.path, isDirectory: &isDirectory) else {
-            print("Error: Path does not exist: \(rootURL.path)")
-            Darwin.exit(1)
+            printError("Error: Path does not exist: \(rootURL.path)")
+            throw ExitCode.failure
         }
 
-        // Show what directory we're analyzing
-        let absolutePath = rootURL.standardizedFileURL.path
+        // Parse thresholds before analysis so a typo fails fast
+        let thresholds = try (options.thresholds ?? []).map { try parseThreshold($0) }
+
+        // Progress goes to stderr so stdout carries only the report (e.g. valid JSON)
         if options.format != .summary {
-            print("Analyzing Swift files in: \(absolutePath)")
+            printError("Analyzing Swift files in: \(rootURL.path)")
         }
 
         let swiftFiles = findSwiftFiles(at: rootURL, options: options, fileManager: fileManager)
-        let calculator = MetricsCalculator()
-
-        if options.format != .summary {
-            print("Found \(swiftFiles.count) Swift files...")
+        guard !swiftFiles.isEmpty else {
+            printError("Error: No Swift files found in \(rootURL.path)")
+            throw ExitCode.failure
         }
 
+        if options.format != .summary {
+            printError("Found \(swiftFiles.count) Swift files...")
+        }
+
+        let calculator = MetricsCalculator()
         var allResults: [MetricsWithSets] = []
 
         for fileURL in swiftFiles {
@@ -1751,78 +1692,80 @@ struct SwiftHAL: ParsableCommand {
 
                 if options.format != .summary {
                     let metrics = result.metrics
-                    print("File: \(metrics.path)")
-                    print("  Vocabulary: \(metrics.vocabulary), Length: \(metrics.length), Volume: \(String(format: "%.2f", metrics.volume))")
-                    print("  Difficulty: \(String(format: "%.2f", metrics.difficulty)), Effort: \(String(format: "%.2f", metrics.effort)), Risk Score: \(String(format: "%.2f", metrics.riskScore))")
+                    printError("File: \(metrics.path)")
+                    printError("  Vocabulary: \(metrics.vocabulary), Length: \(metrics.length), Volume: \(String(format: "%.2f", metrics.volume))")
+                    printError("  Difficulty: \(String(format: "%.2f", metrics.difficulty)), Effort: \(String(format: "%.2f", metrics.effort)), Risk Score: \(String(format: "%.2f", metrics.riskScore))")
                 }
             } catch {
-                print("Error calculating metrics for \(fileURL.path): \(error)")
+                printError("Error calculating metrics for \(fileURL.path): \(error)")
             }
         }
 
-        // Compute and display output
-        if !allResults.isEmpty {
-            let totals = aggregateTotals(allResults)
-            let fileMetrics = allResults.map { $0.metrics }
+        guard !allResults.isEmpty else {
+            printError("Error: No Swift files could be analyzed in \(rootURL.path)")
+            throw ExitCode.failure
+        }
 
-            // Generate output based on format
-            let output: String
-            if options.format == .summary {
-                output = formatAsSummary(fileMetrics, totals: totals, verbose: options.verbose)
-            } else if options.format == .json {
-                output = formatAsJSON(fileMetrics, totals: totals)
-            } else {
-                output = formatAsTable(fileMetrics, totals: totals)
+        let totals = aggregateTotals(allResults)
+        let fileMetrics = allResults.map { $0.metrics }
+        let groupingRoot = isDirectory.boolValue ? rootURL.path : rootURL.deletingLastPathComponent().path
+
+        // Generate output based on format
+        let output: String
+        switch options.format {
+        case .summary:
+            output = formatAsSummary(fileMetrics, totals: totals, verbose: options.verbose, root: groupingRoot)
+        case .json:
+            output = formatAsJSON(fileMetrics, totals: totals)
+        case .table:
+            output = formatAsTable(fileMetrics, totals: totals)
+        }
+
+        if let output_path = options.output_path {
+            try output.write(toFile: output_path, atomically: true, encoding: .utf8)
+            printError("Output written to \(output_path)")
+        } else {
+            print(output)
+        }
+
+        // Thresholds apply per file; the project totals are not a file
+        let violations = fileMetrics.flatMap { checkThresholds($0, thresholds: thresholds) }
+        if !violations.isEmpty {
+            printError("\nThreshold violations:")
+            for violation in violations {
+                printError("  \(violation)")
             }
-
-            if let output_path = options.output_path {
-                try output.write(toFile: output_path, atomically: true, encoding: .utf8)
-                print("Output written to \(output_path)")
-            } else {
-                print(output)
-            }
-
-            // Check thresholds
-            if let threshold_strings = options.thresholds {
-                let thresholds = try threshold_strings.map { try parseThreshold($0) }
-                var all_violations: [String] = []
-
-                // Check individual files
-                    for result in allResults {
-                        let violations = checkThresholds(result.metrics, thresholds: thresholds)
-                        all_violations.append(contentsOf: violations)
-                    }
-
-                    // Check totals
-                    let totals_violations = checkThresholds(totals, thresholds: thresholds)
-                    all_violations.append(contentsOf: totals_violations)
-
-                    if !all_violations.isEmpty {
-                        print("\nThreshold violations:")
-                        for violation in all_violations {
-                            print("  \(violation)")
-                        }
-                        Darwin.exit(2)
-                    }
-                }
-            }
+            throw ExitCode(2)
+        }
     }
 
-    /// Recursively finds all Swift files in a given directory.
+    /// Finds Swift files under a directory, or returns the path itself when it is a Swift file.
     static func findSwiftFiles(at rootURL: URL, options: CLIOptions, fileManager: FileManager) -> [URL] {
+        var isDirectory: ObjCBool = false
+        if fileManager.fileExists(atPath: rootURL.path, isDirectory: &isDirectory), !isDirectory.boolValue {
+            return rootURL.pathExtension == "swift" ? [rootURL] : []
+        }
+
         var swiftFiles: [URL] = []
         let enumerator = fileManager.enumerator(at: rootURL,
-                                               includingPropertiesForKeys: [.isRegularFileKey],
+                                               includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey],
                                                options: [.skipsHiddenFiles, .skipsPackageDescendants])
 
         guard let fileEnumerator = enumerator else {
-            print("Error: Could not enumerate files at \(rootURL.path)")
+            printError("Error: Could not enumerate files at \(rootURL.path)")
             return []
         }
 
         for case let fileURL as URL in fileEnumerator {
             do {
-                let resourceValues = try fileURL.resourceValues(forKeys: [.isRegularFileKey])
+                let resourceValues = try fileURL.resourceValues(forKeys: [.isRegularFileKey, .isDirectoryKey])
+                if resourceValues.isDirectory == true {
+                    // The enumerator never yields the root, so only Tests folders below it are skipped
+                    if !options.include_tests && fileURL.lastPathComponent == "Tests" {
+                        fileEnumerator.skipDescendants()
+                    }
+                    continue
+                }
                 if resourceValues.isRegularFile == true && fileURL.pathExtension == "swift" {
                     // Apply exclusion filters
                     if shouldExcludeFile(fileURL, options: options) {
@@ -1831,7 +1774,7 @@ struct SwiftHAL: ParsableCommand {
                     swiftFiles.append(fileURL)
                 }
             } catch {
-                print("Error processing file attributes for \(fileURL.path): \(error)")
+                printError("Error processing file attributes for \(fileURL.path): \(error)")
             }
         }
         return swiftFiles
@@ -1844,25 +1787,7 @@ struct SwiftHAL: ParsableCommand {
             return true
         }
 
-        // If include_tests is true, don't apply test exclusions
-        if options.include_tests {
-            return false
-        }
-
-        // Default exclusions (when include_tests is false):
-
-        // Exclude files ending in Tests.swift
-        if fileURL.lastPathComponent.hasSuffix("Tests.swift") {
-            return true
-        }
-
-        // Exclude files in any /Tests/ directory
-        let pathComponents = fileURL.pathComponents
-        if pathComponents.contains("Tests") {
-            return true
-        }
-
-        return false
+        // Exclude files ending in Tests.swift unless tests are included
+        return !options.include_tests && fileURL.lastPathComponent.hasSuffix("Tests.swift")
     }
 }
-

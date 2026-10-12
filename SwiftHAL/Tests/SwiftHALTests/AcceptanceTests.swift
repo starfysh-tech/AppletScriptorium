@@ -103,4 +103,61 @@ final class AcceptanceTests: XCTestCase {
         XCTAssertEqual(metrics.N1, 3, "Total operators")
         XCTAssertEqual(metrics.n2, 3, "Distinct operands: x, 1, 2")
     }
+
+    // TEST 6: Literal operands are distinct by kind
+    func test_stringAndIntegerLiterals_areDistinctOperands() throws {
+        let fixture = writeFixture("literals.swift", content: "let a = 1\nlet b = \"1\"")
+        let metrics = try calculator.calculate(for: fixture)
+
+        XCTAssertEqual(metrics.n2, 4, "Distinct operands: a, b, int 1, string 1")
+    }
+
+    // TEST 7: self is an operand
+    func test_self_isOperand() throws {
+        let fixture = writeFixture("self.swift", content: "let s = self")
+        let metrics = try calculator.calculate(for: fixture)
+
+        XCTAssertEqual(metrics.n2, 2, "Distinct operands: s, self")
+    }
+
+    // MARK: - Readability analyzers
+
+    func test_liveness_resetsPerFunction() throws {
+        let padding = String(repeating: "// pad\n", count: 30)
+        let code = "func a() {\n  let x = 1\n  print(x)\n}\n" + padding + "func b() {\n  let x = 2\n  print(x)\n}\n"
+        let metrics = try calculator.calculate(for: writeFixture("live.swift", content: code))
+
+        XCTAssertEqual(metrics.liveness?.maxLifespan, 1, "Each x lives one line inside its own function")
+        XCTAssertEqual(metrics.liveness?.longLivedCount, 0)
+    }
+
+    func test_chainLength_countsMemberAccessHops() throws {
+        let code = "let v = a.b().c().d().e()\nlet w = [1].map { $0 }.filter { $0 > 0 }"
+        let metrics = try calculator.calculate(for: writeFixture("chain.swift", content: code))
+
+        XCTAssertEqual(metrics.grouping?.maxChainLength, 4, "a.b().c().d().e() has 4 hops; the 2-hop chain is below the reporting cutoff")
+        XCTAssertEqual(metrics.grouping?.locations.count, 1)
+        XCTAssertEqual(metrics.grouping?.locations.first?.line, 1)
+    }
+
+    func test_conditionals_countEveryCondition() throws {
+        let code = """
+        func f(a: Bool, b: Bool, o: Int?) {
+            if a { }
+            if let x = o { _ = x }
+            if a && b || a { }
+        }
+        func g(a: Int, b: Int, e: Bool) {
+            if a < b && b > a || e { }
+        }
+        """
+        let metrics = try calculator.calculate(for: writeFixture("cond.swift", content: code))
+
+        XCTAssertEqual(metrics.conditionals?.totalConditionals, 4)
+        XCTAssertEqual(metrics.conditionals?.mixedOperatorCount, 2)
+        XCTAssertEqual(metrics.conditionals?.locations.count, 2, "Only the mixed &&/|| conditions are listed")
+        // Comparison < and > still count as operators: <, &&, >, ||
+        XCTAssertEqual(metrics.conditionals?.locations.first?.operatorCount, 4)
+        XCTAssertEqual(metrics.conditionals?.locations.first?.line, 7)
+    }
 }

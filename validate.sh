@@ -5,7 +5,11 @@ set -uo pipefail
 # Checks that all prerequisites and components are working
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PYTHON_CMD="python3"
+PYTHON_CMD="$REPO_ROOT/.venv/bin/python3"  # the interpreter the Mail rule uses
+if [ ! -x "$PYTHON_CMD" ]; then
+    echo "No .venv found at $REPO_ROOT/.venv. Run ./install.sh first." >&2
+    exit 1
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -68,16 +72,15 @@ echo "=============================================="
 echo ""
 
 # Check 1: System commands
-log_info "[1/10] Checking system commands (brew, python3, ollama, git, osascript)..."
+log_info "[1/8] Checking system commands (brew, python3, git, osascript)..."
 check_command "brew" "Homebrew"
 check_command "python3" "Python 3"
-check_command "ollama" "Ollama"
 check_command "git" "Git"
 check_command "osascript" "AppleScript"
 echo ""
 
 # Check 2: Python version
-log_info "[2/10] Checking Python version (>= 3.11 required)..."
+log_info "[2/8] Checking Python version (>= 3.11 required)..."
 PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}')
 PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
 PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
@@ -90,47 +93,50 @@ fi
 echo ""
 
 # Check 3: Python packages
-log_info "[3/10] Checking Python packages (beautifulsoup4, httpx, readability-lxml, pytest)..."
-PACKAGES=("beautifulsoup4" "httpx" "readability-lxml" "pytest")
-for pkg in "${PACKAGES[@]}"; do
+log_info "[3/8] Checking Python packages from Summarizer/requirements.txt..."
+while read -r pkg; do
     if $PYTHON_CMD -m pip show "$pkg" >/dev/null 2>&1; then
         log_pass "Python package: $pkg"
     else
         log_fail "Python package missing: $pkg"
     fi
-done
+done < <(sed -E 's/[][<>=!~;[:space:]].*//; /^#/d; /^$/d' "$REPO_ROOT/Summarizer/requirements.txt")
 echo ""
 
-# Check 4: Playwright
-log_info "[4/10] Checking Playwright (for Cloudflare-protected sites)..."
-if $PYTHON_CMD -c "from playwright.sync_api import sync_playwright; print('OK')" >/dev/null 2>&1; then
-    log_pass "Playwright installed"
-else
-    log_warn "Playwright not installed (needed for Cloudflare-protected sites)"
-    log_info "Install with: python3 -m playwright install"
+# Check 4: LM Studio (required) and Ollama (optional fallback)
+log_info "[4/8] Checking LM Studio server (LMSTUDIO_BASE_URL in .env)..."
+ENV_FILE="$REPO_ROOT/.env"
+# Parse with python-dotenv, as the pipeline does (inline comments, quotes, case)
+read -r LMSTUDIO_URL OLLAMA_ON < <("$PYTHON_CMD" -c '
+import sys
+from dotenv import dotenv_values
+v = dotenv_values(sys.argv[1])
+print(v.get("LMSTUDIO_BASE_URL") or "-", (v.get("OLLAMA_ENABLED") or "").lower() == "true")
+' "$ENV_FILE" 2>/dev/null)
+OLLAMA_RUNNING=false
+if [ "$OLLAMA_ON" = "True" ] && pgrep -x "ollama" >/dev/null; then
+    OLLAMA_RUNNING=true
 fi
-echo ""
-
-# Check 5: Ollama service
-log_info "[5/10] Checking Ollama service (must be running)..."
-if pgrep -x "ollama" >/dev/null; then
-    log_pass "Ollama service running"
+if [ -z "$LMSTUDIO_URL" ] || [ "$LMSTUDIO_URL" = "-" ]; then
+    log_fail "LMSTUDIO_BASE_URL not set in .env"
+elif curl -fsS --max-time 5 "$LMSTUDIO_URL/v1/models" >/dev/null 2>&1; then
+    log_pass "LM Studio server reachable: $LMSTUDIO_URL"
+elif [ "$OLLAMA_RUNNING" = true ]; then
+    log_warn "LM Studio server not reachable: $LMSTUDIO_URL (Ollama fallback will be used)"
 else
-    log_fail "Ollama service not running"
+    log_fail "LM Studio server not reachable: $LMSTUDIO_URL"
+    log_info "Start the LM Studio server, or fix LMSTUDIO_BASE_URL"
+fi
+if [ "$OLLAMA_RUNNING" = true ]; then
+    log_pass "Ollama fallback running"
+elif [ "$OLLAMA_ON" = "True" ]; then
+    log_warn "OLLAMA_ENABLED=true but Ollama is not running"
     log_info "Start with: brew services start ollama"
 fi
-
-# Check 6: Ollama model
-if ollama list 2>/dev/null | grep -q "qwen3:latest"; then
-    log_pass "Ollama model: qwen3:latest"
-else
-    log_fail "Ollama model not found: qwen3:latest"
-    log_info "Install with: ollama pull qwen3:latest"
-fi
 echo ""
 
-# Check 7: Repository structure
-log_info "[7/10] Checking repository structure (Summarizer/, tests/, Samples/, templates/, runs/)..."
+# Check 5: Repository structure
+log_info "[5/8] Checking repository structure (Summarizer/, tests/, Samples/, templates/, runs/)..."
 DIRS=("Summarizer" "Summarizer/tests" "Summarizer/Samples" "Summarizer/templates" "runs")
 for dir in "${DIRS[@]}"; do
     if [ -d "$REPO_ROOT/$dir" ]; then
@@ -141,9 +147,9 @@ for dir in "${DIRS[@]}"; do
 done
 echo ""
 
-# Check 8: Scripts are executable
-log_info "[8/10] Checking script permissions (install.sh, setup-mail-rule.sh, validate.sh, run_workflow.sh)..."
-SCRIPTS=("install.sh" "setup-mail-rule.sh" "validate.sh" "run_workflow.sh")
+# Check 6: Scripts are executable
+log_info "[6/8] Checking script permissions (install.sh, setup-mail-rule.sh, validate.sh)..."
+SCRIPTS=("install.sh" "setup-mail-rule.sh" "validate.sh")
 for script in "${SCRIPTS[@]}"; do
     if [ -x "$REPO_ROOT/$script" ]; then
         log_pass "Executable: $script"
@@ -154,18 +160,18 @@ for script in "${SCRIPTS[@]}"; do
 done
 echo ""
 
-# Check 9: Run test suite
-log_info "[9/10] Running test suite..."
+# Check 7: Run test suite
+log_info "[7/8] Running test suite..."
 if $PYTHON_CMD -m pytest "$REPO_ROOT/Summarizer/tests" -q >/dev/null 2>&1; then
     log_pass "Test suite passed"
 else
     log_fail "Test suite failed"
-    log_info "Run manually for details: python3 -m pytest Summarizer/tests -v"
+    log_info "Run manually for details: .venv/bin/python3 -m pytest Summarizer/tests -v"
 fi
 echo ""
 
-# Check 10: Mail rule setup (optional)
-log_info "[10/10] Checking Mail rule setup (process-alert.scpt)..."
+# Check 8: Mail rule setup (optional)
+log_info "[8/8] Checking Mail rule setup (process-alert.scpt)..."
 MAIL_SCRIPT="$HOME/Library/Application Scripts/com.apple.mail/process-alert.scpt"
 if [ -f "$MAIL_SCRIPT" ]; then
     log_pass "Mail AppleScript installed"
@@ -188,8 +194,8 @@ if [ "$FAIL_COUNT" -eq 0 ]; then
     echo -e "${GREEN}All critical checks passed!${NC}"
     echo ""
     echo "You can now:"
-    echo "  - Test with: python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head"
-    echo "  - Run pipeline: python3 -m Summarizer.cli run --output-dir runs/test --max-articles 3"
+    echo "  - Test with: .venv/bin/python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head"
+    echo "  - Run pipeline: .venv/bin/python3 -m Summarizer.cli run --output-dir runs/test --max-articles 3"
     if [ ! -f "$MAIL_SCRIPT" ]; then
         echo "  - Setup Mail rule: ./setup-mail-rule.sh"
     fi

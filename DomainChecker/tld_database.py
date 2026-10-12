@@ -47,7 +47,7 @@ TLD_DATABASE = {
         '.exposed', '.express', '.help', '.info', '.link', '.live',
         '.media', '.news', '.online', '.press', '.publishing', '.review',
         '.reviews', '.search', '.social', '.stream', '.tel', '.today',
-        '.video', '.vip', '.website', 'world'
+        '.video', '.vip', '.website', '.world'
     ],
     '🎮 Entertainment': [
         '.actor', '.art', '.band', '.bar', '.bingo', '.casino', '.ceo',
@@ -104,3 +104,4 @@ for category_tlds in TLD_DATABASE.values():
 
 # Remove duplicates while preserving order
 ALL_TLDS = list(dict.fromkeys(ALL_TLDS))
+assert all(t.startswith('.') for t in ALL_TLDS)

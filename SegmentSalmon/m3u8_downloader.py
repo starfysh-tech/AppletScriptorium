@@ -8,8 +8,9 @@ import sys
 import re
 import time
 import argparse
+import shutil
 import requests
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 import subprocess
@@ -19,6 +20,10 @@ import atexit
 import uuid
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, DownloadColumn, TransferSpeedColumn, TimeRemainingColumn
 from rich.console import Console
+
+
+class UnsupportedPlaylistError(ValueError):
+    pass
 
 
 class ProgressTracker:
@@ -88,56 +93,27 @@ class M3U8Downloader:
         signal.signal(signal.SIGTERM, self._signal_handler)
         
     def _signal_handler(self, signum, frame):
-        """Handle keyboard interrupt and cleanup"""
-        if not self.interrupted:
-            self.interrupted = True
-            self.console.print("\n[yellow]Download interrupted by user. Stopping...[/yellow]")
-            # Force exit to avoid progress bar hanging
-            import sys
-            sys.exit(130)
-            
+        """Flag the interrupt; workers and the download loop stop on the flag"""
+        self.interrupted = True
+        # A second Ctrl+C kills the process if a stalled request blocks shutdown
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        self.console.print("\n[yellow]Download interrupted by user. Stopping...[/yellow]")
+
     def _cleanup_on_exit(self):
-        """Clean up temporary files and session directory"""
-        try:
-            # Clean up any registered cleanup files (concat lists, etc.)
-            for file_path in self.cleanup_files:
-                if file_path and file_path.exists():
-                    try:
-                        file_path.unlink(missing_ok=True)
-                    except Exception:
-                        pass  # File might be in use, skip
-                    
-            # Clean up entire session segments directory 
-            if self.segments_dir and self.segments_dir.exists():
-                try:
-                    import shutil
-                    # Use shutil.rmtree for faster cleanup of entire directory
-                    shutil.rmtree(self.segments_dir, ignore_errors=True)
-                    print(f"Cleaned up session directory: {self.segments_dir.name}")
-                except Exception as e:
-                    # Fallback to individual file removal
-                    try:
-                        segment_files = list(self.segments_dir.glob("*"))
-                        removed_count = 0
-                        for segment_file in segment_files:
-                            try:
-                                segment_file.unlink(missing_ok=True)
-                                removed_count += 1
-                            except Exception:
-                                pass  # Skip files that can't be removed
-                        
-                        # Try to remove the directory
-                        try:
-                            self.segments_dir.rmdir()
-                            print(f"Cleaned up {removed_count} files and session directory")
-                        except Exception:
-                            if removed_count > 0:
-                                print(f"Cleaned up {removed_count} files (directory may remain)")
-                    except Exception:
-                        pass  # Ignore cleanup errors
-                    
-        except Exception:
-            pass  # Ignore cleanup errors to avoid masking original exceptions
+        """Clean up temporary files (concat lists, etc.)"""
+        for file_path in self.cleanup_files:
+            try:
+                file_path.unlink(missing_ok=True)
+            except Exception:
+                pass  # File might be in use, skip
+
+    def _remove_segments_dir(self):
+        """Remove the session segments directory"""
+        if self.segments_dir and self.segments_dir.exists():
+            shutil.rmtree(self.segments_dir, ignore_errors=True)
+            self.console.print(f"[dim]Cleaned up session directory: {self.segments_dir.name}[/dim]")
+            self.segments_dir = None
         
     def _create_session(self):
         """Create HTTP session with proper headers"""
@@ -153,14 +129,17 @@ class M3U8Downloader:
         
     def fetch_playlist(self, url):
         """Fetch M3U8 playlist content with retries"""
-        for attempt in range(self.retries):
+        attempts = self.retries + 1
+        for attempt in range(attempts):
+            if self.interrupted:
+                raise Exception("interrupted")
             try:
                 response = self.session.get(url, timeout=self.timeout)
                 response.raise_for_status()
                 return response.text
             except requests.RequestException as e:
-                if attempt == self.retries - 1:
-                    raise Exception(f"Failed to fetch playlist after {self.retries} attempts: {e}")
+                if attempt == attempts - 1:
+                    raise Exception(f"Failed to fetch playlist after {attempts} attempts: {e}")
                 time.sleep(2 ** attempt)
                 
     def parse_playlist(self, content, base_url):
@@ -179,8 +158,10 @@ class M3U8Downloader:
     def _parse_master_playlist(self, lines, base_url):
         """Parse master playlist and return best quality stream URL"""
         streams = []
-        
+
         for i, line in enumerate(lines):
+            if line.startswith('#EXT-X-MEDIA') and 'TYPE=AUDIO' in line:
+                raise UnsupportedPlaylistError("separate audio renditions (#EXT-X-MEDIA:TYPE=AUDIO) are not supported")
             if line.startswith('#EXT-X-STREAM-INF'):
                 # Extract bandwidth
                 bandwidth_match = re.search(r'BANDWIDTH=(\d+)', line)
@@ -205,6 +186,10 @@ class M3U8Downloader:
         
         for line in lines:
             line = line.strip()
+            if line.startswith('#EXT-X-KEY') and not re.search(r'[:,]METHOD=NONE(,|$)', line):
+                raise UnsupportedPlaylistError("encrypted segments (#EXT-X-KEY) are not supported")
+            if line.startswith('#EXT-X-MAP'):
+                raise UnsupportedPlaylistError("fMP4 init segments (#EXT-X-MAP) are not supported")
             if line and not line.startswith('#'):
                 segment_url = urljoin(base_url, line)
                 segments.append(segment_url)
@@ -213,25 +198,29 @@ class M3U8Downloader:
         
     def download_segment(self, url, output_path, progress_tracker=None):
         """Download a single segment with retries and progress tracking"""
-        bytes_downloaded = 0
-        
-        for attempt in range(self.retries):
+        attempts = self.retries + 1
+        for attempt in range(attempts):
+            if self.interrupted:
+                return False
+            bytes_downloaded = 0
             try:
                 response = self.session.get(url, timeout=self.timeout, stream=True)
                 response.raise_for_status()
-                
+
                 with open(output_path, 'wb') as f:
                     for chunk in response.iter_content(chunk_size=8192):
+                        if self.interrupted:
+                            return False
                         if chunk:
                             f.write(chunk)
                             bytes_downloaded += len(chunk)
-                            
+
                 if progress_tracker:
                     progress_tracker.update_progress(True, bytes_downloaded)
                 return True
-                
-            except requests.RequestException as e:
-                if attempt == self.retries - 1:
+
+            except requests.RequestException:
+                if attempt == attempts - 1:
                     if progress_tracker:
                         progress_tracker.update_progress(False)
                     return False
@@ -307,19 +296,16 @@ class M3U8Downloader:
             task = progress.add_task("Downloading", total=len(segments), 
                                    rate=0.0, elapsed="00:00", eta="00:00")
             
-            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                futures = {executor.submit(download_worker, (i, url)): i 
+            executor = ThreadPoolExecutor(max_workers=self.max_workers)
+            try:
+                futures = {executor.submit(download_worker, (i, url)): i
                           for i, url in enumerate(segments)}
-                
+
                 for future in as_completed(futures):
-                    # Check for interruption
                     if self.interrupted:
                         self.console.print("\n[yellow]Cancelling remaining downloads...[/yellow]")
-                        # Cancel remaining futures
-                        for remaining_future in futures:
-                            remaining_future.cancel()
                         break
-                        
+
                     result = future.result()
                     if result:
                         segment_files.append((futures[future], result))
@@ -343,59 +329,43 @@ class M3U8Downloader:
                                   rate=current_rate,
                                   elapsed=progress_tracker.format_time(current_elapsed),
                                   eta=progress_tracker.format_time(current_eta))
-                    
-        # Check if we were interrupted - cleanup happens here after threads are done
+            finally:
+                executor.shutdown(wait=not self.interrupted, cancel_futures=True)
+
         if self.interrupted:
             self.console.print("[red]Download was interrupted by user[/red]")
-            self.console.print("[dim]Cleaning up partial downloads...[/dim]")
-            self._cleanup_on_exit()
+            self._remove_segments_dir()
             return None
-            
+
         if progress_tracker.failed > 0:
-            self.console.print(f"[yellow]Warning: {progress_tracker.failed} segments failed to download[/yellow]")
-            
+            raise Exception(
+                f"{progress_tracker.failed} of {len(segments)} segments failed to download; "
+                f"kept downloaded segments in {segments_dir}"
+            )
+
         # Sort segment files by index
         segment_files.sort(key=lambda x: x[0])
-        
-        if not segment_files:
-            self.console.print("[red]No segments were successfully downloaded[/red]")
-            return None
-        
+
         # Generate output filename
         if not output_name:
-            parsed_url = urlparse(playlist_url)
             output_name = f"video_{int(time.time())}.mp4"
-            
+
         output_file = output_dir / output_name
-        
+        if shutil.which('ffmpeg'):
+            output_file = output_file.with_suffix('.mp4')  # ffmpeg always writes MP4
+
         print(f"Concatenating {len(segment_files)} segments...")
-        try:
-            self._concatenate_segments([path for _, path in segment_files], output_file)
-            print(f"Download completed: {output_file}")
-            
-            # Clean up session directory after successful concatenation
-            if self.segments_dir and self.segments_dir.exists():
-                try:
-                    import shutil
-                    shutil.rmtree(self.segments_dir, ignore_errors=True)
-                    self.console.print(f"[dim]Cleaned up session directory: {self.segments_dir.name}[/dim]")
-                    self.segments_dir = None  # Mark as cleaned up
-                except Exception:
-                    pass  # Ignore cleanup errors
-                    
-            return output_file
-            
-        except KeyboardInterrupt:
-            self.console.print("\n[yellow]Concatenation interrupted[/yellow]")
-            return None
-        
+        self._concatenate_segments([path for _, path in segment_files], output_file)
+        print(f"Download completed: {output_file}")
+        self._remove_segments_dir()
+        return output_file
+
     def _concatenate_segments(self, segment_paths, output_path):
         """Concatenate video segments using FFmpeg for better quality"""
-        # Try FFmpeg first for better quality
-        if self._try_ffmpeg_concat(segment_paths, output_path):
+        if shutil.which('ffmpeg'):
+            self._ffmpeg_concat(segment_paths, output_path)
             return
-            
-        # Fallback to binary concatenation
+
         print("FFmpeg not available, using binary concatenation...")
         with open(output_path, 'wb') as output_file:
             for segment_path in segment_paths:
@@ -421,36 +391,29 @@ class M3U8Downloader:
         }
         return crf_values.get(self.quality_preset, '18')
                         
-    def _try_ffmpeg_concat(self, segment_paths, output_path):
-        """Try to use FFmpeg for lossless concatenation preserving source quality"""
-        try:
-            # Check if ffmpeg is available
-            subprocess.run(['ffmpeg', '-version'], 
-                          capture_output=True, check=True)
-            
-            # Create file list for FFmpeg
-            concat_file = output_path.parent / "concat_list.txt"
-            self.cleanup_files.append(concat_file)  # Register for cleanup
-            with open(concat_file, 'w') as f:
-                for segment_path in segment_paths:
-                    if segment_path.exists():
-                        f.write(f"file '{segment_path.absolute()}'\n")
-            
-            # Convert output to MP4 if not already
-            if not str(output_path).endswith('.mp4'):
-                output_path = output_path.with_suffix('.mp4')
-            
-            # Try lossless stream copy first (preserves source quality)
-            if self._try_stream_copy(concat_file, output_path):
-                concat_file.unlink(missing_ok=True)
-                return True
-                
-            # Fallback to re-encoding if stream copy fails
-            return self._try_reencoding(concat_file, output_path)
-                
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            return False
-            
+    def _ffmpeg_concat(self, segment_paths, output_path):
+        """Concatenate with FFmpeg, lossless first; raise with FFmpeg's stderr on failure"""
+        concat_file = output_path.parent / "concat_list.txt"
+        self.cleanup_files.append(concat_file)  # Register for cleanup
+        with open(concat_file, 'w') as f:
+            for segment_path in segment_paths:
+                # ffmpeg concat syntax: close the quote, escaped quote, reopen
+                escaped = str(segment_path.absolute()).replace("'", "'\\''")
+                f.write(f"file '{escaped}'\n")
+
+        # Try lossless stream copy first (preserves source quality)
+        if self._try_stream_copy(concat_file, output_path):
+            concat_file.unlink(missing_ok=True)
+            return
+
+        # Ctrl+C also kills ffmpeg, which looks like a failed stream copy
+        if self.interrupted:
+            raise Exception("interrupted")
+        # Fallback to re-encoding if stream copy fails
+        stderr = self._try_reencoding(concat_file, output_path)
+        if stderr is not None:
+            raise Exception(f"FFmpeg failed; kept segments in {self.segments_dir}\n{stderr}")
+
     def _try_stream_copy(self, concat_file, output_path):
         """Try lossless stream copy concatenation"""
         cmd = [
@@ -496,10 +459,8 @@ class M3U8Downloader:
         
         if result.returncode == 0:
             print(f"Re-encoded concatenation successful: {output_path}")
-            return True
-        else:
-            print(f"FFmpeg failed: {result.stderr}")
-            return False
+            return None
+        return result.stderr
 
 
 def main():
@@ -515,29 +476,37 @@ def main():
     parser.add_argument('--timeout', type=int, default=30,
                        help='Request timeout in seconds (default: 30)')
     parser.add_argument('--retries', type=int, default=3,
-                       help='Number of retries per segment (default: 3)')
-    
+                       help='Number of retries per segment after the first attempt (default: 3)')
+
     args = parser.parse_args()
-    
+
+    downloader = M3U8Downloader(
+        max_workers=args.workers,
+        timeout=args.timeout,
+        retries=args.retries
+    )
+
+    # Set quality preset
+    downloader.quality_preset = args.quality
+
     try:
-        downloader = M3U8Downloader(
-            max_workers=args.workers,
-            timeout=args.timeout, 
-            retries=args.retries
-        )
-        
-        # Set quality preset
-        downloader.quality_preset = args.quality
-        
         downloader.download_stream(
-            args.url, 
-            args.output_dir, 
+            args.url,
+            args.output_dir,
             args.name
         )
-        
+    except UnsupportedPlaylistError as e:
+        print(f"Error: {e}. Try: ffmpeg -i '{args.url}' -c copy output.mp4")
+        sys.exit(1)
     except Exception as e:
+        if downloader.interrupted:
+            downloader._remove_segments_dir()
+            sys.exit(130)
         print(f"Error: {e}")
         sys.exit(1)
+
+    if downloader.interrupted:
+        sys.exit(130)
 
 
 if __name__ == "__main__":

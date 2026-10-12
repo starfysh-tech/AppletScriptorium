@@ -237,11 +237,11 @@ Each tool includes tests or validation:
 
 ```bash
 # Summarizer - Full test suite
-python3 -m pytest Summarizer/tests
+.venv/bin/python3 -m pytest Summarizer/tests
 
 # Summarizer - Compare local LLMs on the summarization task
 # (loads each model in turn; see Summarizer/evals/README.md)
-python3 -m Summarizer.cli eval
+.venv/bin/python3 -m Summarizer.cli eval
 
 # ExtensionAuditor - Dry run validation
 python3 ExtensionAuditor/extension-auditor.py --help
@@ -267,7 +267,7 @@ SegmentSalmon/segment-salmon --help
 
 **Key Conventions:**
 - Python module invocation: `python3 -m Tool.cli` (not direct script paths)
-- System Python required (Summarizer Mail rules)
+- Summarizer dependencies live in `.venv`; the Mail rule calls `.venv/bin/python3`
 - Snake_case for functions/variables
 - Conventional Commits for git messages
 

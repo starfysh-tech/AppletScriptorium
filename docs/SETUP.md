@@ -106,7 +106,7 @@ OLLAMA_MODEL=qwen3:latest
 **Backend Fallback Behavior:**
 - Pipeline tries LM Studio first (if `LMSTUDIO_BASE_URL` configured)
 - If LM Studio fails AND `OLLAMA_ENABLED=true`, tries Ollama
-- The bundled `install.sh` and `validate.sh` scripts also provision/check Ollama as the supported fallback path
+- `install.sh` does not install Ollama; `validate.sh` checks it only when `OLLAMA_ENABLED=true`
 - If neither backend is available, pipeline exits with error
 
 ---
@@ -134,7 +134,6 @@ cd AppletScriptorium
 The `install.sh` script automates:
 - Checking prerequisites
 - Installing Python dependencies
-- Provisioning Ollama fallback support (`brew services start ollama` + `ollama pull qwen3:latest`)
 - Making scripts executable
 - Running the Summarizer test suite
 
@@ -148,8 +147,8 @@ cd ~/Code
 git clone https://github.com/starfysh-tech/AppletScriptorium.git
 cd AppletScriptorium
 
-# 2. Install Python dependencies (system Python with --user flag)
-python3 -m pip install --user -r Summarizer/requirements.txt
+# 2. Install Python dependencies into the repo venv
+python3 -m venv .venv && .venv/bin/pip install -r Summarizer/requirements.txt
 
 # 3. Optional: If you want Ollama fallback, install and start it
 brew install ollama
@@ -160,7 +159,7 @@ ollama pull qwen3:latest
 npm install -g url-to-markdown-cli-tool
 
 # 5. Make scripts executable
-chmod +x install.sh setup-mail-rule.sh validate.sh run_workflow.sh
+chmod +x install.sh setup-mail-rule.sh validate.sh
 chmod +x Summarizer/fetch-alert-source.applescript Summarizer/bin/run_alert.sh
 
 # 6. Create output directory
@@ -171,10 +170,10 @@ cp .env.template .env
 # Edit .env to add your JINA_API_KEY (for Cloudflare fallback)
 
 # 8. Run tests
-python3 -m pytest Summarizer/tests
+.venv/bin/python3 -m pytest Summarizer/tests
 ```
 
-**Note:** The `--user` flag installs packages to user site-packages, which is required for Mail rule automation (venv not supported).
+**Note:** The Mail rule calls `.venv/bin/python3` by full path, so the venv needs no activation. Homebrew Python 3.12+ blocks `pip install --user` (PEP 668).
 
 ---
 
@@ -190,11 +189,11 @@ macOS requires permissions for AppleScript to interact with Mail.app:
 1. Go to **System Settings** → **Privacy & Security** → **Automation**
 2. Enable **Terminal → Mail**
 
-**When to grant:** When first running `python3 -m Summarizer.cli run`
+**When to grant:** When first running `.venv/bin/python3 -m Summarizer.cli run`
 
 **What it enables:** AppleScript can capture inbox messages
 
-**Note:** Mail rule automation uses SMTP for digest delivery, but Mail.app still needs Accessibility permission to run the AppleScript rule.
+**Note:** Mail rule automation needs no extra permission. The rule script does no UI scripting, and the digest goes out over SMTP.
 
 ---
 
@@ -272,7 +271,7 @@ Test your SMTP credentials before using the Mail rule:
 
 ```bash
 # Run pipeline manually with SMTP sending
-python3 -m Summarizer.cli run \
+.venv/bin/python3 -m Summarizer.cli run \
   --output-dir runs/test-$(date +%Y%m%d-%H%M%S) \
   --max-articles 1 \
   --email-digest your-email@example.com \
@@ -449,7 +448,7 @@ Run the validation script:
 This checks:
 - Python 3.11+ installed
 - Required packages installed
-- Ollama running with qwen3:latest model
+- Ollama running with qwen3:latest model (only if `OLLAMA_ENABLED=true`)
 - All tests passing
 
 **If validation fails:** See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
@@ -462,7 +461,7 @@ This checks:
 
 ```bash
 # Parse sample alert (no network calls required)
-python3 Summarizer/clean-alert.py \
+.venv/bin/python3 Summarizer/clean-alert.py \
   Summarizer/Samples/google-alert-sample-2025-10-06.eml | head
 ```
 
@@ -471,7 +470,7 @@ python3 Summarizer/clean-alert.py \
 Requires Google Alert in Mail.app inbox:
 
 ```bash
-python3 -m Summarizer.cli run \
+.venv/bin/python3 -m Summarizer.cli run \
   --output-dir runs/test-$(date +%Y%m%d-%H%M%S) \
   --max-articles 3 \
   --subject-filter "Google Alert -"

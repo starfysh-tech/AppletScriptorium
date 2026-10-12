@@ -16,8 +16,7 @@ import re
 import subprocess
 import time
 from dataclasses import dataclass, replace
-from pathlib import Path
-from typing import Any, Callable, List, Literal, Optional
+from typing import Any, Callable, List, Literal
 
 import httpx
 
@@ -38,11 +37,10 @@ from .config import (
     LMSTUDIO_REASONING_EFFORT,
     LMSTUDIO_TIMEOUT,
     LMSTUDIO_HEALTH_TIMEOUT,
-    SUMMARY_PROMPT_TEMPLATE,
     SUMMARY_PROMPTS,
     SUMMARY_JSON_SCHEMA,
 )
-from .model_manager import LMS
+from .model_manager import load_lmstudio_model
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +116,7 @@ def summarize_article(
             article_type=article_type,
             token_budget=_lmstudio_content_token_budget(LMSTUDIO_BASE_URL, lm_cfg.model, lm_cfg.max_tokens),
         )
-        return _run_with_lmstudio(lm_prompt, lm_cfg), lm_cfg.model
+        return _run_with_lmstudio(lm_prompt, lm_cfg, response_format=SUMMARY_JSON_SCHEMA), lm_cfg.model
 
     # Built on demand: the LM Studio path sizes its own prompt to the model's
     # context, so only the custom-runner and Ollama paths use this one.
@@ -175,8 +173,9 @@ def summarize_article(
                 if OLLAMA_ENABLED:
                     logger.warning("[lmstudio] Falling back to Ollama (WARNING: may slow down computer)")
                     try:
-                        raw_output = _run_with_ollama(default_prompt(), cfg)
-                        model_name = cfg.model or OLLAMA_MODEL
+                        # cfg.model names an LM Studio model, which `ollama run` would try to pull
+                        raw_output = _run_with_ollama(default_prompt(), replace(cfg, model=OLLAMA_MODEL))
+                        model_name = OLLAMA_MODEL
                         backend_used = "ollama"
                     except SummarizerError as ollama_exc:
                         logger.error("[ollama] Fallback also failed: %s", ollama_exc)
@@ -346,10 +345,7 @@ def _build_prompt(article: ArticleDict, article_type: str | None = None, token_b
     title = article.get("title", "")
 
     # Select prompt based on article type
-    if article_type and article_type in SUMMARY_PROMPTS:
-        prompt_template = SUMMARY_PROMPTS[article_type]
-    else:
-        prompt_template = SUMMARY_PROMPT_TEMPLATE
+    prompt_template = SUMMARY_PROMPTS.get(article_type or "NEWS", SUMMARY_PROMPTS["NEWS"])
 
     return f"Title: {title}\n\nArticle content:\n{content_text}\n\n{prompt_template}"
 
@@ -368,9 +364,12 @@ def _attempt_ollama_restart() -> bool:
             check=False,
             timeout=5.0,
         )
-        if kill_result.returncode in (0, 1):  # 0=killed, 1=no process found
+        # Exit 1 means nothing matched, so nothing will restart; try brew below
+        if kill_result.returncode == 0:
             logger.info("Killed unresponsive ollama serve process; launchd will restart")
-            return True
+            if _wait_for_ollama():
+                return True
+            logger.info("Ollama did not come back after pkill; trying brew services")
     except Exception as exc:
         logger.debug("Could not kill ollama process: %s", exc)
 
@@ -385,17 +384,29 @@ def _attempt_ollama_restart() -> bool:
         )
         if brew_result.returncode == 0:
             logger.info("Restarted Ollama via brew services")
-            return True
+            return _wait_for_ollama()
     except Exception as exc:
         logger.debug("Could not restart ollama via brew: %s", exc)
 
     return False
 
 
-def _get_loaded_models(base_url: str) -> list[str]:
-    """Get list of currently loaded model IDs from LM Studio.
+def _wait_for_ollama(timeout: float = 15.0) -> bool:
+    """Poll the Ollama API until it answers, so the retry does not hit a daemon that is still starting."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            httpx.get(OLLAMA_BASE_URL, timeout=2.0)
+            return True
+        except httpx.HTTPError:
+            time.sleep(1.0)
+    return False
 
-    Returns empty list if cannot connect or no models loaded.
+
+def _get_downloaded_models(base_url: str) -> list[str]:
+    """Get the model IDs LM Studio has downloaded (/v1/models).
+
+    Returns empty list if cannot connect.
     """
     try:
         with httpx.Client(timeout=LMSTUDIO_HEALTH_TIMEOUT) as client:
@@ -411,7 +422,7 @@ def _get_loaded_models(base_url: str) -> list[str]:
 # /api/v0/models is the only endpoint carrying per-instance load state and
 # context length, and several helpers need it for the same article. Cache the
 # parsed records briefly so one summary costs one round trip instead of seven;
-# _ensure_correct_model_loaded drops the cache after changing what is loaded.
+# ensure_correct_model_loaded drops the cache after changing what is loaded.
 _MODELS_CACHE_TTL = 5.0
 _models_cache: tuple[float, str, list[dict]] | None = None
 
@@ -478,7 +489,7 @@ def resolve_lmstudio_model(base_url: str, explicit: str | None = None) -> str:
         logger.info("[lmstudio] No preferred model loaded; using what LM Studio has: %s", loaded[0])
         return loaded[0]
 
-    downloaded = _get_loaded_models(base_url)
+    downloaded = _get_downloaded_models(base_url)
     for preferred in LMSTUDIO_PREFERRED_MODELS:
         if preferred in downloaded:
             return preferred
@@ -492,7 +503,7 @@ def resolve_lmstudio_model(base_url: str, explicit: str | None = None) -> str:
     )
 
 
-def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool, str]:
+def ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool, str]:
     """Ensure the target model is loaded in LM Studio, loading it via `lms` if
     it is downloaded but not active. Other loaded models are left alone.
 
@@ -508,7 +519,7 @@ def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool
         logger.info("[lmstudio] Model already loaded: %s", target_model)
         return True, f"Using {target_model}"
 
-    if target_model not in _get_loaded_models(base_url):
+    if target_model not in _get_downloaded_models(base_url):
         return False, f"Model '{target_model}' not found - check .env LMSTUDIO_PREFERRED_MODELS / LMSTUDIO_MODEL"
 
     # Downloaded but not loaded - load it. Other loaded models are left alone;
@@ -516,18 +527,7 @@ def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool
     logger.info("[lmstudio] Model %s downloaded but not loaded, loading...", target_model)
 
     try:
-        result = subprocess.run(
-            [LMS, "load", "--yes", target_model],
-            capture_output=True,
-            text=True,
-            timeout=90
-        )
-
-        if result.returncode != 0:
-            stderr = result.stderr.strip()
-            if "not found" in stderr.lower() or "no model" in stderr.lower():
-                return False, f"Model '{target_model}' not found - check .env LMSTUDIO_PREFERRED_MODELS / LMSTUDIO_MODEL"
-            return False, f"Load failed: {stderr[:200]}"
+        load_lmstudio_model(target_model)
 
         # Verify load succeeded
         time.sleep(2)
@@ -539,36 +539,17 @@ def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool
         else:
             return False, f"Load succeeded but model not in list: {loaded}"
 
+    except subprocess.CalledProcessError as exc:
+        stderr = (exc.stderr or "").strip()
+        if "not found" in stderr.lower() or "no model" in stderr.lower():
+            return False, f"Model '{target_model}' not found - check .env LMSTUDIO_PREFERRED_MODELS / LMSTUDIO_MODEL"
+        return False, f"Load failed: {stderr[:200]}"
     except subprocess.TimeoutExpired:
         return False, f"Loading '{target_model}' timed out (>90s)"
     except FileNotFoundError:
         return False, "'lms' CLI not found - install LM Studio CLI"
     except Exception as e:
         return False, f"Load error: {e}"
-
-
-def _test_lmstudio_availability(base_url: str) -> bool:
-    """Fast health check to verify LM Studio is responsive.
-
-    Returns True if LM Studio responds to /v1/models within timeout.
-    """
-    try:
-        with httpx.Client(timeout=LMSTUDIO_HEALTH_TIMEOUT) as client:
-            response = client.get(f"{base_url}/v1/models")
-            if response.status_code == 200:
-                logger.debug("[lmstudio] Health check passed at %s", base_url)
-                return True
-            logger.warning("[lmstudio] Health check returned status %d", response.status_code)
-            return False
-    except httpx.TimeoutException:
-        logger.warning("[lmstudio] Health check timed out after %.1fs", LMSTUDIO_HEALTH_TIMEOUT)
-        return False
-    except httpx.ConnectError as exc:
-        logger.warning("[lmstudio] Connection failed: %s", exc)
-        return False
-    except (httpx.RequestError, httpx.InvalidURL) as exc:
-        logger.warning("[lmstudio] Health check error: %s", exc)
-        return False
 
 
 def _lmstudio_context_length(base_url: str, model: str) -> int | None:
@@ -655,11 +636,11 @@ def _fit_max_tokens(base_url: str, model: str, prompt: str, requested: int) -> i
     return min(requested, remaining)
 
 
-def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: dict = SUMMARY_JSON_SCHEMA) -> str:
+def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: dict | None) -> str:
     """Call LM Studio API using OpenAI-compatible endpoint.
 
-    response_format defaults to the summary schema; pass another schema for
-    calls that expect a different shape (e.g. classification).
+    response_format is required: pass the JSON schema the reply must match
+    (SUMMARY_JSON_SCHEMA, ARTICLE_TYPE_JSON_SCHEMA), or None for free text.
 
     Raises SummarizerError on any failure with informative error messages.
     """
@@ -668,8 +649,8 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: d
 
     target_model = resolve_lmstudio_model(LMSTUDIO_BASE_URL, cfg.model)
 
-    # Ensure correct model is loaded (auto-load if needed, unload others)
-    success, message = _ensure_correct_model_loaded(LMSTUDIO_BASE_URL, target_model)
+    # Ensure correct model is loaded (auto-load if needed)
+    success, message = ensure_correct_model_loaded(LMSTUDIO_BASE_URL, target_model)
     if not success:
         raise SummarizerError(f"Model setup failed: {message}")
 
@@ -681,8 +662,9 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: d
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": _fit_max_tokens(LMSTUDIO_BASE_URL, target_model, prompt, cfg.max_tokens),
         "temperature": cfg.temperature,
-        "response_format": response_format,
     }
+    if response_format is not None:
+        payload["response_format"] = response_format
     if LMSTUDIO_REASONING_EFFORT:
         payload["reasoning_effort"] = LMSTUDIO_REASONING_EFFORT
 
@@ -706,6 +688,8 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: d
                 raise SummarizerError("LM Studio returned empty response")
 
             content = data["choices"][0]["message"]["content"]
+            if not content:
+                raise SummarizerError("LM Studio returned no content")
             logger.debug("[lmstudio] Received %d chars from model", len(content))
             return content.strip()
 
@@ -725,7 +709,7 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: d
         raise SummarizerError(f"LM Studio connection error: {exc}")
     except (KeyError, json.JSONDecodeError) as exc:
         logger.error("[lmstudio] Response parsing error: %s", exc)
-        raise SummarizerError(f"LM Studio returned invalid JSON response")
+        raise SummarizerError("LM Studio returned invalid JSON response")
 
 
 def _run_with_ollama(prompt: str, cfg: SummarizerConfig) -> str:
@@ -765,46 +749,24 @@ def _run_with_ollama(prompt: str, cfg: SummarizerConfig) -> str:
 
 
 def _validate_bullet_structure(bullets: List[str], raw_output: str) -> tuple[bool, str]:
-    """Validate that bullets conform to required structure or accept prose fallback.
+    """Accept 3-4 bullets, or coherent prose (100-2000 chars) as fallback.
 
-    Checks:
-    - 3-4 structured bullets with required labels, OR
-    - Coherent prose (100-2000 chars) as fallback
+    Labels are not checked: each article type uses its own labels
+    (config.SUMMARY_PROMPTS). The LM Studio schema enforces 4 bullets.
 
     Returns:
         (is_valid, error_message) where error_message is empty if valid
     """
-    # Check for structured bullets (3-4 with labels)
     if 3 <= len(bullets) <= 4:
-        # Check for required labels
-        bullets_text = "\n".join(bullets)
-        required_labels = ["**KEY FINDING**", "**TACTICAL WIN", "**MARKET SIGNAL", "**CONCERN**"]
+        return (True, "")
 
-        # Find which labels are present
-        present_labels = [label for label in required_labels if label in bullets_text]
-        missing_labels = [label for label in required_labels if label not in bullets_text]
-
-        logger.debug("[validate][debug] Found %d bullets, checking labels - present: %s, missing: %s",
-                     len(bullets), present_labels, missing_labels)
-
-        if not missing_labels:
-            return (True, "")
-
-        # Has 3-4 bullets but missing labels - fall through to prose check
-
-    # Check for prose fallback (coherent text without bullet structure)
+    # Ollama has no schema and can answer in prose
     prose_length = len(raw_output.strip())
     if 100 <= prose_length <= 2000:
         logger.debug("[validate][debug] Accepting prose fallback (%d chars)", prose_length)
         return (True, "")
 
-    # Neither structured bullets nor valid prose
-    if len(bullets) < 3:
-        return (False, f"Expected 3-4 bullets, got {len(bullets)}, and output not valid prose ({prose_length} chars)")
-    elif len(bullets) > 4:
-        return (False, f"Expected 3-4 bullets, got {len(bullets)}")
-    else:
-        return (False, f"Expected 3-4 bullets with required labels, got {len(bullets)} bullets with missing labels: {', '.join(missing_labels)}")
+    return (False, f"Expected 3-4 bullets, got {len(bullets)}, and output not valid prose ({prose_length} chars)")
 
 
 def _parse_actionability(raw_output: str) -> str:
