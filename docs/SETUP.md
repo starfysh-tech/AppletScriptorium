@@ -148,8 +148,8 @@ cd ~/Code
 git clone https://github.com/starfysh-tech/AppletScriptorium.git
 cd AppletScriptorium
 
-# 2. Install Python dependencies (system Python with --user flag)
-python3 -m pip install --user -r Summarizer/requirements.txt
+# 2. Install Python dependencies into the repo venv
+python3 -m venv .venv && .venv/bin/pip install -r Summarizer/requirements.txt
 
 # 3. Optional: If you want Ollama fallback, install and start it
 brew install ollama
@@ -171,10 +171,10 @@ cp .env.template .env
 # Edit .env to add your JINA_API_KEY (for Cloudflare fallback)
 
 # 8. Run tests
-python3 -m pytest Summarizer/tests
+.venv/bin/python3 -m pytest Summarizer/tests
 ```
 
-**Note:** The `--user` flag installs packages to user site-packages, which is required for Mail rule automation (venv not supported).
+**Note:** The Mail rule calls `.venv/bin/python3` by full path, so the venv needs no activation. Homebrew Python 3.12+ blocks `pip install --user` (PEP 668).
 
 ---
 

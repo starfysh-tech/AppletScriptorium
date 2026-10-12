@@ -37,7 +37,7 @@ Build the simplest solution that works on local macOS—avoid premature abstract
 
 ### Prerequisites
 **Summarizer:**
-- Python 3.11+ system Python (venv NOT supported—see Constraints below)
+- Python 3.11+ in the repo venv `.venv` (see Constraints below)
 - LM Studio with loaded model (required) OR Ollama with `qwen3:latest` model (optional fallback)
 - Mail.app configured
 
@@ -133,15 +133,12 @@ Future tools live alongside existing tools. Shared utilities migrate to `shared/
 
 ## Critical Constraints
 
-### System Python Requirement
-- **Mail rule automation CANNOT use virtual environments**
-- Mail.app scripts run in restricted sandbox without venv access
-- **Must** install packages with `--user` flag: `python3 -m pip install --user -r requirements.txt`
-- Packages install to `~/.local/lib/python3.x/site-packages`
+### Python Environment
+- Dependencies live in the repo venv: `python3 -m venv .venv && .venv/bin/pip install -r Summarizer/requirements.txt`
+- The Mail rule calls `.venv/bin/python3` by full path, so it needs no activation
+- A venv avoids PEP 668, which blocks `pip install --user` on Homebrew Python 3.12+
 
 ### AppleScript Limitations
-- Cannot activate venv (Mail.app sandbox restriction)
-- Must use system Python: `which python3` (now dynamic for Intel/Apple Silicon compatibility)
 - Tab indentation required (not spaces)
 - Validate syntax before committing: `osascript -s <file>`
 

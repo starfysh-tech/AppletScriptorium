@@ -267,7 +267,7 @@ SegmentSalmon/segment-salmon --help
 
 **Key Conventions:**
 - Python module invocation: `python3 -m Tool.cli` (not direct script paths)
-- System Python required (Summarizer Mail rules)
+- Summarizer dependencies live in `.venv`; the Mail rule calls `.venv/bin/python3`
 - Snake_case for functions/variables
 - Conventional Commits for git messages
 

@@ -5,7 +5,7 @@ set -uo pipefail
 # Checks that all prerequisites and components are working
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PYTHON_CMD="python3"
+PYTHON_CMD="$REPO_ROOT/.venv/bin/python3"  # the interpreter the Mail rule uses
 
 # Colors for output
 RED='\033[0;31m'
@@ -152,7 +152,7 @@ if $PYTHON_CMD -m pytest "$REPO_ROOT/Summarizer/tests" -q >/dev/null 2>&1; then
     log_pass "Test suite passed"
 else
     log_fail "Test suite failed"
-    log_info "Run manually for details: python3 -m pytest Summarizer/tests -v"
+    log_info "Run manually for details: .venv/bin/python3 -m pytest Summarizer/tests -v"
 fi
 echo ""
 
@@ -180,8 +180,8 @@ if [ "$FAIL_COUNT" -eq 0 ]; then
     echo -e "${GREEN}All critical checks passed!${NC}"
     echo ""
     echo "You can now:"
-    echo "  - Test with: python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head"
-    echo "  - Run pipeline: python3 -m Summarizer.cli run --output-dir runs/test --max-articles 3"
+    echo "  - Test with: .venv/bin/python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head"
+    echo "  - Run pipeline: .venv/bin/python3 -m Summarizer.cli run --output-dir runs/test --max-articles 3"
     if [ ! -f "$MAIL_SCRIPT" ]; then
         echo "  - Setup Mail rule: ./setup-mail-rule.sh"
     fi

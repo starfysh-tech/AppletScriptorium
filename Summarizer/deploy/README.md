@@ -19,7 +19,7 @@ To run the pipeline on a fixed schedule from your Mac, follow the steps below. T
 
 Install Python dependencies once:
 ```bash
-python3 -m pip install --user -r Summarizer/requirements.txt
+python3 -m venv .venv && .venv/bin/pip install -r Summarizer/requirements.txt
 ```
 
 ## 2. Test the Pipeline Manually

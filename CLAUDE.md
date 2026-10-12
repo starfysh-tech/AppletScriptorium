@@ -66,7 +66,7 @@ This file primarily documents Summarizer development patterns. For ExtensionAudi
 ### Python Execution
 - **Always** use module invocation: `python3 -m Summarizer.cli` (NOT `python3 Summarizer/cli.py`)
 - Reason: Relative imports (`from .article_fetcher import ...`) require package mode
-- System Python with `--user` flag for dependencies (venv not compatible with Mail rule automation)
+- Dependencies live in `.venv` (`python3 -m venv .venv && .venv/bin/pip install -r Summarizer/requirements.txt`); PEP 668 blocks `--user` installs on Homebrew Python
 
 ### Testing Approach
 - Fixture-based: Committed samples in `Summarizer/Samples/` anchor regression tests
@@ -80,10 +80,9 @@ This file primarily documents Summarizer development patterns. For ExtensionAudi
 - See `cli.py` lines 150-180 for reference implementation
 
 ### AppleScript Constraints
-- **Cannot activate venv** — Mail.app scripts run in restricted sandbox, must use system Python
 - **Tab indentation** — AppleScript uses tabs, not spaces
 - **Validation** — Run `osascript -s` to check syntax before committing
-- **Python path** — Selected interactively during `setup-mail-rule.sh`; script detects all Python installations, checks for dependencies, and lets user choose
+- **Python path** — `setup-mail-rule.sh` creates `.venv` and writes `.venv/bin/python3` into the Mail rule; called by full path, no activation needed
 
 ### Common Bash Commands
 ```bash
@@ -102,8 +101,8 @@ python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10
 # Check AppleScript syntax
 osascript -s Summarizer/templates/process-alert.scpt
 
-# Validate system Python packages
-python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
+# Validate venv packages
+.venv/bin/python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 ```
 
 ## Key Technical Details
@@ -190,8 +189,7 @@ python3 -m pip list | grep -E "beautifulsoup4|httpx|readability"
 ## Common Gotchas
 
 - **LM Studio required**: Pipeline will fail without `LMSTUDIO_BASE_URL` in `.env`. The model no longer has to be pinned — whatever is loaded is used (see Summarization above)
-- **AppleScript Mail rules**: Cannot use venv, must use system Python with `--user` packages
-- **AppleScript Python path**: User selects Python installation during `setup-mail-rule.sh` (script detects all installations, checks dependencies with ✓/⚠/✗ indicators, prompts for selection)
+- **AppleScript Mail rules**: Use `.venv/bin/python3` by full path; `setup-mail-rule.sh` creates the venv and installs dependencies
 - **Python imports**: Must use `-m Summarizer.cli` for relative imports to work
 - **Markdown fallback cache**: `article_fetcher._CACHE_MARKDOWN` stores cleaned Markdown per URL
 - **Fixture regeneration**: Run `refresh-fixtures.py` after modifying parsers, diff before committing

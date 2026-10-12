@@ -33,7 +33,7 @@ fi
 
 {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting run with args: ${ARGS[*]}"
-  python3 -m Summarizer.cli run "${ARGS[@]}"
+  "$REPO_ROOT/.venv/bin/python3" -m Summarizer.cli run "${ARGS[@]}"
 } >> "$LOG_FILE" 2>&1 || STATUS=$?
 
 notify() {

@@ -85,12 +85,15 @@ fi
 echo ""
 
 # Step 3: Install Python dependencies
-log_info "Step 3/6: Installing Python dependencies..."
-if $PYTHON_CMD -m pip install --user -r "$REPO_ROOT/Summarizer/requirements.txt"; then
+log_info "Step 3/6: Installing Python dependencies into .venv..."
+# PEP 668 blocks pip installs into Homebrew Python; the Mail rule calls .venv/bin/python3 directly.
+[ -x "$REPO_ROOT/.venv/bin/python3" ] || $PYTHON_CMD -m venv "$REPO_ROOT/.venv"
+PYTHON_CMD="$REPO_ROOT/.venv/bin/python3"
+if $PYTHON_CMD -m pip install -q -r "$REPO_ROOT/Summarizer/requirements.txt"; then
     log_success "Python dependencies installed"
 else
     log_error "Failed to install Python dependencies"
-    log_info "Try manually: python3 -m pip install --user -r Summarizer/requirements.txt"
+    log_info "Try manually: .venv/bin/python3 -m pip install -r Summarizer/requirements.txt"
     exit 1
 fi
 
@@ -117,7 +120,7 @@ if $PYTHON_CMD -m pytest "$REPO_ROOT/Summarizer/tests" -q; then
     log_success "All tests passed"
 else
     log_warn "Some tests failed (non-critical for basic usage)"
-    log_info "Run manually to see details: python3 -m pytest Summarizer/tests -v"
+    log_info "Run manually to see details: .venv/bin/python3 -m pytest Summarizer/tests -v"
 fi
 
 echo ""
@@ -130,7 +133,7 @@ echo ""
 echo "Next steps:"
 echo ""
 echo "  1. Test with sample fixture:"
-echo "     python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head"
+echo "     .venv/bin/python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head"
 echo ""
 echo "  2. Set up Mail rule automation (recommended):"
 echo "     ./setup-mail-rule.sh"
@@ -139,7 +142,7 @@ echo "  3. Validate setup (also checks the LM Studio server):"
 echo "     ./validate.sh"
 echo ""
 echo "  4. Run manual test:"
-echo "     python3 -m Summarizer.cli run --output-dir runs/test --max-articles 3 --subject-filter 'Google Alert -'"
+echo "     .venv/bin/python3 -m Summarizer.cli run --output-dir runs/test --max-articles 3 --subject-filter 'Google Alert -'"
 echo ""
 echo "For complete documentation, see:"
 echo "  - docs/SETUP.md (setup, Mail automation, verification)"
