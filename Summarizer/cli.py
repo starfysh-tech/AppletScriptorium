@@ -788,8 +788,8 @@ def run_eval(args: argparse.Namespace) -> int:
     Returns:
         Exit code (0 on success)
     """
-    from .evals import ModelEvaluator, GOLD_ANNOTATIONS
-    from .evals.report import generate_markdown_report, save_report
+    from .evals import ModelEvaluator
+    from .evals.report import save_report
     from .evals.runner import format_score
 
     # Setup logging
@@ -852,8 +852,6 @@ def run_eval(args: argparse.Namespace) -> int:
         logging.error("No evaluation results generated")
         return 1
 
-    # Generate and save report
-    report = generate_markdown_report(results)
     save_report(results, args.output)
 
     # Print summary to console

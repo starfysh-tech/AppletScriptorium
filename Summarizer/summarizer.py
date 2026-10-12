@@ -16,7 +16,7 @@ import re
 import subprocess
 import time
 from dataclasses import dataclass, replace
-from typing import Any, Callable, List, Literal, Optional
+from typing import Any, Callable, List, Literal
 
 import httpx
 
@@ -709,7 +709,7 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: d
         raise SummarizerError(f"LM Studio connection error: {exc}")
     except (KeyError, json.JSONDecodeError) as exc:
         logger.error("[lmstudio] Response parsing error: %s", exc)
-        raise SummarizerError(f"LM Studio returned invalid JSON response")
+        raise SummarizerError("LM Studio returned invalid JSON response")
 
 
 def _run_with_ollama(prompt: str, cfg: SummarizerConfig) -> str:
