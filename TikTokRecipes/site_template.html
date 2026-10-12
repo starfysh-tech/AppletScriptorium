@@ -114,6 +114,26 @@ nav {
 .card h2 { font-size: 1rem; line-height: 1.3; margin: -4px 0 0; font-weight: 600; }
 .by { font-size: .85rem; color: var(--muted); }
 .empty { grid-column: 1 / -1; text-align: center; padding: 60px 0; color: var(--muted); }
+.cardwrap { position: relative; }
+.pick {
+  position: absolute; top: 8px; right: 8px; z-index: 1; width: 36px; height: 36px; border-radius: 50%; border: 0;
+  background: rgb(255 255 255 / .92); color: var(--teal); font: 700 1.15rem Poppins, sans-serif; box-shadow: var(--shadow);
+}
+.pick[aria-pressed=true] { background: var(--coral); color: #fff; }
+.tray {
+  position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 8px; padding: 10px 16px; background: var(--teal); color: #fff; box-shadow: 0 -2px 12px rgb(1 64 78 / .25);
+}
+.tray[hidden] { display: none; }
+.tray .count { margin-right: 4px; }
+.tray .btn.ghost { color: #fff; border-color: rgb(255 255 255 / .45); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 22px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 12px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); font-size: .88rem; }
+.chip a { text-decoration: none; font-weight: 600; }
+.chip button { border: 0; background: none; color: var(--muted); font-size: 1rem; padding: 0 4px; }
+.shop { max-width: 720px; margin-bottom: 60px; }
+.shop .from { color: var(--muted); font-size: .85rem; }
 
 /* Recipe page */
 .back { display: inline-block; margin: 22px 0 14px; font-weight: 700; text-decoration: none; color: var(--muted); }
@@ -176,6 +196,7 @@ footer { border-top: 1px solid var(--line); color: var(--muted); font-size: .85r
   <label class="search"><input type="search" id="q" placeholder="Search recipes or ingredients" aria-label="Search"></label>
 </nav>
 <div class="wrap" id="app"></div>
+<div class="tray" id="tray" hidden></div>
 <noscript><p class="wrap">This site needs JavaScript. Without it, read the <a href="/llms.txt">recipe index</a>, the <a href="/sitemap.xml">sitemap</a>, or search with <a href="/api/search?q=chicken&amp;format=md">/api/search?q=</a>.</p></noscript>
 <footer>Pulled from TikTok descriptions, captions, and linked recipe pages. Each recipe links to its original video. Blank quantities were not stated by the creator.</footer>
 <script type="application/json" id="data">__DATA__</script>
@@ -184,7 +205,8 @@ const recipes = JSON.parse(document.getElementById("data").textContent);
 const CATS = ["breakfast", "main", "side", "soup-salad", "snack", "dessert", "drink", "sauce-dip", "other"];
 const EMOJI = { breakfast: "🍳", main: "🍝", side: "🥦", "soup-salad": "🥗", snack: "🍿",
   dessert: "🍰", drink: "🍹", "sauce-dip": "🫙", other: "🍴" };
-const state = { q: "", cat: null, tags: new Set(), flavor: null, sort: "newest", tagsOpen: false, scroll: 0 };
+const state = { q: "", cat: null, tags: new Set(), flavor: null, sort: "newest", tagsOpen: false, scroll: 0,
+  picks: new Set(), only: false };
 const SORTS = { newest: ["Newest added", (a, b) => a.video.added - b.video.added],
   oldest: ["Oldest added", (a, b) => b.video.added - a.video.added],
   az: ["A–Z", (a, b) => a.title.localeCompare(b.title)] };
@@ -214,6 +236,7 @@ recipes.forEach((r) => {
   r.hay = [r.title, r.category, ...r.tags, ...r.ingredients.map((i) => i.item), r.video.uploader, r.credit || ""]
     .join(" ").toLowerCase();
 });
+const byId = new Map(recipes.map((r) => [r.id, r]));
 const byTitle = (a, b) => a.title.localeCompare(b.title);
 const tagCounts = {};
 recipes.forEach((r) => r.tags.forEach((t) => (tagCounts[t] = (tagCounts[t] || 0) + 1)));
@@ -221,6 +244,7 @@ recipes.forEach((r) => r.tags.forEach((t) => (tagCounts[t] = (tagCounts[t] || 0)
 const allTags = Object.entries(tagCounts).filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 
 function matches(r) {
+  if (state.only && !state.picks.has(r.id)) return false;
   if (state.cat && r.category !== state.cat) return false;
   if (state.flavor && r.flavor !== state.flavor) return false;
   for (const t of state.tags) if (!r.tags.includes(t)) return false;
@@ -235,6 +259,8 @@ function readURL() {
   state.flavor = ["sweet", "savory"].includes(p.get("flavor")) ? p.get("flavor") : null;
   state.tags = new Set((p.get("tags") || "").split(",").filter(Boolean));
   state.sort = p.get("sort") in SORTS ? p.get("sort") : "newest";
+  state.picks = new Set((p.get("picks") || "").split(",").filter((id) => byId.has(id)));
+  state.only = p.get("only") === "1" && state.picks.size > 0;
   q.value = state.q;
 }
 
@@ -245,12 +271,13 @@ function writeURL() {
   if (state.flavor) p.set("flavor", state.flavor);
   if (state.tags.size) p.set("tags", [...state.tags].join(","));
   if (state.sort !== "newest") p.set("sort", state.sort);
+  if (state.picks.size) p.set("picks", [...state.picks].join(","));
+  if (state.only) p.set("only", "1");
   const qs = p.toString().replaceAll("%2C", ",");
   history.replaceState(null, "", (qs ? "?" + qs : location.pathname) + location.hash);
 }
 
 function listView() {
-  writeURL();
   const list = recipes.filter(matches).sort(SORTS[state.sort][1]);
   const cats = CATS.filter((c) => recipes.some((r) => r.category === c)).map((c) => {
     const sample = recipes.filter((r) => r.category === c && r.video.thumb).sort(byTitle)[0];
@@ -284,7 +311,7 @@ function listView() {
   const surprise = el("button", { class: "btn", text: "🎲 Surprise me", onclick: () => {
     if (list.length) location.hash = list[Math.floor(Math.random() * list.length)].id;
   } });
-  const heading = state.cat ? label(state.cat) : "All recipes";
+  const heading = state.only ? "Picked recipes" : state.cat ? label(state.cat) : "All recipes";
   app.replaceChildren(
     el("section", { class: "hero" },
       el("h1", { text: "What are we cooking?" }),
@@ -298,11 +325,80 @@ function listView() {
 }
 
 function card(r) {
-  return el("a", { class: "card", href: "#" + r.id },
-    photo(r),
-    el("div", { class: "kicker", text: label(r.category) }),
-    el("h2", { text: r.title }),
-    el("div", { class: "by", text: "by @" + r.video.uploader }));
+  const picked = state.picks.has(r.id);
+  return el("div", { class: "cardwrap" },
+    el("a", { class: "card", href: "#" + r.id },
+      photo(r),
+      el("div", { class: "kicker", text: label(r.category) }),
+      el("h2", { text: r.title }),
+      el("div", { class: "by", text: "by @" + r.video.uploader })),
+    el("button", { class: "pick", "aria-pressed": String(picked), text: picked ? "✓" : "+",
+      "aria-label": `${picked ? "Remove" : "Pick"} ${r.title}`, onclick: () => togglePick(r.id) }));
+}
+
+function togglePick(id) {
+  state.picks.has(id) ? state.picks.delete(id) : state.picks.add(id);
+  if (!state.picks.size) state.only = false;
+  state.scroll = scrollY;
+  render(true);
+}
+
+const pickURL = (hash = "") => `${location.origin}${location.pathname}?picks=${[...state.picks].join(",")}&only=1${hash}`;
+
+// Sticky bar for the picked recipes; shown on every view while anything is picked.
+function trayView(onList) {
+  const tray = document.getElementById("tray");
+  tray.hidden = !state.picks.size;
+  if (!state.picks.size) return tray.replaceChildren();
+  const n = state.picks.size;
+  tray.replaceChildren(...[
+    el("span", { class: "count", text: `${n} picked` }),
+    onList ? el("button", { class: "btn small ghost", text: state.only ? "Show all" : "Show picked",
+      onclick: () => { state.only = !state.only; state.scroll = 0; render(); } }) : null,
+    location.hash === "#list" ? null : el("a", { class: "btn small", href: "#list", text: "🛒 Shopping list" }),
+    el("button", { class: "btn small ghost", text: "⧉ Share picks",
+      onclick: (e) => copyText(pickURL(location.hash === "#list" ? "#list" : ""), e.currentTarget, "⧉ Share picks", "✓ Link copied") }),
+    el("button", { class: "btn small ghost", text: "Clear", onclick: () => { state.picks.clear(); state.only = false; render(true); } }),
+  ].filter(Boolean));
+}
+
+// Same ingredient from several recipes becomes one line: "(...)" notes and ", diced" are dropped,
+// and plurals match singulars ("eggs" = "egg", "tomatoes" = "tomato").
+function shoppingList(rs) {
+  const groups = new Map();
+  for (const r of rs) for (const i of r.ingredients) {
+    const name = i.item.replace(/\(.*?\)/g, "").split(",")[0].trim() || i.item;
+    const key = name.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim().replace(/(?<=o)es$|s$/, "");
+    if (!groups.has(key)) groups.set(key, { name: name.charAt(0).toUpperCase() + name.slice(1).toLowerCase(), uses: [] });
+    groups.get(key).uses.push({ quantity: i.quantity, recipe: r });
+  }
+  return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+const amounts = (g) => g.uses.some((u) => u.quantity) ? g.uses.map((u) => u.quantity || "some").join(" + ") : "";
+
+function shoppingView() {
+  const picked = [...state.picks].map((id) => byId.get(id));
+  const items = shoppingList(picked);
+  const text = items.map((g) => `- ${g.name}${amounts(g) ? ": " + amounts(g) : ""}`).join("\n") + "\n";
+  app.replaceChildren(
+    el("a", { class: "back", href: "#", text: "← All recipes" }),
+    el("section", { class: "shop" },
+      el("h1", { text: "Shopping list" }),
+      picked.length ? el("p", { class: "by", text: `${items.length} ingredients from ${picked.length} recipes. Tick off what you already have.` })
+        : el("p", { class: "by", text: "Pick recipes with the + on each card to build a list." }),
+      el("div", { class: "chips" }, ...picked.map((r) => el("span", { class: "chip" },
+        el("a", { href: "#" + r.id, text: r.title }),
+        el("button", { "aria-label": "Remove " + r.title, text: "×", onclick: () => togglePick(r.id) })))),
+      items.length ? el("div", { class: "panel" },
+        el("div", { class: "links" },
+          el("button", { class: "btn small", text: "⧉ Copy list",
+            onclick: (e) => copyText(text, e.currentTarget, "⧉ Copy list", "✓ Copied") })),
+        el("ul", { class: "ing" }, ...items.map((g) => el("li", {}, el("label", {},
+          el("input", { type: "checkbox" }),
+          el("span", {}, g.name, amounts(g) ? el("span", { class: "qty", text: " " + amounts(g) }) : null,
+            g.uses.length > 1 ? el("span", { class: "from", text: ` · ${g.uses.length} recipes` }) : null)))))) : null));
+  document.title = "Shopping list · __TITLE__";
 }
 
 function recipeView(r) {
@@ -326,10 +422,12 @@ function recipeView(r) {
         el("div", { class: "links" },
           el("a", { class: "btn small", href: safeUrl(r.video.url), target: "_blank", rel: "noopener", text: "▶ Open on TikTok" }),
           el("button", { class: "btn small ghost", text: "⧉ Copy recipe", onclick: (e) => copy(r, e.currentTarget) }),
+          el("button", { class: "btn small ghost", "aria-pressed": String(state.picks.has(r.id)),
+            text: state.picks.has(r.id) ? "✓ Picked" : "+ Pick for shopping list", onclick: () => togglePick(r.id) }),
           ...links.map((u) => el("a", { class: "btn small ghost", href: safeUrl(u), target: "_blank", rel: "noopener",
             text: "↗ " + host(u) }))),
         r.tags.length ? el("div", { class: "tags" }, ...r.tags.map((t) => el("button", { class: "tag", text: "#" + t,
-          onclick: () => { Object.assign(state, { tags: new Set([t]), cat: null, flavor: null, q: "", scroll: 0 }); q.value = ""; location.hash = ""; } })))
+          onclick: () => { Object.assign(state, { tags: new Set([t]), cat: null, flavor: null, q: "", scroll: 0, only: false }); q.value = ""; location.hash = ""; } })))
           : null,
         siblingsNote(r),
         videoEmbed(r))),
@@ -347,7 +445,6 @@ function recipeView(r) {
         r.missing.length ? el("div", { class: "note" }, el("strong", { text: "Not stated in the video" }),
           el("ul", {}, ...r.missing.map((m) => el("li", { text: m })))) : null)));
   document.title = `${r.title} · __TITLE__`;
-  scrollTo(0, 0);
 }
 
 // The player iframe loads only when opened, so the list stays fast and TikTok is not contacted until asked.
@@ -390,24 +487,34 @@ function markdown(r) {
   return lines.join("\n") + "\n";
 }
 
-async function copy(r, btn) {
+const copy = (r, btn) => copyText(markdown(r), btn, "⧉ Copy recipe", "✓ Copied");
+
+async function copyText(text, btn, idle, done) {
   try {
-    await navigator.clipboard.writeText(markdown(r));
-    btn.textContent = "✓ Copied";
+    await navigator.clipboard.writeText(text);
+    btn.textContent = done;
   } catch {
     btn.textContent = "Copy failed";
   }
-  setTimeout(() => (btn.textContent = "⧉ Copy recipe"), 1800);
+  setTimeout(() => (btn.textContent = idle), 1800);
 }
 
-function render() {
+// keepScroll: re-render in place (picking a recipe) instead of jumping to the view's start.
+function render(keepScroll = false) {
+  writeURL();
   const id = decodeURIComponent(location.hash.slice(1));
   // Older links carried a position suffix (-2); fall back to the id without it.
   const r = id && (recipes.find((x) => x.id === id) || recipes.find((x) => x.id === id.replace(/-\d+$/, "")));
-  if (r) return recipeView(r);
-  document.title = "__TITLE__";
-  listView();
-  scrollTo(0, state.scroll);
+  const y = scrollY;
+  trayView(!r && id !== "list");
+  if (id === "list") shoppingView();
+  else if (r) recipeView(r);
+  else {
+    document.title = "__TITLE__";
+    listView();
+    return scrollTo(0, keepScroll ? y : state.scroll);
+  }
+  scrollTo(0, keepScroll ? y : 0);
 }
 
 const q = document.getElementById("q");
