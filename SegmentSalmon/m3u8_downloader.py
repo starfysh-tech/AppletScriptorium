@@ -500,6 +500,7 @@ def main():
         sys.exit(1)
     except Exception as e:
         if downloader.interrupted:
+            downloader._remove_segments_dir()
             sys.exit(130)
         print(f"Error: {e}")
         sys.exit(1)

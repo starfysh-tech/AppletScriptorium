@@ -448,7 +448,7 @@ Run the validation script:
 This checks:
 - Python 3.11+ installed
 - Required packages installed
-- Ollama running with qwen3:latest model
+- Ollama running with qwen3:latest model (only if `OLLAMA_ENABLED=true`)
 - All tests passing
 
 **If validation fails:** See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
