@@ -60,11 +60,21 @@ Each full run publishes `site/` to Cloudflare Pages at https://tt-recipes.pages.
 TikTokRecipes/install_hourly.sh 'https://www.tiktok.com/@user/collection/Name-123'
 ```
 
-This installs a launchd agent (`com.starfysh.tiktokrecipes`) that runs now and every hour. Each run first does `git pull --ff-only origin main`, so changes merged to main go live within an hour. The pull fails without changing anything when the checkout has conflicting local edits or is not on main; the run then uses the local code. A run with no new videos and no code changes skips the upload. New videos are extracted and published. Cached videos cost no LLM calls. The Mac must be awake and LM Studio running. Output goes to `TikTokRecipes/runs/hourly.log`. Remove it with:
+This installs a launchd agent (`com.starfysh.tiktokrecipes`) that runs now and every hour. Each run first does `git pull --ff-only origin main`, so changes merged to main go live within an hour. The pull fails without changing anything when the checkout has conflicting local edits or is not on main; the run then uses the local code. A run with no new videos and no code changes skips the upload. New videos are extracted and published. Cached videos cost no LLM calls. The Mac must be awake and LM Studio running. Output goes to `TikTokRecipes/runs/hourly.log`.
+
+Pause it (the plist stays in `~/Library/LaunchAgents/`):
 
 ```bash
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.starfysh.tiktokrecipes.plist
 ```
+
+Resume it (it runs once right away, then hourly):
+
+```bash
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.starfysh.tiktokrecipes.plist
+```
+
+Check whether it is loaded: `launchctl list | grep tiktokrecipes` prints nothing when it is paused. To remove it for good, pause it and delete the plist.
 
 ### Troubleshooting
 

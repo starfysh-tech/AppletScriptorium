@@ -191,7 +191,7 @@ diff -u Summarizer/Samples/google-alert-sample-2025-10-06-links.tsv /tmp/alert-l
 - **Markdown fallbacks**: `urltomd_fetcher.py` + `jina_fetcher.py` provide Markdown when httpx is blocked
 - **Fixture regeneration**: Must diff against committed fixtures before merging parser changes
 - **System permissions**: Different modes require different permissions:
-  - **Mail rule automation**: Accessibility (System Settings → Privacy & Security → Accessibility → enable Mail.app)
+  - **Mail rule automation**: none (no UI scripting; the digest goes out over SMTP)
   - **Manual CLI usage**: Automation (System Settings → Privacy & Security → Automation → enable Terminal → Mail)
 - **Breaking changes**: No backward compatibility maintained—document in release notes only
 
