@@ -106,7 +106,7 @@ OLLAMA_MODEL=qwen3:latest
 **Backend Fallback Behavior:**
 - Pipeline tries LM Studio first (if `LMSTUDIO_BASE_URL` configured)
 - If LM Studio fails AND `OLLAMA_ENABLED=true`, tries Ollama
-- The bundled `install.sh` and `validate.sh` scripts also provision/check Ollama as the supported fallback path
+- `install.sh` does not install Ollama; `validate.sh` checks it only when `OLLAMA_ENABLED=true`
 - If neither backend is available, pipeline exits with error
 
 ---
@@ -134,7 +134,6 @@ cd AppletScriptorium
 The `install.sh` script automates:
 - Checking prerequisites
 - Installing Python dependencies
-- Provisioning Ollama fallback support (`brew services start ollama` + `ollama pull qwen3:latest`)
 - Making scripts executable
 - Running the Summarizer test suite
 
@@ -190,7 +189,7 @@ macOS requires permissions for AppleScript to interact with Mail.app:
 1. Go to **System Settings** → **Privacy & Security** → **Automation**
 2. Enable **Terminal → Mail**
 
-**When to grant:** When first running `python3 -m Summarizer.cli run`
+**When to grant:** When first running `.venv/bin/python3 -m Summarizer.cli run`
 
 **What it enables:** AppleScript can capture inbox messages
 
@@ -272,7 +271,7 @@ Test your SMTP credentials before using the Mail rule:
 
 ```bash
 # Run pipeline manually with SMTP sending
-python3 -m Summarizer.cli run \
+.venv/bin/python3 -m Summarizer.cli run \
   --output-dir runs/test-$(date +%Y%m%d-%H%M%S) \
   --max-articles 1 \
   --email-digest your-email@example.com \
@@ -462,7 +461,7 @@ This checks:
 
 ```bash
 # Parse sample alert (no network calls required)
-python3 Summarizer/clean-alert.py \
+.venv/bin/python3 Summarizer/clean-alert.py \
   Summarizer/Samples/google-alert-sample-2025-10-06.eml | head
 ```
 
@@ -471,7 +470,7 @@ python3 Summarizer/clean-alert.py \
 Requires Google Alert in Mail.app inbox:
 
 ```bash
-python3 -m Summarizer.cli run \
+.venv/bin/python3 -m Summarizer.cli run \
   --output-dir runs/test-$(date +%Y%m%d-%H%M%S) \
   --max-articles 3 \
   --subject-filter "Google Alert -"

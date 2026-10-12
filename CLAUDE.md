@@ -38,7 +38,7 @@ This file primarily documents Summarizer development patterns. For ExtensionAudi
 ## Core Files Reference
 
 ### Entry Points
-- `Summarizer/cli.py` — Main orchestrator, invoke with `python3 -m Summarizer.cli run`
+- `Summarizer/cli.py` — Main orchestrator, invoke with `.venv/bin/python3 -m Summarizer.cli run`
 - `Summarizer/fetch-alert-source.applescript` — Captures inbox messages (manual CLI)
 - `Summarizer/templates/process-alert.scpt` — Mail rule automation script
 
@@ -64,13 +64,13 @@ This file primarily documents Summarizer development patterns. For ExtensionAudi
 ## Development Patterns
 
 ### Python Execution
-- **Always** use module invocation: `python3 -m Summarizer.cli` (NOT `python3 Summarizer/cli.py`)
+- **Always** use module invocation: `.venv/bin/python3 -m Summarizer.cli` (NOT `python3 Summarizer/cli.py`)
 - Reason: Relative imports (`from .article_fetcher import ...`) require package mode
 - Dependencies live in `.venv` (`python3 -m venv .venv && .venv/bin/pip install -r Summarizer/requirements.txt`); PEP 668 blocks `--user` installs on Homebrew Python
 
 ### Testing Approach
 - Fixture-based: Committed samples in `Summarizer/Samples/` anchor regression tests
-- Run tests: `python3 -m pytest Summarizer/tests`
+- Run tests: `.venv/bin/python3 -m pytest Summarizer/tests`
 - Refresh fixtures: `Summarizer/refresh-fixtures.py`
 - Mock external calls: `article_fetcher` has in-memory cache, call `clear_cache()` between tests
 
@@ -87,16 +87,16 @@ This file primarily documents Summarizer development patterns. For ExtensionAudi
 ### Common Bash Commands
 ```bash
 # Run all tests
-python3 -m pytest Summarizer/tests
+.venv/bin/python3 -m pytest Summarizer/tests
 
 # Test specific module
-python3 -m pytest Summarizer/tests/test_link_extractor.py -v
+.venv/bin/python3 -m pytest Summarizer/tests/test_link_extractor.py -v
 
 # Refresh fixtures after parser changes
 Summarizer/refresh-fixtures.py
 
 # Parse alert and view links
-python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head
+.venv/bin/python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head
 
 # Check AppleScript syntax
 osascript -s Summarizer/templates/process-alert.scpt
@@ -159,7 +159,7 @@ osascript -s Summarizer/templates/process-alert.scpt
 
 **Ollama Health Detection & Auto-Recovery** (`Summarizer/summarizer.py:_run_with_ollama`):
 - **Timeout**: `OLLAMA_TIMEOUT` env var (seconds, default 120) — detects unresponsive daemon
-- **Detection**: Logs `"Ollama unresponsive (timeout after 120s); attempting restart"`
+- **Detection**: Logs `"Ollama unresponsive (timeout after <OLLAMA_TIMEOUT>s); attempting restart"`
 - **Auto-restart**: Kills stuck process via `pkill -f "ollama serve"`; launchd auto-relaunches
 - **Fallback**: If pkill finds no process, attempts `brew services restart ollama`; then waits up to 15s for the API
 - **Retry**: Retries summarization once after restart attempt

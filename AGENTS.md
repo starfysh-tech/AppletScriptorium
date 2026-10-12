@@ -48,16 +48,16 @@ Build the simplest solution that works on local macOS—avoid premature abstract
 ### Summarizer Commands
 ```bash
 # Run full pipeline (use -m for module invocation)
-python3 -m Summarizer.cli run --output-dir runs/test --max-articles 3
+.venv/bin/python3 -m Summarizer.cli run --output-dir runs/test --max-articles 3
 
 # Run all tests
-python3 -m pytest Summarizer/tests
+.venv/bin/python3 -m pytest Summarizer/tests
 
 # Run specific test file
-python3 -m pytest Summarizer/tests/test_link_extractor.py -v
+.venv/bin/python3 -m pytest Summarizer/tests/test_link_extractor.py -v
 
 # Parse alert and view extracted links
-python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head
+.venv/bin/python3 Summarizer/clean-alert.py Summarizer/Samples/google-alert-sample-2025-10-06.eml | head
 
 # Refresh fixtures after parser changes
 Summarizer/refresh-fixtures.py
@@ -81,7 +81,7 @@ open https://crxplorer.com/
 ```
 
 ### Testing Instructions
-- Run `python3 -m pytest Summarizer/tests` before every commit
+- Run `.venv/bin/python3 -m pytest Summarizer/tests` before every commit
 - Fixtures in `Summarizer/Samples/` anchor regression tests
 - After modifying parsers, run `Summarizer/refresh-fixtures.py` and diff output
 - Mock external calls: `article_fetcher.clear_cache()` resets in-memory cache between tests
@@ -91,7 +91,7 @@ open https://crxplorer.com/
 
 ### Python
 - PEP 8: 4-space indents, snake_case for functions/variables
-- **Always** use module invocation: `python3 -m Summarizer.cli` (NOT `python3 Summarizer/cli.py`)
+- **Always** use module invocation: `.venv/bin/python3 -m Summarizer.cli` (NOT `python3 Summarizer/cli.py`)
 - Reason: Relative imports (`from .article_fetcher import ...`) require package mode
 - Prefer pure functions and dependency injection for testability
 
@@ -143,7 +143,7 @@ Future tools live alongside existing tools. Shared utilities migrate to `shared/
 - Validate syntax before committing: `osascript -s <file>`
 
 ### Module Invocation Pattern
-- **Always** use: `python3 -m Summarizer.cli run`
+- **Always** use: `.venv/bin/python3 -m Summarizer.cli run`
 - **Never** use: `python3 Summarizer/cli.py`
 - Reason: Package imports (`from .module import ...`) fail without `-m`
 
@@ -167,7 +167,7 @@ Future tools live alongside existing tools. Shared utilities migrate to `shared/
 ### Before Committing
 ```bash
 # Run tests
-python3 -m pytest Summarizer/tests
+.venv/bin/python3 -m pytest Summarizer/tests
 
 # Validate AppleScript syntax
 osascript -s Summarizer/templates/process-alert.scpt

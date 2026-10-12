@@ -27,10 +27,10 @@ python3 -m venv .venv && .venv/bin/pip install -r Summarizer/requirements.txt
 From the repo root, generate a full run to ensure everything works:
 ```bash
 # Process most recent inbox message
-python3 -m Summarizer.cli run --output-dir runs/manual-test
+.venv/bin/python3 -m Summarizer.cli run --output-dir runs/manual-test
 
 # Or specify a subject filter to match specific alerts
-python3 -m Summarizer.cli run \
+.venv/bin/python3 -m Summarizer.cli run \
   --output-dir runs/manual-test \
   --subject-filter "Medication reminder"
 ```
@@ -83,7 +83,7 @@ Summarizer/bin/run_alert.sh
 ```
 Or replay into a scratch directory (limit article count if needed):
 ```bash
-python3 -m Summarizer.cli run --output-dir runs/manual-replay --max-articles 3
+.venv/bin/python3 -m Summarizer.cli run --output-dir runs/manual-replay --max-articles 3
 ```
 - For Cloudflare-guarded links, install the url-to-md CLI (`npm install -g url-to-markdown-cli-tool`) so the pipeline can extract Markdown when standard HTTP fails.
 - `ALERT_DIGEST_EMAIL` causes the CLI to create `digest.eml`. SMTP delivery only happens when the CLI is run with `--smtp-send` (the Mail rule template does this; `Summarizer/bin/run_alert.sh` does not).

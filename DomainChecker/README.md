@@ -23,7 +23,7 @@ Checks run in order and stop at the first hit (30 TLDs in parallel; 2s timeout f
 Each TLD gets one status:
 
 - `taken` — a check hit
-- `free` — no check hit and every lookup answered
+- `free` — no check hit and every lookup answered (HTTP errors count as no hit, since a free domain never answers HTTP)
 - `unknown` — no check hit, but the DNS or whois lookup timed out or failed, so the TLD could not be judged
 
 Free is a hint, not a guarantee. Confirm at a registrar before you buy.

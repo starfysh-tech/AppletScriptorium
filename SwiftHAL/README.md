@@ -124,7 +124,7 @@ Supported metrics: `volume`, `difficulty`, `effort`, `riskScore`, `time`, `vocab
 
 ### Advanced Options
 
-By default, files ending in `Tests.swift` and folders named `Tests` below `--path` are skipped.
+By default, files ending in `Tests.swift` and folders named `Tests` below `--path` are skipped. A single file passed as `--path` is always analyzed.
 
 ```bash
 # Write output to file

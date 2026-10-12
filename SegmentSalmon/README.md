@@ -119,7 +119,7 @@ The dynamic progress bar shows:
 ### Error Recovery
 - **Exponential Backoff**: `2^attempt` second delays between retries
 - **Failed Segments**: If any segment still fails after its retries, skips concatenation, keeps the downloaded segments, and exits 1
-- **Unsupported Streams**: Exits with an error on encrypted (`#EXT-X-KEY`), fMP4 (`#EXT-X-MAP`), or separate-audio (`#EXT-X-MEDIA:TYPE=AUDIO`) playlists and suggests `ffmpeg -i <url> -c copy`
+- **Unsupported Streams**: Exits with an error on encrypted (`#EXT-X-KEY`), fMP4 (`#EXT-X-MAP`), or separate-audio (`#EXT-X-MEDIA:TYPE=AUDIO`) playlists and suggests `ffmpeg -i <url> -c copy output.mp4`
 - **Network Resilience**: Handles connection timeouts and HTTP errors
 
 ## 🐛 Troubleshooting
