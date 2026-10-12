@@ -1,6 +1,6 @@
 # TikTokRecipes
 
-Turns a TikTok collection into a recipe book. Reads each video's description, captions, and any recipe page linked in the description. Does not download or process the video itself.
+Turns a TikTok collection into a recipe book, published at https://tt-recipes.pages.dev/ and updated hourly. Reads each video's description, captions, and any recipe page linked in the description. Does not download or process the video itself.
 
 ## Requirements
 
@@ -23,7 +23,7 @@ Short `/t/` links work too. Options:
 - `--model ID` — LM Studio model (default: first loaded LLM)
 - `--cookies-from-browser chrome` — if TikTok needs your login
 - `--refresh` — refetch metadata and captions
-- `--reextract` — rerun the LLM on cached videos
+- `--reextract` — rerun the LLM on cached videos, including ones that failed before
 - `--fetch-only` — cache metadata and captions, skip the LLM
 - `--no-deploy` — build `site/` but do not publish it
 
@@ -37,10 +37,13 @@ runs/<collection>/
 ├── index.md         # recipes grouped by meal type, with tags
 ├── recipes.json     # all recipes as data
 ├── recipes/*.md     # one file per recipe
-└── cache/<id>/      # video.info.json, captions, thumb.jpg, linked.json, extracted.json
+├── order.json       # video ids in the order they were saved, newest first
+├── deployed.sha256  # fingerprint of the last uploaded site; unchanged sites are not uploaded
+└── cache/<id>/      # video.info.json, captions, thumb.jpg, food.jpg, linked.json, extracted.json,
+                     # extract_failed.txt (LLM error; skipped until --reextract)
 ```
 
-`site/` is a static website. Open `site/index.html` or host the folder. It has search, meal type filters, a sweet / savory toggle, a multi-select tag filter (recipes must have every selected tag), sorting by newest added, oldest added, or A–Z, a random pick, and an ingredient checklist. Filters and sort are kept in the URL (`?q=&cat=&flavor=&tags=a,b&sort=oldest`), so a filtered view can be shared. Each recipe has its own page (`#<recipe>`) with the TikTok video embedded in a collapsed section, a button that copies the recipe as Markdown, and links to the video and to any site linked in the description. Each card uses the photo from the linked recipe page when there is one, else the cover the creator picked on TikTok. Both are saved to the cache because TikTok's image links expire within days. Edit `site_template.html` to change the design.
+`site/` is a static website. Open `site/index.html` or host the folder. It has search, meal type filters, a sweet / savory toggle, a multi-select tag filter (recipes must have every selected tag), sorting by newest added, oldest added, or A–Z, a random pick, and an ingredient checklist. Filters and sort are kept in the URL (`?q=&cat=&flavor=&tags=a,b&sort=oldest`), so a filtered view can be shared. Each recipe has its own page (`#<recipe>`) with the TikTok video embedded in a collapsed section (when a browser extension blocks TikTok's player, it shows a link to the video instead), a button that copies the recipe as Markdown, and links to the video and to any site linked in the description. Each card uses the photo from the linked recipe page when there is one, else the cover the creator picked on TikTok. Both are saved to the cache because TikTok's image links expire within days. When one video teaches several dishes, each of its recipe pages links to the others. A recipe's id is its title plus the last 6 digits of the video id, so links stay stable when the LLM re-runs. Edit `site_template.html` to change the design.
 
 Meal types: breakfast, main, side, soup-salad, snack, dessert, drink, sauce-dip, other. Each recipe also gets 0–5 free tags.
 
@@ -74,7 +77,6 @@ Any AI or script can read the site without running its JavaScript:
 
 ## Local search
 
-
 ```bash
 python3 TikTokRecipes/search_recipes.py chicken rice --flavor savory
 python3 TikTokRecipes/search_recipes.py --tag high-protein --tag air-fryer --category snack
@@ -83,6 +85,13 @@ python3 TikTokRecipes/search_recipes.py --show <id>
 ```
 
 Words match title, ingredients, tags, category, and creator. `-word` excludes. It reads the newest local `runs/*/recipes.json`, or the live site's `/recipes.json` when there is no local run. The site also serves `/llms.txt`, which describes the data for AI tools.
+
+## What counts as a recipe
+
+- A video about something other than making a dish or drink (a vlog, a science demo, a product ad) is listed under "Not recipes" in `index.md`.
+- Usually one video gives one recipe. Its parts (sauce, frosting, topping, a side made for it) and its variations are folded into that recipe.
+- A video gives several recipes only when it teaches separate dishes with their own ingredients, such as a "what I eat in a day". In those videos, entries with fewer than 3 ingredients are dropped as mentions.
+- A cooking video with little text (no captions, short description) still becomes a recipe. It keeps the dish name and any ingredients the text names, and lists "full recipe is only shown in the video" as missing.
 
 ## How quantities are chosen
 

@@ -80,7 +80,7 @@ python3 DomainChecker/domain_checker.py   # open http://127.0.0.1:5000
 ---
 
 ### TikTokRecipes
-Turns a TikTok collection into a recipe book from video descriptions, captions, and linked recipe pages. Does not download the videos.
+Turns a TikTok collection into a recipe book from video descriptions, captions, and linked recipe pages, published at https://tt-recipes.pages.dev/ and updated hourly. Does not download the videos.
 
 **Use case:** Get the saved recipes out of a TikTok collection, grouped by meal type, with quantities.
 
