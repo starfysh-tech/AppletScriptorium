@@ -367,7 +367,9 @@ def _attempt_ollama_restart() -> bool:
         # Exit 1 means nothing matched, so nothing will restart; try brew below
         if kill_result.returncode == 0:
             logger.info("Killed unresponsive ollama serve process; launchd will restart")
-            return _wait_for_ollama()
+            if _wait_for_ollama():
+                return True
+            logger.info("Ollama did not come back after pkill; trying brew services")
     except Exception as exc:
         logger.debug("Could not kill ollama process: %s", exc)
 
@@ -637,9 +639,8 @@ def _fit_max_tokens(base_url: str, model: str, prompt: str, requested: int) -> i
 def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: dict | None) -> str:
     """Call LM Studio API using OpenAI-compatible endpoint.
 
-    response_format defaults to the summary schema; pass another schema for
-    calls that expect a different shape (e.g. classification), or None for
-    free text.
+    response_format is required: pass the JSON schema the reply must match
+    (SUMMARY_JSON_SCHEMA, ARTICLE_TYPE_JSON_SCHEMA), or None for free text.
 
     Raises SummarizerError on any failure with informative error messages.
     """

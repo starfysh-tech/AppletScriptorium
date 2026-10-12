@@ -78,6 +78,10 @@ if [ ! -x "$VENV_PYTHON" ]; then
     log_info "Creating virtual environment at .venv..."
     python3 -m venv "$REPO_ROOT/.venv" || { log_error "Failed to create .venv"; exit 1; }
 fi
+if ! "$VENV_PYTHON" -c 'import sys; sys.exit(sys.version_info < (3, 11))'; then
+    log_error ".venv uses Python older than 3.11; remove .venv and run ./install.sh"
+    exit 1
+fi
 log_info "Installing dependencies into .venv..."
 if ! "$VENV_PYTHON" -m pip install -q -r "$REPO_ROOT/Summarizer/requirements.txt"; then
     log_error "Failed to install dependencies into .venv"

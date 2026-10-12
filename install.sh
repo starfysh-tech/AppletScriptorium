@@ -70,7 +70,7 @@ echo ""
 
 # Step 2: Verify Python version
 log_info "Step 2/6: Verifying Python version..."
-PYTHON_VERSION=$($PYTHON_CMD --version 2>&1 | awk '{print $2}')
+PYTHON_VERSION=$("$PYTHON_CMD" --version 2>&1 | awk '{print $2}')
 PYTHON_MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
 PYTHON_MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
 
@@ -87,9 +87,16 @@ echo ""
 # Step 3: Install Python dependencies
 log_info "Step 3/6: Installing Python dependencies into .venv..."
 # PEP 668 blocks pip installs into Homebrew Python; the Mail rule calls .venv/bin/python3 directly.
-[ -x "$REPO_ROOT/.venv/bin/python3" ] || $PYTHON_CMD -m venv "$REPO_ROOT/.venv"
+if [ ! -x "$REPO_ROOT/.venv/bin/python3" ] && ! "$PYTHON_CMD" -m venv "$REPO_ROOT/.venv"; then
+    log_error "Failed to create .venv with $PYTHON_CMD"
+    exit 1
+fi
 PYTHON_CMD="$REPO_ROOT/.venv/bin/python3"
-if $PYTHON_CMD -m pip install -q -r "$REPO_ROOT/Summarizer/requirements.txt"; then
+if ! "$PYTHON_CMD" -c 'import sys; sys.exit(sys.version_info < (3, 11))'; then
+    log_error ".venv uses Python older than 3.11; remove .venv and rerun ./install.sh"
+    exit 1
+fi
+if "$PYTHON_CMD" -m pip install -q -r "$REPO_ROOT/Summarizer/requirements.txt"; then
     log_success "Python dependencies installed"
 else
     log_error "Failed to install Python dependencies"
@@ -116,7 +123,7 @@ echo ""
 
 # Step 5: Run tests
 log_info "Step 5/6: Running test suite..."
-if $PYTHON_CMD -m pytest "$REPO_ROOT/Summarizer/tests" -q; then
+if "$PYTHON_CMD" -m pytest "$REPO_ROOT/Summarizer/tests" -q; then
     log_success "All tests passed"
 else
     log_warn "Some tests failed (non-critical for basic usage)"

@@ -6,6 +6,10 @@ set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_CMD="$REPO_ROOT/.venv/bin/python3"  # the interpreter the Mail rule uses
+if [ ! -x "$PYTHON_CMD" ]; then
+    echo "No .venv found at $REPO_ROOT/.venv. Run ./install.sh first." >&2
+    exit 1
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -102,22 +106,32 @@ echo ""
 # Check 4: LM Studio (required) and Ollama (optional fallback)
 log_info "[4/8] Checking LM Studio server (LMSTUDIO_BASE_URL in .env)..."
 ENV_FILE="$REPO_ROOT/.env"
-LMSTUDIO_URL=$(sed -nE "s/^LMSTUDIO_BASE_URL=[\"']?([^\"']*)[\"']?$/\1/p" "$ENV_FILE" 2>/dev/null | tail -1)
-if [ -z "$LMSTUDIO_URL" ]; then
+# Parse with python-dotenv, as the pipeline does (inline comments, quotes, case)
+read -r LMSTUDIO_URL OLLAMA_ON < <("$PYTHON_CMD" -c '
+import sys
+from dotenv import dotenv_values
+v = dotenv_values(sys.argv[1])
+print(v.get("LMSTUDIO_BASE_URL") or "-", (v.get("OLLAMA_ENABLED") or "").lower() == "true")
+' "$ENV_FILE" 2>/dev/null)
+OLLAMA_RUNNING=false
+if [ "$OLLAMA_ON" = "True" ] && pgrep -x "ollama" >/dev/null; then
+    OLLAMA_RUNNING=true
+fi
+if [ -z "$LMSTUDIO_URL" ] || [ "$LMSTUDIO_URL" = "-" ]; then
     log_fail "LMSTUDIO_BASE_URL not set in .env"
 elif curl -fsS --max-time 5 "$LMSTUDIO_URL/v1/models" >/dev/null 2>&1; then
     log_pass "LM Studio server reachable: $LMSTUDIO_URL"
+elif [ "$OLLAMA_RUNNING" = true ]; then
+    log_warn "LM Studio server not reachable: $LMSTUDIO_URL (Ollama fallback will be used)"
 else
     log_fail "LM Studio server not reachable: $LMSTUDIO_URL"
     log_info "Start the LM Studio server, or fix LMSTUDIO_BASE_URL"
 fi
-if grep -qE "^OLLAMA_ENABLED=[\"']?true" "$ENV_FILE" 2>/dev/null; then
-    if pgrep -x "ollama" >/dev/null; then
-        log_pass "Ollama fallback running"
-    else
-        log_warn "OLLAMA_ENABLED=true but Ollama is not running"
-        log_info "Start with: brew services start ollama"
-    fi
+if [ "$OLLAMA_RUNNING" = true ]; then
+    log_pass "Ollama fallback running"
+elif [ "$OLLAMA_ON" = "True" ]; then
+    log_warn "OLLAMA_ENABLED=true but Ollama is not running"
+    log_info "Start with: brew services start ollama"
 fi
 echo ""
 

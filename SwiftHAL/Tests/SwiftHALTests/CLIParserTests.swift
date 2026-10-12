@@ -42,6 +42,12 @@ final class CLIParserTests: XCTestCase {
         XCTAssertEqual(command.threshold, "volume>800")
     }
 
+    func test_threshold_flag_splits_comma_separated_list() throws {
+        let command = try parse(["--threshold", "volume>800,difficulty>=30"])
+        XCTAssertEqual(command.thresholdList, ["volume>800", "difficulty>=30"])
+        XCTAssertNoThrow(try command.thresholdList!.map { try parseThreshold($0) })
+    }
+
     func test_output_flag_parses_correctly() throws {
         let command = try parse(["--output", "halstead.json"])
         XCTAssertEqual(command.output, "halstead.json")

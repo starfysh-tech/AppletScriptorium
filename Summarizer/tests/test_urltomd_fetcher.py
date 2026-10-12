@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import signal
 import subprocess
 
 import pytest
@@ -34,7 +35,7 @@ def fake_popen(monkeypatch: pytest.MonkeyPatch, *, returncode=0, stdout="", stde
     monkeypatch.setattr(subprocess, "Popen", FakePopen)
     # The timeout path signals the process group; keep it off real processes
     monkeypatch.setattr(os, "getpgid", lambda pid: pid)
-    monkeypatch.setattr(os, "killpg", lambda pgid, sig: None)
+    monkeypatch.setattr(os, "killpg", lambda pgid, sig: captured.setdefault("killpg", []).append(sig))
     return captured
 
 
@@ -53,12 +54,13 @@ def test_urltomd_builds_command(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_urltomd_timeout(monkeypatch: pytest.MonkeyPatch):
-    fake_popen(monkeypatch, communicate_error=subprocess.TimeoutExpired("url-to-md", timeout=5))
+    captured = fake_popen(monkeypatch, communicate_error=subprocess.TimeoutExpired("url-to-md", timeout=5))
 
     with pytest.raises(UrlToMdError) as exc:
         fetch_with_urltomd("https://slow.example", UrlToMdConfig(timeout=5))
 
     assert "timeout" in str(exc.value).lower()
+    assert captured["killpg"][0] == signal.SIGTERM
 
 
 def test_urltomd_missing_binary(monkeypatch: pytest.MonkeyPatch):

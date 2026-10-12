@@ -1624,6 +1624,11 @@ struct SwiftHAL: ParsableCommand {
     @Flag(name: .long, help: "Show detailed explanation of metrics")
     var explain = false
 
+    /// `--threshold` takes a comma-separated list.
+    var thresholdList: [String]? {
+        threshold?.split(separator: ",").map(String.init)
+    }
+
     mutating func run() throws {
         if explain {
             printMetricsExplanation()
@@ -1633,7 +1638,7 @@ struct SwiftHAL: ParsableCommand {
         let options = CLIOptions(
             path: path,
             format: format,
-            thresholds: threshold?.split(separator: ",").map(String.init),
+            thresholds: thresholdList,
             output_path: output,
             include_tests: includeTests,
             verbose: verbose

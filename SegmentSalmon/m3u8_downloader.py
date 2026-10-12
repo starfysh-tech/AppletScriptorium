@@ -131,6 +131,8 @@ class M3U8Downloader:
         """Fetch M3U8 playlist content with retries"""
         attempts = self.retries + 1
         for attempt in range(attempts):
+            if self.interrupted:
+                raise Exception("interrupted")
             try:
                 response = self.session.get(url, timeout=self.timeout)
                 response.raise_for_status()
@@ -184,7 +186,7 @@ class M3U8Downloader:
         
         for line in lines:
             line = line.strip()
-            if line.startswith('#EXT-X-KEY') and 'METHOD=NONE' not in line:
+            if line.startswith('#EXT-X-KEY') and not re.search(r'[:,]METHOD=NONE(,|$)', line):
                 raise UnsupportedPlaylistError("encrypted segments (#EXT-X-KEY) are not supported")
             if line.startswith('#EXT-X-MAP'):
                 raise UnsupportedPlaylistError("fMP4 init segments (#EXT-X-MAP) are not supported")
@@ -349,6 +351,8 @@ class M3U8Downloader:
             output_name = f"video_{int(time.time())}.mp4"
 
         output_file = output_dir / output_name
+        if shutil.which('ffmpeg'):
+            output_file = output_file.with_suffix('.mp4')  # ffmpeg always writes MP4
 
         print(f"Concatenating {len(segment_files)} segments...")
         self._concatenate_segments([path for _, path in segment_files], output_file)
@@ -397,15 +401,14 @@ class M3U8Downloader:
                 escaped = str(segment_path.absolute()).replace("'", "'\\''")
                 f.write(f"file '{escaped}'\n")
 
-        # Convert output to MP4 if not already
-        if not str(output_path).endswith('.mp4'):
-            output_path = output_path.with_suffix('.mp4')
-
         # Try lossless stream copy first (preserves source quality)
         if self._try_stream_copy(concat_file, output_path):
             concat_file.unlink(missing_ok=True)
             return
 
+        # Ctrl+C also kills ffmpeg, which looks like a failed stream copy
+        if self.interrupted:
+            raise Exception("interrupted")
         # Fallback to re-encoding if stream copy fails
         stderr = self._try_reencoding(concat_file, output_path)
         if stderr is not None:

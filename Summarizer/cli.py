@@ -560,7 +560,7 @@ def parse_args(argv=None) -> argparse.Namespace:
     )
     run_parser.add_argument(
         "--email-sender",
-        help="Optional sender address when emailing the digest (defaults to first recipient unless ALERT_EMAIL_SENDER is set)",
+        help="Sender address for the digest (default: ALERT_EMAIL_SENDER, then SMTP_FROM_EMAIL, then SMTP_USERNAME, then the first recipient)",
     )
     run_parser.add_argument(
         "--smtp-send",

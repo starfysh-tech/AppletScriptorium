@@ -95,6 +95,7 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
     headers = dict(DEFAULT_HEADERS)
     headers.update(_env_headers_for(url))
     last_error: Exception | None = None
+    fallback_tried = False
 
     for _ in range(cfg.max_retries + 1):
         start = perf_counter()
@@ -163,15 +164,16 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
             body = exc.response.text[:200].replace("\n", " ")
             last_error = FetchError(url, f"HTTP {status}: {body}")
 
-            if status in {403, 429, 503}:
+            if status in {403, 429, 503} and not fallback_tried:
                 # Bot protection does not clear on a plain retry; the fallback chain runs once
+                fallback_tried = True
                 try:
                     outcome = fetch_markdown_fallback(url, cfg.allow_cache)
                 except FetchError as fallback_error:
                     last_error = fallback_error
-                    break
-                _FETCH_CONTEXT.outcome = outcome
-                return outcome.content
+                else:
+                    _FETCH_CONTEXT.outcome = outcome
+                    return outcome.content
             if status < 500:
                 break
         except httpx.HTTPError as exc:
@@ -234,7 +236,7 @@ def _env_headers_for(url: str) -> Dict[str, str]:
     if not isinstance(mapping, dict):
         return {}
 
-    host = (urlparse(url).hostname or "").lower()
+    host = (urlparse(url).hostname or "").lower().rstrip(".")
     headers: Dict[str, str] = {}
     for key, value in mapping.items():
         if not isinstance(key, str) or not isinstance(value, dict):

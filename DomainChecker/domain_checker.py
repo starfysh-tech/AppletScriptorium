@@ -48,7 +48,7 @@ class DomainChecker:
                 resolver.resolve(full_domain, record_type)
                 return True
             except dns.resolver.NXDOMAIN:
-                return result  # the name does not exist for any record type
+                return False  # the name does not exist for any record type
             except dns.resolver.NoAnswer:
                 pass
             except dns.exception.DNSException:
@@ -83,6 +83,7 @@ class DomainChecker:
                 ['whois', '--', full_domain],
                 capture_output=True,
                 text=True,
+                errors="replace",
                 timeout=WHOIS_TIMEOUT
             )
         except (subprocess.TimeoutExpired, OSError):
@@ -108,7 +109,8 @@ class DomainChecker:
             if indicator in output_lower:
                 return True
 
-        return False
+        # A failed run (unreachable registry server) concluded nothing
+        return None if result.returncode else False
 
     def check_domain(self, tld: str) -> Dict:
         """Comprehensive domain check"""

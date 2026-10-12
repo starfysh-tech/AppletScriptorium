@@ -629,7 +629,7 @@ def main() -> None:
                 try:
                     fetch_video(url, folder, args.cookies_from_browser)
                 except Exception as exc:
-                    if not saved:
+                    if not saved or args.fetch_only:
                         raise
                     log(f"fetch failed {url}, kept saved recipe: {exc}")
             info = json.loads(info_path.read_text()) if info_path.exists() else {}
@@ -637,7 +637,9 @@ def main() -> None:
             if not saved and (args.refresh or not (folder / "thumb.jpg").exists()):
                 fetch_thumbnail(info, folder / "thumb.jpg")
             video = {
-                "id": video_id, "url": url, "uploader": info.get("uploader") or "unknown",
+                "id": video_id, "url": url,
+                # Without metadata (video deleted from TikTok) the handle in the URL still credits the poster.
+                "uploader": info.get("uploader") or next(iter(re.findall(r"/@([^/?]+)", url)), "unknown"),
                 "title": info.get("title") or info.get("description") or video_id,
                 "transcript_source": source, "added": added.get(video_id, len(added)),
             }
