@@ -252,7 +252,7 @@ def _format_header_stats(articles: list[dict]) -> str:
     return f" • {count} {article_word} from {source_count} {source_word}"
 
 
-def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None, topic: str | None = None, insights: list[str] | None = None) -> str:
+def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None, topic: str | None = None, insights: Sequence[str] = ()) -> str:
     generated_at = generated_at or datetime.now()
     missing = missing or []
     article_list = list(articles)
@@ -275,8 +275,6 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
             )
 
     # Generate cross-article insights section
-    if insights is None:
-        insights = generate_cross_article_insights(article_list)
     insights_block = ""
     if insights:
         insight_items = "\n".join(f"    <li>{html.escape(insight)}</li>" for insight in insights)
@@ -380,7 +378,7 @@ def render_digest_html(articles: Iterable[dict], *, generated_at: datetime | Non
     )
 
 
-def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None, topic: str | None = None, insights: list[str] | None = None) -> str:
+def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | None = None, missing: Sequence[dict] | None = None, topic: str | None = None, insights: Sequence[str] = ()) -> str:
     generated_at = generated_at or datetime.now()
     missing = missing or []
     article_list = list(articles)
@@ -399,8 +397,6 @@ def render_digest_text(articles: Iterable[dict], *, generated_at: datetime | Non
             lines.append("")
 
     # Add cross-article insights
-    if insights is None:
-        insights = generate_cross_article_insights(article_list)
     if insights:
         lines.append("📊 Cross-Article Insights:")
         for insight in insights:

@@ -32,6 +32,7 @@ from .article_fetcher import (
     FetchError,
     clear_cache,
     fetch_article,
+    fetch_markdown_fallback,
     get_last_fetch_outcome,
 )
 from .config import DIGEST_SUBJECT_TEMPLATE, LMSTUDIO_BASE_URL, MAX_WORKERS, OLLAMA_ENABLED
@@ -39,7 +40,13 @@ from .content_cleaner import extract_content, strip_cruft
 from .digest_renderer import generate_cross_article_insights, render_digest_html, render_digest_text
 from .link_extractor import extract_links_from_eml
 from .markdown_cleanup import validate_markdown_content
-from .summarizer import SummarizerConfig, SummarizerError, summarize_article
+from .summarizer import (
+    SummarizerConfig,
+    SummarizerError,
+    ensure_correct_model_loaded,
+    resolve_lmstudio_model,
+    summarize_article,
+)
 
 APPLESCRIPT = PACKAGE_ROOT / "fetch-alert-source.applescript"
 
@@ -304,7 +311,6 @@ def _fetch_and_extract_article(
     if should_retry and outcome.format == "html":
         logging.warning("[clean][RETRY] %s -> %s, trying markdown fallback", url, retry_reason)
         try:
-            from .article_fetcher import fetch_markdown_fallback
             fallback_outcome = fetch_markdown_fallback(url, allow_cache=False)
             content_text = strip_cruft(fallback_outcome.content)
 
@@ -507,8 +513,7 @@ def write_status_log(
         error_msg: Optional error message to append to FAILED status
         failures: Optional list of failure dicts with 'url' and 'reason' keys
     """
-    status_log = STATUS_LOG
-    status_log.parent.mkdir(parents=True, exist_ok=True)
+    STATUS_LOG.parent.mkdir(parents=True, exist_ok=True)
 
     # Truncate long subjects for readability
     display_subject = subject if len(subject) <= 40 else subject[:37] + "..."
@@ -530,10 +535,10 @@ def write_status_log(
         f'Digest: {digest_str} | SMTP: {smtp_str} | Status: {status_str}\n'
     )
 
-    with open(status_log, "a", encoding="utf-8") as f:
+    with open(STATUS_LOG, "a", encoding="utf-8") as f:
         f.write(log_entry)
 
-    logging.info("[status-log] Entry written to %s", status_log)
+    logging.info("[status-log] Entry written to %s", STATUS_LOG)
 
 
 def parse_args(argv=None) -> argparse.Namespace:
@@ -650,7 +655,6 @@ def run_pipeline(args: argparse.Namespace) -> Path:
 
         # Pre-flight check: Ensure LM Studio model is ready before fetching articles
         if LMSTUDIO_BASE_URL:
-            from .summarizer import SummarizerError, ensure_correct_model_loaded, resolve_lmstudio_model
             logging.info("[preflight] Verifying LM Studio model is loaded...")
             try:
                 target_model = resolve_lmstudio_model(LMSTUDIO_BASE_URL, sum_cfg.model)
@@ -790,7 +794,7 @@ def run_eval(args: argparse.Namespace) -> int:
     """
     from .evals import ModelEvaluator
     from .evals.report import save_report
-    from .evals.runner import format_score
+    from .evals.runner import format_score, ranked_by_accuracy
 
     # Setup logging
     logging.basicConfig(
@@ -862,11 +866,7 @@ def run_eval(args: argparse.Namespace) -> int:
     print(f"\nEvaluated {len(results)} models on {len(articles)} articles")
     print("\nTop 3 Models by Accuracy:")
 
-    sorted_models = sorted(
-        results.items(),
-        key=lambda x: x[1].avg_accuracy if x[1].avg_accuracy is not None else -1.0,
-        reverse=True,
-    )[:3]
+    sorted_models = ranked_by_accuracy(results)[:3]
 
     for rank, (model, model_results) in enumerate(sorted_models, 1):
         print(f"  {rank}. {model}: {format_score(model_results.avg_accuracy, '.1%')}")

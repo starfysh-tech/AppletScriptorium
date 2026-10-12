@@ -4,7 +4,7 @@ import logging
 import shutil
 import subprocess
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from ..summarizer import summarize_article, SummarizerConfig
 from ..config import LMSTUDIO_BASE_URL
@@ -25,6 +25,15 @@ logger = logging.getLogger(__name__)
 def format_score(value: Optional[float], spec: str = ".2%") -> str:
     """Format a score, or "n/a" when the model produced nothing to score."""
     return "n/a" if value is None else format(value, spec)
+
+
+def ranked_by_accuracy(results: Dict[str, "ModelResults"]) -> List[Tuple[str, "ModelResults"]]:
+    """(model, results) pairs, best accuracy first; unscored models rank last."""
+    return sorted(
+        results.items(),
+        key=lambda x: x[1].avg_accuracy if x[1].avg_accuracy is not None else -1.0,
+        reverse=True,
+    )
 
 
 @dataclass
@@ -95,8 +104,7 @@ class ModelEvaluator:
         Returns:
             List of model identifiers available in LM Studio
         """
-        models_info = discover_lmstudio_models()
-        return [m.name for m in models_info]
+        return discover_lmstudio_models()
 
     def load_model(self, model: str) -> bool:
         """Load a specific model in LM Studio.
@@ -156,14 +164,11 @@ class ModelEvaluator:
                 logger.warning("No gold standard for %s, skipping", article.get("url", ""))
         logger.info("Evaluating model: %s (runs=%d, articles=%d)", model, runs, len(scored))
 
-        # Load model
+        results = ModelResults(model=model, total_articles=len(scored), runs_per_article=runs)
         if not self.load_model(model):
             logger.error("Failed to load model %s, skipping evaluation", model)
-            return ModelResults(
-                model=model, total_articles=len(scored), runs_per_article=runs, error_count=len(scored) * runs
-            )
-
-        results = ModelResults(model=model, total_articles=len(scored), runs_per_article=runs)
+            results.error_count = len(scored) * runs
+            return results
 
         # For each article, run multiple times
         for article, gold in scored:

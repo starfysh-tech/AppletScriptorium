@@ -47,7 +47,9 @@ class DomainChecker:
             try:
                 resolver.resolve(full_domain, record_type)
                 return True
-            except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+            except dns.resolver.NXDOMAIN:
+                return result  # the name does not exist for any record type
+            except dns.resolver.NoAnswer:
                 pass
             except dns.exception.DNSException:
                 result = None

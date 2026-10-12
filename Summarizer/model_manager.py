@@ -4,11 +4,8 @@ import logging
 import os
 import re
 import subprocess
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, List
-
-Backend = Literal["lmstudio", "ollama"]
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -17,20 +14,12 @@ _LMS_HOME = Path.home() / ".lmstudio" / "bin" / "lms"
 LMS = str(_LMS_HOME) if _LMS_HOME.is_file() and os.access(_LMS_HOME, os.X_OK) else "lms"
 
 
-@dataclass
-class ModelInfo:
-    """Represents a model available on a backend."""
-    backend: Backend
-    name: str  # e.g., "qwen3:latest", "mistral-7b"
-    loaded: bool  # For LM Studio: True if loaded, False if available
-
-
-def discover_lmstudio_models() -> List[ModelInfo]:
+def discover_lmstudio_models() -> List[str]:
     """
     Discover LM Studio models via `lms ls` CLI.
 
     Returns:
-        List of ModelInfo objects with backend="lmstudio".
+        Model names (e.g. "mistralai/mistral-7b-instruct-v0.3").
         Empty list if CLI not found.
     """
     try:
@@ -80,16 +69,14 @@ def discover_lmstudio_models() -> List[ModelInfo]:
         if not in_llm_section:
             continue
 
-        # Parse model line: extract first column (model name) and check for "✓ LOADED" suffix
+        # Parse model line: extract first column (model name)
         # Model names may contain slashes, hyphens, and may have "(1 variant)" notation
         match = re.match(r"^([^\s]+(?:\s+\([^\)]+\))?)\s+", line)
         if match:
             model_name = match.group(1)
             # Remove "(N variant)" suffix
             model_name = re.sub(r"\s+\(\d+\s+variants?\)", "", model_name)
-            # Check if line ends with "✓ LOADED"
-            loaded = "✓ LOADED" in line
-            models.append(ModelInfo(backend="lmstudio", name=model_name, loaded=loaded))
+            models.append(model_name)
         else:
             logger.debug(f"Skipping lms ls line: {line_stripped}")
 

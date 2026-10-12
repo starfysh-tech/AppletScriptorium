@@ -6,7 +6,7 @@ using terms from application "Mail"
 
 		set repoPath to "{{REPO_PATH}}"
 		set digestRecipient to "{{EMAIL}}"
-		-- Python path configured during setup (selected by user based on available installations)
+		-- Repo .venv interpreter, written by setup-mail-rule.sh
 		set pythonPath to "{{PYTHON_PATH}}"
 
 		-- Mail can hand one rule several matching messages at once

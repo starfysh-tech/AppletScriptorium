@@ -899,8 +899,7 @@ struct DirectoryStats {
 
     init(files: [HalsteadMetrics]) {
         self.file_count = files.count
-        let totalRisk = files.reduce(0.0) { $0 + $1.riskScore }
-        self.avg_risk = file_count > 0 ? totalRisk / Double(file_count) : 0.0
+        self.avg_risk = averageRisk(files)
 
         var critical = 0
         var high = 0

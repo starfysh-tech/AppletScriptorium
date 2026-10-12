@@ -101,7 +101,7 @@ def test_lmstudio_omits_response_format_when_none(monkeypatch):
     cfg = summarizer.SummarizerConfig(model=None, temperature=0.3, max_tokens=64)
     assert summarizer._run_with_lmstudio("p", cfg, response_format=None) == "- insight"
     assert "response_format" not in sent
-    summarizer._run_with_lmstudio("p", cfg)
+    summarizer._run_with_lmstudio("p", cfg, response_format=summarizer.SUMMARY_JSON_SCHEMA)
     assert sent["response_format"] == summarizer.SUMMARY_JSON_SCHEMA
 
 

@@ -83,7 +83,6 @@ if ! "$VENV_PYTHON" -m pip install -q -r "$REPO_ROOT/Summarizer/requirements.txt
     log_error "Failed to install dependencies into .venv"
     exit 1
 fi
-SELECTED_PYTHON="$VENV_PYTHON"
 
 echo ""
 log_info "Configuring AppleScript..."
@@ -91,13 +90,13 @@ log_info "Configuring AppleScript..."
 # Replace {{EMAIL}}, {{REPO_PATH}}, and {{PYTHON_PATH}} placeholders
 sed -e "s|{{EMAIL}}|$USER_EMAIL|g" \
     -e "s|{{REPO_PATH}}|$REPO_ROOT|g" \
-    -e "s|{{PYTHON_PATH}}|$SELECTED_PYTHON|g" \
+    -e "s|{{PYTHON_PATH}}|$VENV_PYTHON|g" \
     "$TEMPLATE_FILE" > "$TARGET_FILE"
 
 if [ -f "$TARGET_FILE" ]; then
     log_success "AppleScript installed: $TARGET_FILE"
     log_success "Configured for: $USER_EMAIL"
-    log_success "Python path: $SELECTED_PYTHON"
+    log_success "Python path: $VENV_PYTHON"
     log_success "Repository path: $REPO_ROOT"
 else
     log_error "Failed to create AppleScript"

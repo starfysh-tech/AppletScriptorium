@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from typing import Dict
-from .runner import ModelResults, format_score
+from .runner import ModelResults, format_score, ranked_by_accuracy
 
 
 def _best(results: Dict[str, ModelResults], metric: str, lowest: bool = False) -> str:
@@ -27,11 +27,7 @@ def generate_markdown_report(results: Dict[str, ModelResults]) -> str:
         return "# Model Evaluation Report\n\nNo results to report.\n"
 
     # Sort models by accuracy (descending)
-    sorted_models = sorted(
-        results.items(),
-        key=lambda x: x[1].avg_accuracy if x[1].avg_accuracy is not None else -1.0,
-        reverse=True,
-    )
+    sorted_models = ranked_by_accuracy(results)
 
     lines = [
         "# Model Evaluation Report",

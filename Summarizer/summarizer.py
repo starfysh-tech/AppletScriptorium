@@ -116,7 +116,7 @@ def summarize_article(
             article_type=article_type,
             token_budget=_lmstudio_content_token_budget(LMSTUDIO_BASE_URL, lm_cfg.model, lm_cfg.max_tokens),
         )
-        return _run_with_lmstudio(lm_prompt, lm_cfg), lm_cfg.model
+        return _run_with_lmstudio(lm_prompt, lm_cfg, response_format=SUMMARY_JSON_SCHEMA), lm_cfg.model
 
     # Built on demand: the LM Studio path sizes its own prompt to the model's
     # context, so only the custom-runner and Ollama paths use this one.
@@ -525,13 +525,7 @@ def ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool,
     logger.info("[lmstudio] Model %s downloaded but not loaded, loading...", target_model)
 
     try:
-        try:
-            load_lmstudio_model(target_model)
-        except subprocess.CalledProcessError as exc:
-            stderr = (exc.stderr or "").strip()
-            if "not found" in stderr.lower() or "no model" in stderr.lower():
-                return False, f"Model '{target_model}' not found - check .env LMSTUDIO_PREFERRED_MODELS / LMSTUDIO_MODEL"
-            return False, f"Load failed: {stderr[:200]}"
+        load_lmstudio_model(target_model)
 
         # Verify load succeeded
         time.sleep(2)
@@ -543,6 +537,11 @@ def ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool,
         else:
             return False, f"Load succeeded but model not in list: {loaded}"
 
+    except subprocess.CalledProcessError as exc:
+        stderr = (exc.stderr or "").strip()
+        if "not found" in stderr.lower() or "no model" in stderr.lower():
+            return False, f"Model '{target_model}' not found - check .env LMSTUDIO_PREFERRED_MODELS / LMSTUDIO_MODEL"
+        return False, f"Load failed: {stderr[:200]}"
     except subprocess.TimeoutExpired:
         return False, f"Loading '{target_model}' timed out (>90s)"
     except FileNotFoundError:
@@ -635,7 +634,7 @@ def _fit_max_tokens(base_url: str, model: str, prompt: str, requested: int) -> i
     return min(requested, remaining)
 
 
-def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: dict | None = SUMMARY_JSON_SCHEMA) -> str:
+def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: dict | None) -> str:
     """Call LM Studio API using OpenAI-compatible endpoint.
 
     response_format defaults to the summary schema; pass another schema for
