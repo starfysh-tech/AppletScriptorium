@@ -115,12 +115,6 @@ results = evaluator.evaluate_model(
     articles=test_articles,
     runs=3
 )
-
-# Evaluate all models
-all_results = evaluator.evaluate_all_models(
-    articles=test_articles,
-    runs=3
-)
 ```
 
 ### Report (`report.py`)

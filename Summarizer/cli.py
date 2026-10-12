@@ -304,8 +304,8 @@ def _fetch_and_extract_article(
     if should_retry and outcome.format == "html":
         logging.warning("[clean][RETRY] %s -> %s, trying markdown fallback", url, retry_reason)
         try:
-            from .article_fetcher import _fetch_markdown_fallback
-            fallback_outcome = _fetch_markdown_fallback(url, allow_cache=False)
+            from .article_fetcher import fetch_markdown_fallback
+            fallback_outcome = fetch_markdown_fallback(url, allow_cache=False)
             content_text = strip_cruft(fallback_outcome.content)
 
             # Update tracking
@@ -650,11 +650,11 @@ def run_pipeline(args: argparse.Namespace) -> Path:
 
         # Pre-flight check: Ensure LM Studio model is ready before fetching articles
         if LMSTUDIO_BASE_URL:
-            from .summarizer import SummarizerError, _ensure_correct_model_loaded, resolve_lmstudio_model
+            from .summarizer import SummarizerError, ensure_correct_model_loaded, resolve_lmstudio_model
             logging.info("[preflight] Verifying LM Studio model is loaded...")
             try:
                 target_model = resolve_lmstudio_model(LMSTUDIO_BASE_URL, sum_cfg.model)
-                success, message = _ensure_correct_model_loaded(LMSTUDIO_BASE_URL, target_model)
+                success, message = ensure_correct_model_loaded(LMSTUDIO_BASE_URL, target_model)
             except SummarizerError as exc:  # LM Studio unreachable / nothing to pick: let Ollama fallback decide
                 success, message = False, str(exc)
             if not success:
@@ -790,6 +790,7 @@ def run_eval(args: argparse.Namespace) -> int:
     """
     from .evals import ModelEvaluator, GOLD_ANNOTATIONS
     from .evals.report import generate_markdown_report, save_report
+    from .evals.runner import format_score
 
     # Setup logging
     logging.basicConfig(
@@ -865,12 +866,12 @@ def run_eval(args: argparse.Namespace) -> int:
 
     sorted_models = sorted(
         results.items(),
-        key=lambda x: x[1].avg_accuracy,
+        key=lambda x: x[1].avg_accuracy if x[1].avg_accuracy is not None else -1.0,
         reverse=True,
     )[:3]
 
     for rank, (model, model_results) in enumerate(sorted_models, 1):
-        print(f"  {rank}. {model}: {model_results.avg_accuracy:.1%}")
+        print(f"  {rank}. {model}: {format_score(model_results.avg_accuracy, '.1%')}")
 
     return 0
 

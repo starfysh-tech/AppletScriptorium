@@ -115,17 +115,17 @@ def test_ensure_loaded_loads_downloaded_but_inactive_model(monkeypatch):
         return R()
     monkeypatch.setattr(S.subprocess, "run", fake_run)
 
-    ok, msg = S._ensure_correct_model_loaded("http://x", "qwen/qwen3.5-9b")
+    ok, msg = S.ensure_correct_model_loaded("http://x", "qwen/qwen3.5-9b")
     assert ok and "Loaded" in msg
     assert calls and "load" in calls[0] and "qwen/qwen3.5-9b" in calls[0]
 
     # Already active: no lms call
     calls.clear()
-    ok, msg = S._ensure_correct_model_loaded("http://x", "qwen/qwen3.5-9b")
+    ok, msg = S.ensure_correct_model_loaded("http://x", "qwen/qwen3.5-9b")
     assert ok and not calls
 
     # Not even downloaded: fail without calling lms
-    ok, msg = S._ensure_correct_model_loaded("http://x", "nope")
+    ok, msg = S.ensure_correct_model_loaded("http://x", "nope")
     assert not ok and not calls
 
 

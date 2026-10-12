@@ -94,7 +94,7 @@ def test_lmstudio_omits_response_format_when_none(monkeypatch):
 
     monkeypatch.setattr(summarizer, "LMSTUDIO_BASE_URL", "http://lmstudio.test")
     monkeypatch.setattr(summarizer, "resolve_lmstudio_model", lambda base, model: "m")
-    monkeypatch.setattr(summarizer, "_ensure_correct_model_loaded", lambda base, model: (True, "ok"))
+    monkeypatch.setattr(summarizer, "ensure_correct_model_loaded", lambda base, model: (True, "ok"))
     monkeypatch.setattr(summarizer, "_fit_max_tokens", lambda base, model, prompt, requested: requested)
     monkeypatch.setattr(summarizer.httpx, "Client", FakeClient)
 

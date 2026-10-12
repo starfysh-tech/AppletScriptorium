@@ -40,7 +40,7 @@ from .config import (
     SUMMARY_PROMPTS,
     SUMMARY_JSON_SCHEMA,
 )
-from .model_manager import LMS
+from .model_manager import load_lmstudio_model
 
 logger = logging.getLogger(__name__)
 
@@ -420,7 +420,7 @@ def _get_downloaded_models(base_url: str) -> list[str]:
 # /api/v0/models is the only endpoint carrying per-instance load state and
 # context length, and several helpers need it for the same article. Cache the
 # parsed records briefly so one summary costs one round trip instead of seven;
-# _ensure_correct_model_loaded drops the cache after changing what is loaded.
+# ensure_correct_model_loaded drops the cache after changing what is loaded.
 _MODELS_CACHE_TTL = 5.0
 _models_cache: tuple[float, str, list[dict]] | None = None
 
@@ -501,7 +501,7 @@ def resolve_lmstudio_model(base_url: str, explicit: str | None = None) -> str:
     )
 
 
-def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool, str]:
+def ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool, str]:
     """Ensure the target model is loaded in LM Studio, loading it via `lms` if
     it is downloaded but not active. Other loaded models are left alone.
 
@@ -525,15 +525,10 @@ def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool
     logger.info("[lmstudio] Model %s downloaded but not loaded, loading...", target_model)
 
     try:
-        result = subprocess.run(
-            [LMS, "load", "--yes", target_model],
-            capture_output=True,
-            text=True,
-            timeout=90
-        )
-
-        if result.returncode != 0:
-            stderr = result.stderr.strip()
+        try:
+            load_lmstudio_model(target_model)
+        except subprocess.CalledProcessError as exc:
+            stderr = (exc.stderr or "").strip()
             if "not found" in stderr.lower() or "no model" in stderr.lower():
                 return False, f"Model '{target_model}' not found - check .env LMSTUDIO_PREFERRED_MODELS / LMSTUDIO_MODEL"
             return False, f"Load failed: {stderr[:200]}"
@@ -655,7 +650,7 @@ def _run_with_lmstudio(prompt: str, cfg: SummarizerConfig, *, response_format: d
     target_model = resolve_lmstudio_model(LMSTUDIO_BASE_URL, cfg.model)
 
     # Ensure correct model is loaded (auto-load if needed)
-    success, message = _ensure_correct_model_loaded(LMSTUDIO_BASE_URL, target_model)
+    success, message = ensure_correct_model_loaded(LMSTUDIO_BASE_URL, target_model)
     if not success:
         raise SummarizerError(f"Model setup failed: {message}")
 

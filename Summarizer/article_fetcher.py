@@ -139,7 +139,7 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
 
                 # Trigger Markdown fallback for binary formats
                 try:
-                    outcome = _fetch_markdown_fallback(url, cfg.allow_cache)
+                    outcome = fetch_markdown_fallback(url, cfg.allow_cache)
                 except FetchError as fallback_error:
                     last_error = fallback_error
                     break  # Exit retry loop and raise error
@@ -166,7 +166,7 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
             if status in {403, 429, 503}:
                 # Bot protection does not clear on a plain retry; the fallback chain runs once
                 try:
-                    outcome = _fetch_markdown_fallback(url, cfg.allow_cache)
+                    outcome = fetch_markdown_fallback(url, cfg.allow_cache)
                 except FetchError as fallback_error:
                     last_error = fallback_error
                     break
@@ -180,7 +180,7 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
     raise FetchError(url, f"exhausted retries (last error: {last_error})", cause=last_error)
 
 
-def _fetch_markdown_fallback(url: str, allow_cache: bool) -> FetchOutcome:
+def fetch_markdown_fallback(url: str, allow_cache: bool) -> FetchOutcome:
     """Fetch Markdown using url-to-md or Jina and return outcome metadata."""
     if allow_cache and url in _CACHE_MARKDOWN:
         cleaned = _CACHE_MARKDOWN[url]
