@@ -14,13 +14,19 @@ Options: `--host` (default `127.0.0.1`), `--port` (default `5000`), `--debug`.
 
 ## How a TLD is checked
 
-Checks run in order and stop at the first hit (30 TLDs in parallel, 2s timeout each):
+Checks run in order and stop at the first hit (30 TLDs in parallel; 2s timeout for DNS and HTTP, 10s for whois):
 
 1. **DNS** — A or NS record exists
 2. **HTTP** — `HEAD` on https, then http, returns a status below 400 (redirects are not followed)
 3. **WHOIS** — `whois` output contains registrar or creation-date fields
 
-No hit means `FREE`. Free is a hint, not a guarantee. Confirm at a registrar before you buy.
+Each TLD gets one status:
+
+- `taken` — a check hit
+- `free` — no check hit and every lookup answered
+- `unknown` — no check hit, but the DNS or whois lookup timed out or failed, so the TLD could not be judged
+
+Free is a hint, not a guarantee. Confirm at a registrar before you buy.
 
 ## API
 
@@ -28,6 +34,7 @@ No hit means `FREE`. Free is a hint, not a guarantee. Confirm at a registrar bef
 
 - `domain` must be a single label: letters, digits, hyphens, no leading or trailing hyphen. `mybrand.com` is rejected; send `mybrand`.
 - TLDs not in `tld_database.py` are dropped. At most 500 are checked.
+- Each result is `{"tld": ".com", "status": "taken" | "free" | "unknown", "method": "DNS" | "HTTP" | "WHOIS" | "FREE" | "UNKNOWN" | "ERROR"}`.
 
 `GET /api/tlds` returns the TLD categories.
 

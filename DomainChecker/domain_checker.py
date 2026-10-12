@@ -6,17 +6,13 @@ Then open: http://localhost:5000
 """
 
 import subprocess
-import sys
-import json
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, render_template_string, request, jsonify
 import dns.resolver
 import dns.exception
 import requests
-from typing import Dict, List
-import time
-import os
+from typing import Dict, Optional
 import re
 import warnings
 from tld_database import TLD_DATABASE, ALL_TLDS
@@ -26,53 +22,42 @@ warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
 app = Flask(__name__)
 
-# Cache for DNS lookups
-DNS_CACHE = {}
+# Registry whois servers are slow; the 2 s DNS/HTTP timeout cut most of them off
+WHOIS_TIMEOUT = 10
+
+STATUS_ORDER = {'free': 0, 'unknown': 1, 'taken': 2}
 
 class DomainChecker:
     def __init__(self, domain, timeout=2):
         self.domain = domain.lower()
         self.timeout = timeout
 
-    def check_dns(self, tld: str) -> bool:
+    # Each check returns True (taken), False (no sign of registration),
+    # or None (the lookup failed, so nothing can be concluded).
+
+    def check_dns(self, tld: str) -> Optional[bool]:
         """Check domain using DNS resolution"""
         full_domain = f"{self.domain}{tld}"
+        resolver = dns.resolver.Resolver()
+        resolver.timeout = self.timeout
+        resolver.lifetime = self.timeout
 
-        # Check cache
-        if full_domain in DNS_CACHE:
-            return DNS_CACHE[full_domain]
-
-        try:
-            resolver = dns.resolver.Resolver()
-            resolver.timeout = self.timeout
-            resolver.lifetime = self.timeout
-
-            # Try A record first
+        result = False
+        for record_type in ('A', 'NS'):
             try:
-                resolver.resolve(full_domain, 'A')
-                DNS_CACHE[full_domain] = True
+                resolver.resolve(full_domain, record_type)
                 return True
-            except:
+            except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
                 pass
-
-            # Try NS record
-            try:
-                resolver.resolve(full_domain, 'NS')
-                DNS_CACHE[full_domain] = True
-                return True
-            except:
-                pass
-
-            DNS_CACHE[full_domain] = False
-            return False
-        except:
-            DNS_CACHE[full_domain] = False
-            return False
+            except dns.exception.DNSException:
+                result = None
+        return result
 
     def check_http(self, tld: str) -> bool:
         """Check domain using HTTP request"""
         full_domain = f"{self.domain}{tld}"
 
+        # Positive-only: a free domain always fails HTTP, so errors mean no hit
         for protocol in ['https', 'http']:
             try:
                 response = requests.head(
@@ -84,11 +69,11 @@ class DomainChecker:
                 )
                 if response.status_code < 400:
                     return True
-            except:
+            except requests.RequestException:
                 continue
         return False
 
-    def check_whois(self, tld: str) -> bool:
+    def check_whois(self, tld: str) -> Optional[bool]:
         """Check domain using whois"""
         full_domain = f"{self.domain}{tld}"
         try:
@@ -96,65 +81,48 @@ class DomainChecker:
                 ['whois', '--', full_domain],
                 capture_output=True,
                 text=True,
-                timeout=self.timeout
+                timeout=WHOIS_TIMEOUT
             )
-            output = result.stdout + result.stderr
-            output_lower = output.lower()
+        except (subprocess.TimeoutExpired, OSError):
+            return None
+        output_lower = (result.stdout + result.stderr).lower()
 
-            # Check if available
-            available_indicators = [
-                'no match', 'not found', 'no entries found',
-                'domain not found', 'no data found', 'status: free',
-                'is available', 'no object found'
-            ]
-            for indicator in available_indicators:
-                if indicator in output_lower:
-                    return False
+        # Check if available
+        available_indicators = [
+            'no match', 'not found', 'no entries found',
+            'domain not found', 'no data found', 'status: free',
+            'is available', 'no object found'
+        ]
+        for indicator in available_indicators:
+            if indicator in output_lower:
+                return False
 
-            # Check if registered
-            registered_indicators = [
-                'registrar:', 'creation date:', 'expiry date:',
-                'updated date:', 'domain status:', 'registrant:'
-            ]
-            for indicator in registered_indicators:
-                if indicator in output_lower:
-                    return True
+        # Check if registered
+        registered_indicators = [
+            'registrar:', 'creation date:', 'expiry date:',
+            'updated date:', 'domain status:', 'registrant:'
+        ]
+        for indicator in registered_indicators:
+            if indicator in output_lower:
+                return True
 
-            return False
-        except:
-            return False
+        return False
 
     def check_domain(self, tld: str) -> Dict:
         """Comprehensive domain check"""
-        # Try DNS first (fastest)
-        if self.check_dns(tld):
-            return {
-                'tld': tld,
-                'owned': True,
-                'method': 'DNS'
-            }
+        # Cheapest first; a failed lookup does not stop later checks
+        results = []
+        for method, check in (('DNS', self.check_dns),
+                              ('HTTP', self.check_http),
+                              ('WHOIS', self.check_whois)):
+            found = check(tld)
+            if found:
+                return {'tld': tld, 'status': 'taken', 'method': method}
+            results.append(found)
 
-        # Try HTTP (fast)
-        if self.check_http(tld):
-            return {
-                'tld': tld,
-                'owned': True,
-                'method': 'HTTP'
-            }
-
-        # Try whois (slowest, but most reliable)
-        if self.check_whois(tld):
-            return {
-                'tld': tld,
-                'owned': True,
-                'method': 'WHOIS'
-            }
-
-        return {
-            'tld': tld,
-            'owned': False,
-            'method': 'FREE'
-        }
+        if None in results:
+            return {'tld': tld, 'status': 'unknown', 'method': 'UNKNOWN'}
+        return {'tld': tld, 'status': 'free', 'method': 'FREE'}
 
 @app.route('/')
 def index():
@@ -180,7 +148,6 @@ def check_domains():
 
     checker = DomainChecker(domain, timeout=2)
     results = []
-    total = len(tlds)
 
     # Check domains concurrently
     with ThreadPoolExecutor(max_workers=30) as executor:
@@ -193,16 +160,16 @@ def check_domains():
             try:
                 result = future.result()
                 results.append(result)
-            except Exception as e:
+            except Exception:
                 tld = future_to_tld[future]
                 results.append({
                     'tld': tld,
-                    'owned': False,
+                    'status': 'unknown',
                     'method': 'ERROR'
                 })
 
-    # Sort results - available first, then alphabetically
-    results.sort(key=lambda x: (x['owned'], x['tld']))
+    # Sort results - available first, then unknown, then taken, then alphabetically
+    results.sort(key=lambda x: (STATUS_ORDER[x['status']], x['tld']))
 
     return jsonify({
         'domain': domain,
@@ -312,6 +279,7 @@ HTML_TEMPLATE = r"""
         .stat-item .label { color: #94a3b8; font-size: 14px; }
         .stat-item.available .number { color: #4ade80; }
         .stat-item.taken .number { color: #f87171; }
+        .stat-item.unknown .number { color: #fb923c; }
         .stat-item.total .number { color: #60a5fa; }
         .stat-item.time .number { color: #fbbf24; }
 
@@ -349,6 +317,7 @@ HTML_TEMPLATE = r"""
             grid-template-columns: 1fr 1fr;
             gap: 24px;
         }
+        #unknownSection { grid-column: 1 / -1; }
         @media (max-width: 1024px) {
             .results-container { grid-template-columns: 1fr; }
         }
@@ -432,6 +401,15 @@ HTML_TEMPLATE = r"""
             border-color: #f87171;
             background: rgba(248, 113, 113, 0.15);
         }
+        .tld-tag.unknown {
+            border-color: rgba(251, 146, 60, 0.3);
+            background: rgba(251, 146, 60, 0.08);
+            color: #fb923c;
+        }
+        .tld-tag.unknown:hover {
+            border-color: #fb923c;
+            background: rgba(251, 146, 60, 0.15);
+        }
         .tld-tag .method-badge {
             font-size: 9px;
             padding: 1px 6px;
@@ -466,21 +444,6 @@ HTML_TEMPLATE = r"""
 
         .progress-container {
             margin-top: 12px;
-        }
-        .progress-bar {
-            width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 3px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-        .progress-bar .progress-fill {
-            height: 100%;
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            transition: width 0.3s ease;
-            border-radius: 3px;
-            width: 0%;
         }
         .status-text {
             font-size: 14px;
@@ -580,9 +543,6 @@ HTML_TEMPLATE = r"""
             </div>
             <div class="search-history" id="history"></div>
             <div id="progressContainer" class="progress-container" style="display: none;">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
-                </div>
                 <div class="status-text" id="statusText">Starting scan...</div>
             </div>
             <div class="stats" id="stats" style="display: none;">
@@ -593,6 +553,10 @@ HTML_TEMPLATE = r"""
                 <div class="stat-item taken">
                     <span class="number" id="takenCount">0</span>
                     <span class="label">Taken</span>
+                </div>
+                <div class="stat-item unknown">
+                    <span class="number" id="unknownCount">0</span>
+                    <span class="label">Unknown</span>
                 </div>
                 <div class="stat-item total">
                     <span class="number" id="totalCount">0</span>
@@ -609,6 +573,7 @@ HTML_TEMPLATE = r"""
             <button class="filter-btn active" onclick="filterResults('all')">All</button>
             <button class="filter-btn" onclick="filterResults('available')">Available</button>
             <button class="filter-btn" onclick="filterResults('taken')">Taken</button>
+            <button class="filter-btn" onclick="filterResults('unknown')">Unknown</button>
         </div>
 
         <div class="toolbar" id="toolbar" style="display: none;">
@@ -645,6 +610,19 @@ HTML_TEMPLATE = r"""
                     </div>
                 </div>
             </div>
+
+            <div class="result-section" id="unknownSection">
+                <div class="section-header">
+                    <h2>❓ Unknown (lookup failed)</h2>
+                    <span class="count" id="unknownCountLabel">0</span>
+                </div>
+                <div class="scrollable-results" id="unknownResults">
+                    <div class="empty-state">
+                        <div class="icon">🔍</div>
+                        <p>Search for a domain to see TLDs that could not be checked</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -653,8 +631,10 @@ HTML_TEMPLATE = r"""
         let TLD_CATEGORIES = {};
         let currentResults = [];
         let currentDomain = '';
-        let currentFilter = 'all';
-        let searchHistory = JSON.parse(localStorage.getItem('domainHistory') || '[]');
+        // Same rule as the server; also drops bad entries saved by older versions
+        const DOMAIN_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
+        let searchHistory = JSON.parse(localStorage.getItem('domainHistory') || '[]')
+            .filter(d => typeof d === 'string' && DOMAIN_RE.test(d));
 
         // Fetch TLD categories from server
         async function loadTLDs() {
@@ -672,13 +652,13 @@ HTML_TEMPLATE = r"""
 
         function renderHistory() {
             const historyEl = document.getElementById('history');
-            if (searchHistory.length === 0) {
-                historyEl.innerHTML = '';
-                return;
-            }
-            historyEl.innerHTML = searchHistory.map(d =>
-                '<span class="history-tag" onclick="searchDomain(\'' + d + '\')">' + d + '</span>'
-            ).join('');
+            historyEl.replaceChildren(...searchHistory.map(d => {
+                const tag = document.createElement('span');
+                tag.className = 'history-tag';
+                tag.textContent = d;
+                tag.addEventListener('click', () => searchDomain(d));
+                return tag;
+            }));
         }
 
         async function searchDomain(domain) {
@@ -690,6 +670,10 @@ HTML_TEMPLATE = r"""
 
             if (!domain) {
                 alert('Please enter a domain name');
+                return;
+            }
+            if (!DOMAIN_RE.test(domain)) {
+                alert('Domain must be a single label (letters, digits, hyphens)');
                 return;
             }
 
@@ -707,7 +691,6 @@ HTML_TEMPLATE = r"""
         async function performSearch(domain) {
             const btn = document.getElementById('searchBtn');
             const progressContainer = document.getElementById('progressContainer');
-            const progressFill = document.getElementById('progressFill');
             const statusText = document.getElementById('statusText');
             const stats = document.getElementById('stats');
             const filters = document.getElementById('filters');
@@ -717,8 +700,7 @@ HTML_TEMPLATE = r"""
             btn.disabled = true;
             btn.innerHTML = '<span class="loading-spinner"></span> Searching...';
             progressContainer.style.display = 'block';
-            progressFill.style.width = '0%';
-            statusText.textContent = 'Starting scan...';
+            statusText.textContent = 'Checking domains...';
             errorContainer.innerHTML = '';
 
             const startTime = Date.now();
@@ -730,17 +712,7 @@ HTML_TEMPLATE = r"""
                     body: JSON.stringify({ domain: domain })
                 });
 
-                // Simulate progress updates while waiting
-                let progress = 0;
-                const progressInterval = setInterval(() => {
-                    progress += Math.random() * 3;
-                    if (progress > 95) progress = 95;
-                    progressFill.style.width = progress + '%';
-                    statusText.textContent = 'Checking domains... ' + Math.round(progress) + '%';
-                }, 200);
-
                 const data = await response.json();
-                clearInterval(progressInterval);
 
                 if (data.error) {
                     throw new Error(data.error);
@@ -752,8 +724,7 @@ HTML_TEMPLATE = r"""
                 const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
                 document.getElementById('timeCount').textContent = elapsed + 's';
 
-                progressFill.style.width = '100%';
-                statusText.textContent = '✓ Complete! Found ' + currentResults.filter(r => !r.owned).length + ' available domains';
+                statusText.textContent = '✓ Complete! Found ' + byStatus(currentResults, 'free').length + ' available domains';
 
                 setTimeout(() => {
                     progressContainer.style.display = 'none';
@@ -772,28 +743,44 @@ HTML_TEMPLATE = r"""
             btn.innerHTML = '🔍 Search Domains';
         }
 
-        function displayResults(results) {
-            const available = results.filter(r => !r.owned);
-            const taken = results.filter(r => r.owned);
-
-            document.getElementById('availableCount').textContent = available.length;
-            document.getElementById('takenCount').textContent = taken.length;
-            document.getElementById('totalCount').textContent = results.length;
-            document.getElementById('availableCountLabel').textContent = available.length;
-            document.getElementById('takenCountLabel').textContent = taken.length;
-
-            displaySection('availableResults', available, true);
-            displaySection('takenResults', taken, false);
+        function byStatus(results, status) {
+            return results.filter(r => r.status === status);
         }
 
-        function displaySection(containerId, results, isAvailable) {
-            const container = document.getElementById(containerId);
+        const SECTIONS = {
+            free: { id: 'availableResults', label: 'availableCountLabel', css: 'available',
+                    emptyIcon: '😕', emptyText: 'No available domains found' },
+            taken: { id: 'takenResults', label: 'takenCountLabel', css: 'taken',
+                     emptyIcon: '🎉', emptyText: 'No taken domains found' },
+            unknown: { id: 'unknownResults', label: 'unknownCountLabel', css: 'unknown',
+                       emptyIcon: '✅', emptyText: 'Every TLD was checked' },
+        };
+
+        function displayResults(results) {
+            document.getElementById('availableCount').textContent = byStatus(results, 'free').length;
+            document.getElementById('takenCount').textContent = byStatus(results, 'taken').length;
+            document.getElementById('unknownCount').textContent = byStatus(results, 'unknown').length;
+            document.getElementById('totalCount').textContent = results.length;
+            displaySections(results);
+        }
+
+        function displaySections(results) {
+            for (const status in SECTIONS) {
+                const items = byStatus(results, status);
+                document.getElementById(SECTIONS[status].label).textContent = items.length;
+                displaySection(status, items);
+            }
+        }
+
+        function displaySection(status, results) {
+            const section = SECTIONS[status];
+            const container = document.getElementById(section.id);
 
             if (results.length === 0) {
                 container.innerHTML =
                     '<div class="empty-state">' +
-                        '<div class="icon">' + (isAvailable ? '😕' : '🎉') + '</div>' +
-                        '<p>' + (isAvailable ? 'No available domains found' : 'No taken domains found') + '</p>' +
+                        '<div class="icon">' + section.emptyIcon + '</div>' +
+                        '<p>' + section.emptyText + '</p>' +
                     '</div>';
                 return;
             }
@@ -824,10 +811,9 @@ HTML_TEMPLATE = r"""
 
                 items.sort((a, b) => a.tld.localeCompare(b.tld));
                 for (const item of items) {
-                    let classes = 'tld-tag';
-                    classes += isAvailable ? ' available' : ' taken';
+                    const classes = 'tld-tag ' + section.css;
 
-                    const methodBadge = isAvailable ? '' :
+                    const methodBadge = status === 'free' ? '' :
                         '<span class="method-badge">' + item.method + '</span>';
 
                     const fullDomain = currentDomain + item.tld;
@@ -846,8 +832,6 @@ HTML_TEMPLATE = r"""
         }
 
         function filterResults(filter) {
-            currentFilter = filter;
-
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.classList.remove('active');
                 const btnText = btn.textContent;
@@ -857,29 +841,20 @@ HTML_TEMPLATE = r"""
                 }
             });
 
-            let filtered = currentResults;
-
-            if (filter === 'available') {
-                filtered = currentResults.filter(r => !r.owned);
-            } else if (filter === 'taken') {
-                filtered = currentResults.filter(r => r.owned);
-            }
-
-            const available = filtered.filter(r => !r.owned);
-            const taken = filtered.filter(r => r.owned);
-
-            displaySection('availableResults', available, true);
-            displaySection('takenResults', taken, false);
-
-            document.getElementById('availableCountLabel').textContent = available.length;
-            document.getElementById('takenCountLabel').textContent = taken.length;
+            const status = { available: 'free', taken: 'taken', unknown: 'unknown' }[filter];
+            displaySections(status ? byStatus(currentResults, status) : currentResults);
         }
 
         function copyResults() {
-            const available = currentResults.filter(r => !r.owned).map(r => r.tld).join('\n');
-            const taken = currentResults.filter(r => r.owned).map(r => r.tld).join('\n');
+            const list = status => byStatus(currentResults, status).map(r => r.tld);
+            const free = list('free');
+            const taken = list('taken');
+            const unknown = list('unknown');
 
-            const text = 'Domain: ' + currentDomain + '\n\nAvailable (' + currentResults.filter(r => !r.owned).length + '):\n' + available + '\n\nTaken (' + currentResults.filter(r => r.owned).length + '):\n' + taken;
+            const text = 'Domain: ' + currentDomain +
+                '\n\nAvailable (' + free.length + '):\n' + free.join('\n') +
+                '\n\nTaken (' + taken.length + '):\n' + taken.join('\n') +
+                '\n\nUnknown (' + unknown.length + '):\n' + unknown.join('\n');
 
             navigator.clipboard.writeText(text).then(() => {
                 const btn = event.target;
@@ -892,7 +867,7 @@ HTML_TEMPLATE = r"""
             const headers = ['TLD', 'Status', 'Method'];
             const rows = currentResults.map(r => [
                 r.tld,
-                r.owned ? 'Taken' : 'Available',
+                { free: 'Available', taken: 'Taken', unknown: 'Unknown' }[r.status],
                 r.method || 'N/A'
             ]);
 
@@ -922,11 +897,17 @@ HTML_TEMPLATE = r"""
                     '<div class="icon">🔍</div>' +
                     '<p>Search for a domain to see taken TLDs</p>' +
                 '</div>';
+            document.getElementById('unknownResults').innerHTML =
+                '<div class="empty-state">' +
+                    '<div class="icon">🔍</div>' +
+                    '<p>Search for a domain to see TLDs that could not be checked</p>' +
+                '</div>';
             document.getElementById('stats').style.display = 'none';
             document.getElementById('filters').style.display = 'none';
             document.getElementById('toolbar').style.display = 'none';
             document.getElementById('availableCountLabel').textContent = '0';
             document.getElementById('takenCountLabel').textContent = '0';
+            document.getElementById('unknownCountLabel').textContent = '0';
             document.getElementById('errorContainer').innerHTML = '';
             document.getElementById('progressContainer').style.display = 'none';
         }
