@@ -12,6 +12,7 @@ Re-runs reuse both caches; pass --refresh to refetch or --reextract to redo LLM.
 """
 
 import argparse
+import datetime
 import hashlib
 import html
 import json
@@ -20,6 +21,8 @@ import re
 import shutil
 import subprocess
 import sys
+import time
+import traceback
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -168,13 +171,23 @@ def fetch_video(url: str, folder: Path, cookies: str | None) -> None:
         raise RuntimeError(result.stderr.strip() or "yt-dlp returned no metadata")
 
 
+def log(message: str) -> None:
+    print(f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S} {message}", flush=True)
+
+
+def git_version() -> str:
+    result = subprocess.run(["git", "describe", "--always", "--dirty"], capture_output=True, text=True,
+                            cwd=Path(__file__).parent)
+    return result.stdout.strip() or "unknown"
+
+
 def download(url: str, path: Path) -> None:
     req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA})
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             path.write_bytes(resp.read())
     except (urllib.error.URLError, TimeoutError) as exc:
-        print(f"  no image: {exc}", file=sys.stderr)
+        log(f"  image download failed {url[:80]}: {exc}")
 
 
 def fetch_thumbnail(info: dict, path: Path) -> None:
@@ -492,15 +505,15 @@ def site_digest(site: Path) -> str:
 
 def deploy_site(site: Path) -> bool:
     if not shutil.which("wrangler"):
-        print("Deploy skipped: wrangler not installed.", file=sys.stderr)
+        log("deploy skipped: wrangler not installed")
         return False
     result = subprocess.run(["wrangler", "pages", "deploy", str(site.resolve()), "--project-name", PAGES_PROJECT,
                              "--branch", "main", "--commit-dirty=true"], capture_output=True, text=True,
                             cwd=Path(__file__).parent)
     if result.returncode:
-        print(f"Deploy failed:\n{result.stderr.strip() or result.stdout.strip()}", file=sys.stderr)
+        log(f"DEPLOY FAILED:\n{result.stderr.strip() or result.stdout.strip()}")
         return False
-    print(f"Live:  {SITE_URL}/")
+    log(f"deployed {SITE_URL}/")
     return True
 
 
@@ -515,10 +528,12 @@ def main() -> None:
     parser.add_argument("--reextract", action="store_true", help="Rerun the LLM on cached videos")
     parser.add_argument("--fetch-only", action="store_true", help="Stop after caching metadata and captions")
     parser.add_argument("--no-deploy", action="store_true", help="Build site/ but do not publish it")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Log every video, not only ones with work")
     args = parser.parse_args()
 
+    started = time.monotonic()
     collection_url = resolve_url(args.url)
-    print(f"Collection: {collection_url}")
+    log(f"start {collection_url} (code {git_version()})")
     collection = list_videos(collection_url, args.cookies_from_browser)
     entries = [e for e in collection.get("entries") or [] if e and e.get("url")]
     if args.limit:
@@ -527,7 +542,16 @@ def main() -> None:
     root = args.out or Path(__file__).resolve().parent / "runs" / slugify(collection.get("title") or collection.get("id"))
     cache = root / "cache"
     (root / "recipes").mkdir(parents=True, exist_ok=True)
-    model = None if args.fetch_only else lmstudio_model(args.model)
+    # Looked up on first use, so a run with nothing new works while LM Studio is closed.
+    model_cache = {}
+
+    def model() -> str:
+        if "id" not in model_cache:
+            try:
+                model_cache["id"] = lmstudio_model(args.model)
+            except Exception as exc:
+                raise RuntimeError(f"LM Studio not reachable at {LMSTUDIO_BASE_URL}: {exc}") from exc
+        return model_cache["id"]
 
     # TikTok's collection listing varies between calls (59 to 448 entries seen), so keep every video seen before.
     if not args.limit:
@@ -547,15 +571,19 @@ def main() -> None:
     if not args.limit:
         order_path.write_text(json.dumps(order))
     added = {video_id: n for n, video_id in enumerate(order)}
+    log(f"listed {len(listed) if not args.limit else len(entries)} videos from TikTok, "
+        f"{len(entries)} total with cache, {len(new_ids)} new")
 
     recipes, skipped, failed = [], [], []
     for n, entry in enumerate(entries, 1):
         url = entry["url"]
         video_id = entry.get("id") or url.rstrip("/").split("/")[-1]
         folder = cache / video_id
-        print(f"[{n}/{len(entries)}] {url}", flush=True)
+        if args.verbose:
+            log(f"[{n}/{len(entries)}] {url}")
         try:
             if args.refresh or not (folder / "video.info.json").exists():
+                log(f"fetch {url}")
                 fetch_video(url, folder, args.cookies_from_browser)
             info = json.loads((folder / "video.info.json").read_text())
             transcript, source = pick_transcript(folder)
@@ -586,18 +614,21 @@ def main() -> None:
             failed_path = folder / "extract_failed.txt"
             # A video the LLM cannot handle would otherwise cost a full timeout every hour.
             if failed_path.exists() and not args.reextract:
-                raise RuntimeError(f"extraction failed before, skipped (--reextract retries): {failed_path.read_text()}")
+                raise RuntimeError(f"extraction failed before, skipped (--reextract retries): {failed_path.read_text().strip()}")
             if args.reextract or not extracted_path.exists() or (new_links and video["linked"]):
+                t0 = time.monotonic()
                 try:
-                    extracted = extract_recipes(info, transcript, source, linked, model)
+                    extracted = extract_recipes(info, transcript, source, linked, model())
                 except Exception as exc:
                     failed_path.write_text(str(exc))
                     raise
                 failed_path.unlink(missing_ok=True)
                 extracted_path.write_text(json.dumps(extracted, indent=2, ensure_ascii=False))
+                titles = ", ".join(r["title"] for r in extracted["recipes"]) or "not a recipe"
+                log(f"extract {url} ({time.monotonic() - t0:.0f}s, captions: {source}): {titles}")
             extracted = json.loads(extracted_path.read_text())
             if any("flavor" not in r for r in extracted["recipes"]):
-                for recipe, flavor in zip(extracted["recipes"], classify_flavors(extracted["recipes"], model)):
+                for recipe, flavor in zip(extracted["recipes"], classify_flavors(extracted["recipes"], model())):
                     recipe["flavor"] = flavor
                 extracted_path.write_text(json.dumps(extracted, indent=2, ensure_ascii=False))
 
@@ -624,11 +655,11 @@ def main() -> None:
                 recipes.append(recipe)
         except Exception as exc:
             failed.append({"url": url, "error": str(exc)})
-            print(f"  failed: {exc}", file=sys.stderr)
+            log(f"FAILED {url}: {exc}")
 
     if args.fetch_only:
         no_captions = sum(1 for e in entries if pick_transcript(cache / (e.get("id") or ""))[1] == "none")
-        print(f"Fetched {len(entries) - len(failed)} videos, {no_captions} without captions, {len(failed)} failed.")
+        log(f"fetched {len(entries) - len(failed)} videos, {no_captions} without captions, {len(failed)} failed")
         return
 
     keep = {r["file"] for r in recipes}
@@ -639,22 +670,30 @@ def main() -> None:
     recipes.sort(key=lambda r: (r["video"]["added"], r["file"]))
     (root / "recipes.json").write_text(json.dumps(recipes, indent=2, ensure_ascii=False))
     (root / "index.md").write_text(render_index(collection.get("title") or "Recipes", recipes, skipped, failed))
-    print(f"\n{len(recipes)} recipes, {len(skipped)} not recipes, {len(failed)} failed.")
-    print(f"Index: {root / 'index.md'}")
+    log(f"built {len(recipes)} recipes, {len(skipped)} not recipes, {len(failed)} failed "
+        f"in {time.monotonic() - started:.0f}s")
     site = write_site(root, recipes)
-    print(f"Site:  {site}")
     # A --limit run holds a partial collection and would replace the full live site.
     if args.no_deploy or args.limit:
-        print("Deploy skipped.")
+        log("deploy skipped (--limit or --no-deploy)")
         return
     # Most hourly runs find nothing new; skip the upload when the built site is byte-identical.
     digest = site_digest(site.parent)
     stamp = root / "deployed.sha256"
     if stamp.exists() and stamp.read_text() == digest:
-        print("Site unchanged, deploy skipped.")
+        log("site unchanged, deploy skipped")
     elif deploy_site(site.parent):
         stamp.write_text(digest)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit as exc:
+        if isinstance(exc.code, str):
+            log(f"ERROR {exc.code}")
+            sys.exit(1)
+        raise
+    except Exception:
+        log("ERROR run aborted:\n" + traceback.format_exc().rstrip())
+        sys.exit(1)

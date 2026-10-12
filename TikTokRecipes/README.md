@@ -65,6 +65,30 @@ This installs a launchd agent (`com.starfysh.tiktokrecipes`) that runs now and e
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.starfysh.tiktokrecipes.plist
 ```
 
+### Troubleshooting
+
+```bash
+tail -30 TikTokRecipes/runs/hourly.log
+launchctl print gui/$(id -u)/com.starfysh.tiktokrecipes | grep -E 'state|last exit'
+```
+
+Each log line starts with a timestamp. A run with nothing new writes about 4 lines:
+
+```
+2026-10-11 20:02:27 start https://www.tiktok.com/@user/collection/... (code v4.2.0-37-g18eccd2)
+2026-10-11 20:02:39 listed 448 videos from TikTok, 448 total with cache, 0 new
+2026-10-11 20:02:40 built 415 recipes, 35 not recipes, 1 failed in 12s
+2026-10-11 20:02:40 site unchanged, deploy skipped
+```
+
+- `code` is the git commit the run used. `-dirty` means local edits were included.
+- `fetch` and `extract` lines appear only for new videos. `extract` shows the time, caption source, and recipe titles.
+- `FAILED <url>: <reason>` is one video. Videos whose extraction failed before repeat this line each run until you rerun with `--reextract`.
+- `ERROR` means the whole run stopped, for example when TikTok cannot be reached. `LM Studio not reachable` appears only when there are new videos to extract.
+- `git pull failed, running local code` means main could not fast-forward, usually because of local edits.
+- `DEPLOY FAILED` is followed by wrangler's output. A common cause is an expired login; run `wrangler login`.
+- `-v` logs every video, for a manual run.
+
 ## AI access
 
 Any AI or script can read the site without running its JavaScript:

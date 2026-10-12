@@ -23,7 +23,7 @@ cat > "$PLIST" <<EOF
   <array>
     <string>/bin/sh</string>
     <string>-c</string>
-    <string>git -C "\$0" pull --ff-only --quiet origin main || echo "git pull skipped"; exec "\$1" "\$0/tiktok_recipes.py" "\$2"</string>
+    <string>git -C "\$0" pull --ff-only --quiet origin main || echo "\$(date '+%Y-%m-%d %H:%M:%S') git pull failed, running local code"; exec "\$1" "\$0/tiktok_recipes.py" "\$2"</string>
     <string>$DIR</string>
     <string>$(python3 -c "import sys; print(sys.executable)")</string>
     <string>$URL</string>
