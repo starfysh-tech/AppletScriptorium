@@ -5,6 +5,37 @@ All notable changes to AppletScriptorium will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.0](https://github.com/starfysh-tech/AppletScriptorium/compare/v5.1.0...v5.2.0) (2026-10-12)
+
+
+### Features
+
+* **domainchecker:** add domain availability checker web tool ([430ae23](https://github.com/starfysh-tech/AppletScriptorium/commit/430ae23890f7f6d204ec1303f27bb450cfb3489b))
+* **tiktok:** pick recipes for a shareable shopping list ([e3a8be4](https://github.com/starfysh-tech/AppletScriptorium/commit/e3a8be4df1a2023353aa53217e5795f753a39596))
+* **tiktokrecipes:** extract TikTok collection recipes into a hosted site ([c7319d8](https://github.com/starfysh-tech/AppletScriptorium/commit/c7319d860f4ad99d8cadfee468e4c3f1871eed4b))
+* **tiktokrecipes:** hourly job pulls main before running ([62029c2](https://github.com/starfysh-tech/AppletScriptorium/commit/62029c217d9e093a36b4c06f16ae82b270010aee))
+* **tiktokrecipes:** hourly updates, creator covers, and duplicate fixes ([ca1b207](https://github.com/starfysh-tech/AppletScriptorium/commit/ca1b20757b829284a70c8b655c143545320f9ed5))
+* **tiktokrecipes:** shareable filters, AI access, and cheaper hourly runs ([fbd551e](https://github.com/starfysh-tech/AppletScriptorium/commit/fbd551e7d6230b239db357bc216f30ddccce189e))
+* **tiktokrecipes:** timestamped, quiet log for troubleshooting ([e8473b1](https://github.com/starfysh-tech/AppletScriptorium/commit/e8473b15e1bb3298d3f4951056e529727b96195d))
+
+
+### Bug Fixes
+
+* apply staff review fixes across all tools ([#9](https://github.com/starfysh-tech/AppletScriptorium/issues/9)) ([2a85fd6](https://github.com/starfysh-tech/AppletScriptorium/commit/2a85fd6d33a931f6d7a87fa3021eeb681958da89))
+* **Summarizer:** resolve LM Studio model at run time, fix classifier ([#7](https://github.com/starfysh-tech/AppletScriptorium/issues/7)) ([695c5d7](https://github.com/starfysh-tech/AppletScriptorium/commit/695c5d7e9cf4d9edbea4aff66652554d5521006a))
+* **summarizer:** stop hardcoding repo location in templates ([a6b5525](https://github.com/starfysh-tech/AppletScriptorium/commit/a6b5525603105bc57c6001ad455088bcc7d1d4f0))
+* **tiktokrecipes:** one main recipe per video and stable recipe links ([6d80502](https://github.com/starfysh-tech/AppletScriptorium/commit/6d80502cc811bb6152eec52d9cc03ccc46d377b2))
+* **tiktok:** show every pick in the picked view ([71b516b](https://github.com/starfysh-tech/AppletScriptorium/commit/71b516b105f371238d1a76d62c928ec4d7e5e253))
+
+
+### Documentation
+
+* **commitcraft:** sync skill metadata and commit guidance ([8d83a50](https://github.com/starfysh-tech/AppletScriptorium/commit/8d83a50e1c91ed69dd9183722856f19df6a3b4f1))
+* **domainchecker:** add readme and list tool in repo docs ([821a82a](https://github.com/starfysh-tech/AppletScriptorium/commit/821a82a1e2e0a8f2b04bd94c17f6323db994d975))
+* reconcile setup and workflow guides ([90b1396](https://github.com/starfysh-tech/AppletScriptorium/commit/90b1396cbb5368f13d1af96ed06df62a2a4f216c))
+* **tiktokrecipes:** document recipe rules, hosting, and cache files ([18eccd2](https://github.com/starfysh-tech/AppletScriptorium/commit/18eccd2b81a48f779a68612dfd503a70a85128ba))
+* update for run-time model resolution ([#8](https://github.com/starfysh-tech/AppletScriptorium/issues/8)) ([85ef650](https://github.com/starfysh-tech/AppletScriptorium/commit/85ef65038b64c77ff979ea7cc23af67378bb165c))
+
 ## [Unreleased]
 
 ### Fixed
