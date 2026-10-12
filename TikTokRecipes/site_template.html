@@ -244,7 +244,8 @@ recipes.forEach((r) => r.tags.forEach((t) => (tagCounts[t] = (tagCounts[t] || 0)
 const allTags = Object.entries(tagCounts).filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 
 function matches(r) {
-  if (state.only && !state.picks.has(r.id)) return false;
+  // The picked view shows exactly the picks; search and filters apply to the full list.
+  if (state.only) return state.picks.has(r.id);
   if (state.cat && r.category !== state.cat) return false;
   if (state.flavor && r.flavor !== state.flavor) return false;
   for (const t of state.tags) if (!r.tags.includes(t)) return false;
@@ -261,6 +262,7 @@ function readURL() {
   state.sort = p.get("sort") in SORTS ? p.get("sort") : "newest";
   state.picks = new Set((p.get("picks") || "").split(",").filter((id) => byId.has(id)));
   state.only = p.get("only") === "1" && state.picks.size > 0;
+  if (state.only) Object.assign(state, { q: "", cat: null, flavor: null, tags: new Set() });
   q.value = state.q;
 }
 
@@ -282,7 +284,7 @@ function listView() {
   const cats = CATS.filter((c) => recipes.some((r) => r.category === c)).map((c) => {
     const sample = recipes.filter((r) => r.category === c && r.video.thumb).sort(byTitle)[0];
     return el("button", { class: "cat", "aria-pressed": String(state.cat === c),
-      onclick: () => { state.cat = state.cat === c ? null : c; render(); } },
+      onclick: () => { state.cat = state.cat === c ? null : c; state.only = false; render(); } },
       el("div", { class: "ring" }, sample ? el("img", { src: img(sample), alt: "" })
         : el("div", { class: "ph", text: EMOJI[c] })),
       el("div", { class: "label", text: label(c) }),
@@ -290,7 +292,7 @@ function listView() {
   });
   const flavor = el("div", { class: "seg", role: "group", "aria-label": "Sweet or savory" },
     ...[[null, "All"], ["sweet", "🍰 Sweet"], ["savory", "🧂 Savory"]].map(([v, t]) => el("button", {
-      "aria-pressed": String(state.flavor === v), text: t, onclick: () => { state.flavor = v; render(); } })));
+      "aria-pressed": String(state.flavor === v), text: t, onclick: () => { state.flavor = v; state.only = false; render(); } })));
   const tagMenu = el("details", { class: "dd" },
     el("summary", { text: state.tags.size ? `Tags (${state.tags.size})` : "Tags" }),
     el("div", { class: "menu" },
@@ -299,7 +301,7 @@ function listView() {
       ...allTags.map(([t, n]) => {
         const box = el("input", { type: "checkbox" });
         box.checked = state.tags.has(t);
-        box.onchange = () => { box.checked ? state.tags.add(t) : state.tags.delete(t); state.tagsOpen = true; render(); };
+        box.onchange = () => { box.checked ? state.tags.add(t) : state.tags.delete(t); state.tagsOpen = true; state.only = false; render(); };
         return el("label", {}, box, el("span", { text: t }), el("span", { class: "n", text: n }));
       })));
   if (state.tagsOpen) tagMenu.open = true;
@@ -354,7 +356,11 @@ function trayView(onList) {
   tray.replaceChildren(...[
     el("span", { class: "count", text: `${n} picked` }),
     onList ? el("button", { class: "btn small ghost", text: state.only ? "Show all" : "Show picked",
-      onclick: () => { state.only = !state.only; state.scroll = 0; render(); } }) : null,
+      onclick: () => {
+        state.only = !state.only;
+        if (state.only) { Object.assign(state, { q: "", cat: null, flavor: null, tags: new Set() }); q.value = ""; }
+        state.scroll = 0; render();
+      } }) : null,
     location.hash === "#list" ? null : el("a", { class: "btn small", href: "#list", text: "🛒 Shopping list" }),
     el("button", { class: "btn small ghost", text: "⧉ Share picks",
       onclick: (e) => copyText(pickURL(location.hash === "#list" ? "#list" : ""), e.currentTarget, "⧉ Share picks", "✓ Link copied") }),
@@ -520,6 +526,7 @@ function render(keepScroll = false) {
 const q = document.getElementById("q");
 q.addEventListener("input", () => {
   state.q = q.value.trim().toLowerCase();
+  state.only = false;
   state.scroll = 0;
   if (location.hash) location.hash = ""; else render();
 });
