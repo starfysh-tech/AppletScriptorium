@@ -3,103 +3,95 @@ import XCTest
 
 final class CLIParserTests: XCTestCase {
 
+    private func parse(_ args: [String]) throws -> SwiftHAL {
+        try SwiftHAL.parse(args)
+    }
+
     func test_default_path_is_dot() throws {
-        let options = try parseArguments(["hal"])
-        XCTAssertEqual(options.path, ".")
-    }
-
-    func test_path_flag_parses_correctly() throws {
-        let options = try parseArguments(["hal", "--path", "Sources"])
-        XCTAssertEqual(options.path, "Sources")
-    }
-
-    func test_format_flag_parses_json() throws {
-        let options = try parseArguments(["hal", "--format", "json"])
-        XCTAssertEqual(options.format, .json)
-    }
-
-    func test_format_flag_parses_table() throws {
-        let options = try parseArguments(["hal", "--format", "table"])
-        XCTAssertEqual(options.format, .table)
-    }
-
-    func test_format_default_is_summary() throws {
-        let options = try parseArguments(["hal"])
-        XCTAssertEqual(options.format, .summary)
-    }
-
-    func test_threshold_flag_parses_correctly() throws {
-        let options = try parseArguments(["hal", "--threshold", "volume>800"])
-        XCTAssertEqual(options.thresholds?.count, 1)
-    }
-
-    func test_multiple_thresholds_parse_correctly() throws {
-        let options = try parseArguments(["hal", "--threshold", "volume>800,difficulty>20"])
-        XCTAssertEqual(options.thresholds?.count, 2)
-    }
-
-    func test_output_flag_parses_correctly() throws {
-        let options = try parseArguments(["hal", "--output", "halstead.json"])
-        XCTAssertEqual(options.output_path, "halstead.json")
-    }
-
-    func test_include_tests_flag_parses_correctly() throws {
-        let options = try parseArguments(["hal", "--include-tests"])
-        XCTAssertTrue(options.include_tests)
-    }
-
-    func test_help_flag_sets_help_true() throws {
-        let options = try parseArguments(["hal", "--help"])
-        XCTAssertTrue(options.show_help)
-    }
-
-    func test_invalid_format_throws_error() {
-        XCTAssertThrowsError(try parseArguments(["hal", "--format", "invalid"]))
-    }
-
-    func test_include_flag_parses_correctly() throws {
-        let options = try parseArguments(["hal", "--include", "**/*.swift"])
-        XCTAssertEqual(options.include, "**/*.swift")
-    }
-
-    func test_exclude_flag_parses_correctly() throws {
-        let options = try parseArguments(["hal", "--exclude", "Tests/**"])
-        XCTAssertEqual(options.exclude, "Tests/**")
-    }
-
-    func test_explainFlag_setsShowExplanation() throws {
-        let options = try parseArguments(["hal", "--explain"])
-        XCTAssertTrue(options.show_explanation)
-    }
-
-    func test_verboseFlag_setsVerbose() throws {
-        let options = try parseArguments(["hal", "--verbose"])
-        XCTAssertTrue(options.verbose)
-    }
-
-    func test_vFlag_setsVerbose() throws {
-        let options = try parseArguments(["hal", "-v"])
-        XCTAssertTrue(options.verbose)
-    }
-
-    func test_summaryFormat_parsesCorrectly() throws {
-        let options = try parseArguments(["hal", "--format", "summary"])
-        XCTAssertEqual(options.format, .summary)
-    }
-
-    func test_positional_path_argument_parses_correctly() throws {
-        let options = try parseArguments(["hal", "../../contactripple"])
-        XCTAssertEqual(options.path, "../../contactripple")
-    }
-
-    func test_positional_path_with_flags_parses_correctly() throws {
-        let options = try parseArguments(["hal", "Sources", "--format", "json"])
-        XCTAssertEqual(options.path, "Sources")
-        XCTAssertEqual(options.format, .json)
+        let command = try parse([])
+        XCTAssertEqual(command.path, ".")
     }
 
     func test_path_flag_overrides_positional() throws {
-        let options = try parseArguments(["hal", "Sources", "--path", "Tests"])
-        XCTAssertEqual(options.path, "Tests")
+        let command = try parse(["Sources", "--path", "Tests"])
+        XCTAssertEqual(command.path, "Tests")
+    }
+
+    func test_path_flag_parses_correctly() throws {
+        let command = try parse(["--path", "Sources"])
+        XCTAssertEqual(command.pathOption, "Sources")
+    }
+
+    func test_format_flag_parses_json() throws {
+        let command = try parse(["--format", "json"])
+        XCTAssertEqual(command.format, .json)
+    }
+
+    func test_format_flag_parses_table() throws {
+        let command = try parse(["--format", "table"])
+        XCTAssertEqual(command.format, .table)
+    }
+
+    func test_format_default_is_summary() throws {
+        let command = try parse([])
+        XCTAssertEqual(command.format, .summary)
+    }
+
+    func test_threshold_flag_parses_correctly() throws {
+        let command = try parse(["--threshold", "volume>800"])
+        XCTAssertEqual(command.threshold, "volume>800")
+    }
+
+    func test_output_flag_parses_correctly() throws {
+        let command = try parse(["--output", "halstead.json"])
+        XCTAssertEqual(command.output, "halstead.json")
+    }
+
+    func test_include_tests_flag_parses_correctly() throws {
+        let command = try parse(["--include-tests"])
+        XCTAssertTrue(command.includeTests)
+    }
+
+    func test_help_flag_exits() {
+        XCTAssertThrowsError(try parse(["--help"]))
+    }
+
+    func test_invalid_format_throws_error() {
+        XCTAssertThrowsError(try parse(["--format", "invalid"]))
+    }
+
+    func test_removed_include_option_throws_error() {
+        XCTAssertThrowsError(try parse(["--include", "**/*.swift"]))
+    }
+
+    func test_explainFlag_setsExplain() throws {
+        let command = try parse(["--explain"])
+        XCTAssertTrue(command.explain)
+    }
+
+    func test_verboseFlag_setsVerbose() throws {
+        let command = try parse(["--verbose"])
+        XCTAssertTrue(command.verbose)
+    }
+
+    func test_vFlag_setsVerbose() throws {
+        let command = try parse(["-v"])
+        XCTAssertTrue(command.verbose)
+    }
+
+    func test_summaryFormat_parsesCorrectly() throws {
+        let command = try parse(["--format", "summary"])
+        XCTAssertEqual(command.format, .summary)
+    }
+
+    func test_positional_path_argument_parses_correctly() throws {
+        let command = try parse(["../../contactripple"])
+        XCTAssertEqual(command.pathArgument, "../../contactripple")
+    }
+
+    func test_positional_path_with_flags_parses_correctly() throws {
+        let command = try parse(["Sources", "--format", "json"])
+        XCTAssertEqual(command.pathArgument, "Sources")
+        XCTAssertEqual(command.format, .json)
     }
 }

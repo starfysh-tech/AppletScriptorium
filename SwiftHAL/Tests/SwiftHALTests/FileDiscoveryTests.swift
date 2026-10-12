@@ -1,5 +1,6 @@
 import XCTest
 import Foundation
+import ArgumentParser
 @testable import SwiftHAL
 
 final class FileDiscoveryTests: XCTestCase {
@@ -213,5 +214,47 @@ final class FileDiscoveryTests: XCTestCase {
         // Then: Deep test excluded
         XCTAssertEqual(files.count, 1)
         XCTAssertTrue(files[0].path.contains("Source.swift"))
+    }
+
+    func test_tests_folder_above_root_does_not_exclude() throws {
+        // Given: The analyzed root itself lives inside a Tests folder
+        let root = tempDir.appendingPathComponent("Tests/proj2")
+        try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+        try "// source".write(to: root.appendingPathComponent("one.swift"), atomically: true, encoding: .utf8)
+
+        // When: Finding files under that root
+        let files = SwiftHAL.findSwiftFiles(at: root, options: CLIOptions(), fileManager: fileManager)
+
+        // Then: Only Tests folders below the root are skipped
+        XCTAssertEqual(files.map { $0.lastPathComponent }, ["one.swift"])
+    }
+
+    func test_single_file_path_is_analyzed() throws {
+        let file = tempDir.appendingPathComponent("Single.swift")
+        try "let x = 1".write(to: file, atomically: true, encoding: .utf8)
+
+        let files = SwiftHAL.findSwiftFiles(at: file, options: CLIOptions(), fileManager: fileManager)
+
+        XCTAssertEqual(files, [file])
+    }
+
+    func test_runAnalysis_exits1_when_no_swift_files() {
+        var options = CLIOptions()
+        options.path = tempDir.path
+
+        XCTAssertThrowsError(try SwiftHAL.runAnalysis(options: options)) { error in
+            XCTAssertEqual(error as? ExitCode, ExitCode.failure)
+        }
+    }
+
+    func test_hotspots_group_by_first_folder_under_root() {
+        let root = "/work/proj"
+        let grouped = groupByDirectory([
+            HalsteadMetrics(path: "/work/proj/A/Views/one.swift"),
+            HalsteadMetrics(path: "/work/proj/B/Views/two.swift"),
+            HalsteadMetrics(path: "/work/proj/main.swift"),
+        ], root: root)
+
+        XCTAssertEqual(Set(grouped.keys), ["A/", "B/", "."])
     }
 }
