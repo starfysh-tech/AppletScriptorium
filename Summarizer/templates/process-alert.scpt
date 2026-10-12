@@ -41,7 +41,11 @@ on process_message(triggerMessage, repoPath, digestRecipient, pythonPath, logFil
 			display notification "Google Alert digest sent to " & digestRecipient with title "Google Alert Intelligence" sound name "Glass"
 		on error errMsg
 			set errorSummary to errMsg
-			if errMsg contains "Model setup failed" then
+			if errMsg contains "not found - check .env" then
+				set errorSummary to "LM Studio model not found - check .env LMSTUDIO_PREFERRED_MODELS"
+			else if errMsg contains "lms' CLI not found" then
+				set errorSummary to "LM Studio CLI not installed"
+			else if errMsg contains "Model setup failed" then
 				set errorSummary to "Failed to load LM Studio model"
 			else if length of errMsg > 100 then
 				set errorSummary to (text 1 thru 100 of errMsg) & "..."

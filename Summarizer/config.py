@@ -44,8 +44,7 @@ OLLAMA_ENABLED = os.environ.get("OLLAMA_ENABLED", "").lower() == "true"
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:latest")
 OLLAMA_TIMEOUT = float(os.environ.get("OLLAMA_TIMEOUT", "120.0"))
 
-# Legacy settings (kept for backward compatibility with tests)
-DEFAULT_MODEL = OLLAMA_MODEL
+
 TEMPERATURE = 0.1  # Lower = more focused, higher = more creative (0.0-1.0)
 # Completion budget for one 4-bullet summary (observed: ~200 tokens). Generous
 # headroom, but small enough that prompt + completion fits any context a model
@@ -151,41 +150,8 @@ ARTICLE_TYPE_JSON_SCHEMA = {
 # Summarization Prompts
 # =============================================================================
 
-# Default summarization prompt (used when type detection fails or for backward compatibility)
-SUMMARY_PROMPT_TEMPLATE = """
-Generate EXACTLY 4 bullets. NO MORE, NO LESS.
-
-START IMMEDIATELY with bullet 1. NO preamble. STOP AFTER bullet 4.
-
-Required format (output exactly this structure with one tag per bullet):
-1. **KEY FINDING**: [One sentence with specific metrics/main insight]
-2. **TACTICAL WIN [TAG]**: [Specific actionable practice or implementation]
-3. **MARKET SIGNAL [TAG]**: [Trend, shift, or competitive development]
-4. **CONCERN**: [ONLY if article EXPLICITLY states a risk, limitation, or negative outcome. Otherwise write EXACTLY: "No concerns stated in article."]
-
-CONCERN RULES (CRITICAL):
-- DO NOT invent concerns not in the article
-- DO NOT list benefits as concerns (e.g., "better adherence" is a BENEFIT)
-- DO NOT speculate about potential issues (e.g., "may raise privacy concerns" unless article says this)
-- ONLY quote or paraphrase concerns the author explicitly wrote
-
-Tags to use:
-- TACTICAL WIN: Pick ONE of [🚀 SHIP NOW] (quick win) / [🗺️ ROADMAP] (multi-step) / [👀 WATCH] (early signal)
-- MARKET SIGNAL: Pick ONE of [🔴 URGENT] (threat/deadline) / [🟡 NOTABLE] (trend) / [⚫ CONTEXT] (background)
-
-Example output structure:
-1. **KEY FINDING**: [State main finding with specific metrics from article]
-2. **TACTICAL WIN [🚀/🗺️/👀]**: [Describe actionable practice from article]
-3. **MARKET SIGNAL [🔴/🟡/⚫]**: [Identify trend or development from article]
-4. **CONCERN**: [Quote or paraphrase specific concern FROM article, or "No significant concerns identified in article."]
-
-Constraints:
-- Each bullet <30 words
-- Include numbers/metrics from article
-- Tags go INSIDE bold markers before colon
-- STOP after bullet 4 - do NOT add commentary, summaries, or additional bullets
-
-After the 4 bullets, add exactly one line in this format:
+# Shared by every type-specific prompt below
+_ACTIONABILITY_BLOCK = """After the 4 bullets, add exactly one line in this format:
 **ACTIONABILITY**: <emoji> <label>
 
 Choose ONE based on urgency:
@@ -195,9 +161,6 @@ Choose ONE based on urgency:
 - ℹ️ CONTEXT ONLY = Background info, historical context
 
 Example: **ACTIONABILITY**: ⚠️ MONITOR
-
-Output as JSON:
-{"bullets": [{"label": "KEY FINDING", "text": "..."}, {"label": "TACTICAL WIN [🚀/🗺️/👀]", "text": "..."}, {"label": "MARKET SIGNAL [🔴/🟡/⚫]", "text": "..."}, {"label": "CONCERN", "text": "..."}], "actionability": {"emoji": "⚠️", "label": "MONITOR"}}
 """
 
 # Type-specific prompt variants for different article types
@@ -222,17 +185,7 @@ Constraints:
 - Include specific metrics from article
 - STOP after bullet 4 - do NOT add commentary
 
-After the 4 bullets, add exactly one line in this format:
-**ACTIONABILITY**: <emoji> <label>
-
-Choose ONE based on urgency:
-- 🎯 ACT NOW = Urgent deadline, competitive threat, immediate opportunity
-- ⚠️ MONITOR = Emerging trend, ongoing development, watch item
-- 🔍 RESEARCH NEEDED = Unclear implications, needs more data
-- ℹ️ CONTEXT ONLY = Background info, historical context
-
-Example: **ACTIONABILITY**: ⚠️ MONITOR
-
+""" + _ACTIONABILITY_BLOCK + """
 Output as JSON:
 {"bullets": [{"label": "KEY FINDING", "text": "..."}, {"label": "METHODOLOGY", "text": "..."}, {"label": "IMPLICATION", "text": "..."}, {"label": "CONCERN", "text": "..."}], "actionability": {"emoji": "⚠️", "label": "MONITOR"}}
 """,
@@ -259,17 +212,7 @@ Constraints:
 - Tags go INSIDE bold markers before colon
 - STOP after bullet 4 - do NOT add commentary
 
-After the 4 bullets, add exactly one line in this format:
-**ACTIONABILITY**: <emoji> <label>
-
-Choose ONE based on urgency:
-- 🎯 ACT NOW = Urgent deadline, competitive threat, immediate opportunity
-- ⚠️ MONITOR = Emerging trend, ongoing development, watch item
-- 🔍 RESEARCH NEEDED = Unclear implications, needs more data
-- ℹ️ CONTEXT ONLY = Background info, historical context
-
-Example: **ACTIONABILITY**: ⚠️ MONITOR
-
+""" + _ACTIONABILITY_BLOCK + """
 Output as JSON:
 {"bullets": [{"label": "KEY DEVELOPMENT", "text": "..."}, {"label": "TACTICAL WIN [🚀/🗺️/👀]", "text": "..."}, {"label": "MARKET SIGNAL [🔴/🟡/⚫]", "text": "..."}, {"label": "CONCERN", "text": "..."}], "actionability": {"emoji": "⚠️", "label": "MONITOR"}}
 """,
@@ -295,17 +238,7 @@ Constraints:
 - Include specific metrics/dates from release
 - STOP after bullet 4 - do NOT add commentary
 
-After the 4 bullets, add exactly one line in this format:
-**ACTIONABILITY**: <emoji> <label>
-
-Choose ONE based on urgency:
-- 🎯 ACT NOW = Urgent deadline, competitive threat, immediate opportunity
-- ⚠️ MONITOR = Emerging trend, ongoing development, watch item
-- 🔍 RESEARCH NEEDED = Unclear implications, needs more data
-- ℹ️ CONTEXT ONLY = Background info, historical context
-
-Example: **ACTIONABILITY**: ⚠️ MONITOR
-
+""" + _ACTIONABILITY_BLOCK + """
 Output as JSON:
 {"bullets": [{"label": "ANNOUNCEMENT", "text": "..."}, {"label": "STRATEGIC MOVE", "text": "..."}, {"label": "TIMELINE", "text": "..."}, {"label": "CONCERN", "text": "..."}], "actionability": {"emoji": "⚠️", "label": "MONITOR"}}
 """,
@@ -330,17 +263,7 @@ Constraints:
 - Distinguish between author's claims and supporting evidence
 - STOP after bullet 4 - do NOT add commentary
 
-After the 4 bullets, add exactly one line in this format:
-**ACTIONABILITY**: <emoji> <label>
-
-Choose ONE based on urgency:
-- 🎯 ACT NOW = Urgent deadline, competitive threat, immediate opportunity
-- ⚠️ MONITOR = Emerging trend, ongoing development, watch item
-- 🔍 RESEARCH NEEDED = Unclear implications, needs more data
-- ℹ️ CONTEXT ONLY = Background info, historical context
-
-Example: **ACTIONABILITY**: ⚠️ MONITOR
-
+""" + _ACTIONABILITY_BLOCK + """
 Output as JSON:
 {"bullets": [{"label": "THESIS", "text": "..."}, {"label": "EVIDENCE", "text": "..."}, {"label": "COUNTERPOINT", "text": "..."}, {"label": "CREDIBILITY", "text": "..."}], "actionability": {"emoji": "⚠️", "label": "MONITOR"}}
 """

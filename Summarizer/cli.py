@@ -34,7 +34,7 @@ from .article_fetcher import (
     fetch_article,
     get_last_fetch_outcome,
 )
-from .config import DEFAULT_MODEL, DIGEST_SUBJECT_TEMPLATE, LMSTUDIO_BASE_URL, MAX_WORKERS, OLLAMA_ENABLED
+from .config import DIGEST_SUBJECT_TEMPLATE, LMSTUDIO_BASE_URL, MAX_WORKERS, OLLAMA_ENABLED
 from .content_cleaner import extract_content, strip_cruft
 from .digest_renderer import generate_cross_article_insights, render_digest_html, render_digest_text
 from .link_extractor import extract_links_from_eml
@@ -363,9 +363,9 @@ def _summarize_article(
     article_data: dict,
     sum_cfg: SummarizerConfig,
 ) -> Tuple[Optional[dict], Optional[dict]]:
-    """Summarize a single article using Ollama.
+    """Summarize a single article with the configured LLM backend.
 
-    This function runs sequentially to prevent Ollama daemon overload.
+    This function runs sequentially so the local LLM handles one request at a time.
 
     Returns: (summary_dict, failure_dict) - one will be None
     """
@@ -398,10 +398,10 @@ def process_articles(
     sum_cfg: SummarizerConfig,
     max_articles: int | None = None,
 ) -> Tuple[List[dict], List[dict]]:
-    """Process articles in two phases to prevent Ollama daemon overload.
+    """Process articles in two phases: parallel fetch, then sequential summarization.
 
     Phase 1: Parallel fetch and content extraction (I/O-bound, uses MAX_WORKERS)
-    Phase 2: Sequential summarization (CPU-bound, prevents Ollama deadlock)
+    Phase 2: Sequential summarization (one request at a time to the local LLM)
     """
     articles_dir = output_dir / "articles"
     articles_dir.mkdir(exist_ok=True)
@@ -450,7 +450,7 @@ def process_articles(
         summary_parts = ", ".join(f"{key}={count}" for key, count in sorted(strategy_counter.items()))
         logging.info("Fetch summary: %s", summary_parts)
 
-    # PHASE 2: Sequential summarization (prevent Ollama daemon overload)
+    # PHASE 2: Sequential summarization (one request at a time to the local LLM)
     for article_data in article_data_list:
         try:
             summary, failure = _summarize_article(article_data, sum_cfg)

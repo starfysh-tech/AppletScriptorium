@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import threading
 from dataclasses import dataclass, field
@@ -33,6 +34,8 @@ class FetchOutcome:
 
 
 _FETCH_CONTEXT = threading.local()
+logger = logging.getLogger(__name__)
+
 _CACHE_HTML: Dict[str, str] = {}
 _CACHE_MARKDOWN: Dict[str, str] = {}
 
@@ -49,11 +52,6 @@ class FetchError(RuntimeError):
 def clear_cache() -> None:
     """Clear both HTML and Markdown caches (mainly for tests)."""
     _CACHE_HTML.clear()
-    _CACHE_MARKDOWN.clear()
-
-
-def clear_markdown_cache() -> None:
-    """Clear only the Markdown fallback cache."""
     _CACHE_MARKDOWN.clear()
 
 
@@ -166,13 +164,16 @@ def fetch_article(url: str, config: FetchConfig | None = None) -> str:
             last_error = FetchError(url, f"HTTP {status}: {body}")
 
             if status in {403, 429, 503}:
+                # Bot protection does not clear on a plain retry; the fallback chain runs once
                 try:
                     outcome = _fetch_markdown_fallback(url, cfg.allow_cache)
                 except FetchError as fallback_error:
                     last_error = fallback_error
-                else:
-                    _FETCH_CONTEXT.outcome = outcome
-                    return outcome.content
+                    break
+                _FETCH_CONTEXT.outcome = outcome
+                return outcome.content
+            if status < 500:
+                break
         except httpx.HTTPError as exc:
             last_error = exc
 
@@ -226,18 +227,21 @@ def _env_headers_for(url: str) -> Dict[str, str]:
         return {}
     try:
         mapping = json.loads(raw)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
+        logger.warning("ALERT_HTTP_HEADERS_JSON is not valid JSON, ignoring it: %s", exc)
         return {}
 
     if not isinstance(mapping, dict):
         return {}
 
-    domain = urlparse(url).netloc
+    host = (urlparse(url).hostname or "").lower()
     headers: Dict[str, str] = {}
     for key, value in mapping.items():
         if not isinstance(key, str) or not isinstance(value, dict):
             continue
-        if key in domain:
+        key = key.lower()
+        # Substring matching would send example.com cookies to notexample.com
+        if host == key or host.endswith("." + key):
             for header_name, header_value in value.items():
                 if isinstance(header_name, str) and isinstance(header_value, str):
                     headers[header_name] = header_value
@@ -249,7 +253,6 @@ __all__ = [
     "FetchError",
     "FetchOutcome",
     "clear_cache",
-    "clear_markdown_cache",
     "fetch_article",
     "get_last_fetch_outcome",
 ]

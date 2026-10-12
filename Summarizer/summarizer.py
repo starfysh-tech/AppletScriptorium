@@ -16,7 +16,6 @@ import re
 import subprocess
 import time
 from dataclasses import dataclass, replace
-from pathlib import Path
 from typing import Any, Callable, List, Literal, Optional
 
 import httpx
@@ -38,7 +37,6 @@ from .config import (
     LMSTUDIO_REASONING_EFFORT,
     LMSTUDIO_TIMEOUT,
     LMSTUDIO_HEALTH_TIMEOUT,
-    SUMMARY_PROMPT_TEMPLATE,
     SUMMARY_PROMPTS,
     SUMMARY_JSON_SCHEMA,
 )
@@ -175,8 +173,9 @@ def summarize_article(
                 if OLLAMA_ENABLED:
                     logger.warning("[lmstudio] Falling back to Ollama (WARNING: may slow down computer)")
                     try:
-                        raw_output = _run_with_ollama(default_prompt(), cfg)
-                        model_name = cfg.model or OLLAMA_MODEL
+                        # cfg.model names an LM Studio model, which `ollama run` would try to pull
+                        raw_output = _run_with_ollama(default_prompt(), replace(cfg, model=OLLAMA_MODEL))
+                        model_name = OLLAMA_MODEL
                         backend_used = "ollama"
                     except SummarizerError as ollama_exc:
                         logger.error("[ollama] Fallback also failed: %s", ollama_exc)
@@ -346,10 +345,7 @@ def _build_prompt(article: ArticleDict, article_type: str | None = None, token_b
     title = article.get("title", "")
 
     # Select prompt based on article type
-    if article_type and article_type in SUMMARY_PROMPTS:
-        prompt_template = SUMMARY_PROMPTS[article_type]
-    else:
-        prompt_template = SUMMARY_PROMPT_TEMPLATE
+    prompt_template = SUMMARY_PROMPTS.get(article_type or "NEWS", SUMMARY_PROMPTS["NEWS"])
 
     return f"Title: {title}\n\nArticle content:\n{content_text}\n\n{prompt_template}"
 
@@ -368,9 +364,10 @@ def _attempt_ollama_restart() -> bool:
             check=False,
             timeout=5.0,
         )
-        if kill_result.returncode in (0, 1):  # 0=killed, 1=no process found
+        # Exit 1 means nothing matched, so nothing will restart; try brew below
+        if kill_result.returncode == 0:
             logger.info("Killed unresponsive ollama serve process; launchd will restart")
-            return True
+            return _wait_for_ollama()
     except Exception as exc:
         logger.debug("Could not kill ollama process: %s", exc)
 
@@ -385,17 +382,29 @@ def _attempt_ollama_restart() -> bool:
         )
         if brew_result.returncode == 0:
             logger.info("Restarted Ollama via brew services")
-            return True
+            return _wait_for_ollama()
     except Exception as exc:
         logger.debug("Could not restart ollama via brew: %s", exc)
 
     return False
 
 
-def _get_loaded_models(base_url: str) -> list[str]:
-    """Get list of currently loaded model IDs from LM Studio.
+def _wait_for_ollama(timeout: float = 15.0) -> bool:
+    """Poll the Ollama API until it answers, so the retry does not hit a daemon that is still starting."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            httpx.get(OLLAMA_BASE_URL, timeout=2.0)
+            return True
+        except httpx.HTTPError:
+            time.sleep(1.0)
+    return False
 
-    Returns empty list if cannot connect or no models loaded.
+
+def _get_downloaded_models(base_url: str) -> list[str]:
+    """Get the model IDs LM Studio has downloaded (/v1/models).
+
+    Returns empty list if cannot connect.
     """
     try:
         with httpx.Client(timeout=LMSTUDIO_HEALTH_TIMEOUT) as client:
@@ -478,7 +487,7 @@ def resolve_lmstudio_model(base_url: str, explicit: str | None = None) -> str:
         logger.info("[lmstudio] No preferred model loaded; using what LM Studio has: %s", loaded[0])
         return loaded[0]
 
-    downloaded = _get_loaded_models(base_url)
+    downloaded = _get_downloaded_models(base_url)
     for preferred in LMSTUDIO_PREFERRED_MODELS:
         if preferred in downloaded:
             return preferred
@@ -508,7 +517,7 @@ def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool
         logger.info("[lmstudio] Model already loaded: %s", target_model)
         return True, f"Using {target_model}"
 
-    if target_model not in _get_loaded_models(base_url):
+    if target_model not in _get_downloaded_models(base_url):
         return False, f"Model '{target_model}' not found - check .env LMSTUDIO_PREFERRED_MODELS / LMSTUDIO_MODEL"
 
     # Downloaded but not loaded - load it. Other loaded models are left alone;
@@ -545,30 +554,6 @@ def _ensure_correct_model_loaded(base_url: str, target_model: str) -> tuple[bool
         return False, "'lms' CLI not found - install LM Studio CLI"
     except Exception as e:
         return False, f"Load error: {e}"
-
-
-def _test_lmstudio_availability(base_url: str) -> bool:
-    """Fast health check to verify LM Studio is responsive.
-
-    Returns True if LM Studio responds to /v1/models within timeout.
-    """
-    try:
-        with httpx.Client(timeout=LMSTUDIO_HEALTH_TIMEOUT) as client:
-            response = client.get(f"{base_url}/v1/models")
-            if response.status_code == 200:
-                logger.debug("[lmstudio] Health check passed at %s", base_url)
-                return True
-            logger.warning("[lmstudio] Health check returned status %d", response.status_code)
-            return False
-    except httpx.TimeoutException:
-        logger.warning("[lmstudio] Health check timed out after %.1fs", LMSTUDIO_HEALTH_TIMEOUT)
-        return False
-    except httpx.ConnectError as exc:
-        logger.warning("[lmstudio] Connection failed: %s", exc)
-        return False
-    except (httpx.RequestError, httpx.InvalidURL) as exc:
-        logger.warning("[lmstudio] Health check error: %s", exc)
-        return False
 
 
 def _lmstudio_context_length(base_url: str, model: str) -> int | None:
@@ -769,46 +754,24 @@ def _run_with_ollama(prompt: str, cfg: SummarizerConfig) -> str:
 
 
 def _validate_bullet_structure(bullets: List[str], raw_output: str) -> tuple[bool, str]:
-    """Validate that bullets conform to required structure or accept prose fallback.
+    """Accept 3-4 bullets, or coherent prose (100-2000 chars) as fallback.
 
-    Checks:
-    - 3-4 structured bullets with required labels, OR
-    - Coherent prose (100-2000 chars) as fallback
+    Labels are not checked: each article type uses its own labels
+    (config.SUMMARY_PROMPTS). The LM Studio schema enforces 4 bullets.
 
     Returns:
         (is_valid, error_message) where error_message is empty if valid
     """
-    # Check for structured bullets (3-4 with labels)
     if 3 <= len(bullets) <= 4:
-        # Check for required labels
-        bullets_text = "\n".join(bullets)
-        required_labels = ["**KEY FINDING**", "**TACTICAL WIN", "**MARKET SIGNAL", "**CONCERN**"]
+        return (True, "")
 
-        # Find which labels are present
-        present_labels = [label for label in required_labels if label in bullets_text]
-        missing_labels = [label for label in required_labels if label not in bullets_text]
-
-        logger.debug("[validate][debug] Found %d bullets, checking labels - present: %s, missing: %s",
-                     len(bullets), present_labels, missing_labels)
-
-        if not missing_labels:
-            return (True, "")
-
-        # Has 3-4 bullets but missing labels - fall through to prose check
-
-    # Check for prose fallback (coherent text without bullet structure)
+    # Ollama has no schema and can answer in prose
     prose_length = len(raw_output.strip())
     if 100 <= prose_length <= 2000:
         logger.debug("[validate][debug] Accepting prose fallback (%d chars)", prose_length)
         return (True, "")
 
-    # Neither structured bullets nor valid prose
-    if len(bullets) < 3:
-        return (False, f"Expected 3-4 bullets, got {len(bullets)}, and output not valid prose ({prose_length} chars)")
-    elif len(bullets) > 4:
-        return (False, f"Expected 3-4 bullets, got {len(bullets)}")
-    else:
-        return (False, f"Expected 3-4 bullets with required labels, got {len(bullets)} bullets with missing labels: {', '.join(missing_labels)}")
+    return (False, f"Expected 3-4 bullets, got {len(bullets)}, and output not valid prose ({prose_length} chars)")
 
 
 def _parse_actionability(raw_output: str) -> str:

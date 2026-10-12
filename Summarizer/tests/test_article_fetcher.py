@@ -228,3 +228,60 @@ def test_fallback_chain_errors(monkeypatch: pytest.MonkeyPatch):
         fetch_article(url, FetchConfig(max_retries=0, allow_cache=False))
 
     assert "fallback failed" in str(exc.value)
+
+
+def _status_get(status: int, calls: list):
+    def fake_get(url: str, timeout: float, follow_redirects: bool, headers):
+        calls.append(url)
+        request = httpx.Request("GET", url)
+        response = httpx.Response(status, request=request, text="nope")
+        response.raise_for_status()
+    return fake_get
+
+
+def test_fetch_does_not_retry_client_errors(monkeypatch: pytest.MonkeyPatch):
+    calls: list = []
+    monkeypatch.setattr(httpx, "get", _status_get(404, calls))
+
+    with pytest.raises(FetchError):
+        fetch_article("https://gone.example", FetchConfig(max_retries=2, allow_cache=False))
+
+    assert len(calls) == 1
+
+
+def test_fetch_runs_fallback_chain_once_on_block(monkeypatch: pytest.MonkeyPatch):
+    from Summarizer.urltomd_fetcher import UrlToMdError
+    from Summarizer.jina_fetcher import JinaFetchError
+
+    calls: list = []
+    fallbacks: list = []
+
+    def fake_urltomd(url, config):
+        fallbacks.append(url)
+        raise UrlToMdError(url, "blocked")
+
+    def fake_jina(url, config):
+        raise JinaFetchError(url, "blocked")
+
+    monkeypatch.setattr(httpx, "get", _status_get(403, calls))
+    monkeypatch.setattr("Summarizer.article_fetcher.fetch_with_urltomd", fake_urltomd)
+    monkeypatch.setattr("Summarizer.article_fetcher.fetch_with_jina", fake_jina)
+
+    with pytest.raises(FetchError):
+        fetch_article("https://blocked.example", FetchConfig(max_retries=2, allow_cache=False))
+
+    assert len(calls) == 1
+    assert len(fallbacks) == 1
+
+
+@pytest.mark.parametrize("url, sent", [
+    ("https://example.com/a", True),
+    ("https://news.example.com/a", True),
+    ("https://notexample.com/a", False),
+    ("https://example.com.evil.io/a", False),
+])
+def test_env_headers_match_domain_and_subdomains_only(monkeypatch: pytest.MonkeyPatch, url, sent):
+    from Summarizer.article_fetcher import _env_headers_for
+
+    monkeypatch.setenv("ALERT_HTTP_HEADERS_JSON", '{"example.com": {"Cookie": "session=abc"}}')
+    assert ("Cookie" in _env_headers_for(url)) is sent

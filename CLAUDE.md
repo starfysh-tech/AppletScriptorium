@@ -22,8 +22,8 @@ This file primarily documents Summarizer development patterns. For ExtensionAudi
 1. **Alert Capture** — Mail rule saves triggering message (automated) OR `fetch-alert-source.applescript` captures inbox message with optional subject filter (manual CLI)
 2. **Link Extraction** (`link_extractor.py`) — Parses email HTML, extracts article URLs with metadata
 3. **Article Fetching** (`article_fetcher.py` + `urltomd_fetcher.py`) — HTTP fetcher with Markdown fallbacks (url-to-md / Jina) for protection bypass; parallel processing (max 5 workers)
-4. **Content Cleaning** (`content_cleaner.py`) — Converts HTML to readable Markdown using readability-lxml
-5. **Summarization** (`summarizer.py`) — Calls local Ollama for structured 4-bullet summaries
+4. **Content Cleaning** (`content_cleaner.py`) — Converts HTML to Markdown with trafilatura, falling back to readability-lxml + markdownify
+5. **Summarization** (`summarizer.py`) — Classifies the article type, then calls LM Studio (Ollama optional fallback) for a 4-bullet summary
 6. **Digest Rendering** (`digest_renderer.py`) — Generates HTML and plaintext email digests with executive summary and cross-article insights
 7. **SMTP Email Delivery** (`cli.py:send_digest_via_smtp`) — Sends digest via SMTP (replaces UI automation approach)
 8. **CLI Orchestration** (`cli.py`) — Ties all steps together with logging, error handling, and parallel execution
@@ -51,7 +51,7 @@ This file primarily documents Summarizer development patterns. For ExtensionAudi
 - `Summarizer/content_cleaner.py` — `extract_content(html)` → Markdown text
 - `Summarizer/summarizer.py` — `summarize_article(article_dict)` → structured summary
 - `Summarizer/digest_renderer.py` — `render_digest_html(summaries)`, `render_digest_text(summaries)`
-- `Summarizer/cli.py` — `send_digest_via_smtp(eml_path, recipient)` → sends digest.eml via SMTP
+- `Summarizer/cli.py` — `send_digest_via_smtp(eml_path, recipients)` → sends digest.eml via SMTP
 
 ### Test Fixtures
 - `Summarizer/Samples/google-alert-sample-2025-10-06.eml` — Raw email source
@@ -75,9 +75,9 @@ This file primarily documents Summarizer development patterns. For ExtensionAudi
 - Mock external calls: `article_fetcher` has in-memory cache, call `clear_cache()` between tests
 
 ### Parallel Processing
-- Uses `ThreadPoolExecutor` with max 5 workers for article fetch/summarize
+- Fetching uses `ThreadPoolExecutor` with max 5 workers; summarization runs sequentially
 - Pattern: `concurrent.futures.as_completed()` for progress tracking
-- See `cli.py` lines 150-180 for reference implementation
+- See `cli.process_articles` for the reference implementation
 
 ### AppleScript Constraints
 - **Tab indentation** — AppleScript uses tabs, not spaces
@@ -148,7 +148,7 @@ osascript -s Summarizer/templates/process-alert.scpt
 - **Context**: requests size `max_tokens` and article truncation to the context
   the model was actually loaded with (`loaded_context_length`), so a model
   loaded with a small window truncates rather than erroring.
-- Returns structured 4-bullet format: KEY FINDING, TACTICAL WIN [tag], MARKET SIGNAL [tag], CONCERN
+- Returns 4 bullets whose labels depend on the article type (`config.SUMMARY_PROMPTS`): RESEARCH uses KEY FINDING / METHODOLOGY / IMPLICATION / CONCERN, NEWS uses KEY DEVELOPMENT / TACTICAL WIN [tag] / MARKET SIGNAL [tag] / CONCERN, and PRESS_RELEASE and OPINION have their own
 - Digest includes executive summary and cross-article insights
 - Works with any Google Alert topic—summaries adapt to content
 
@@ -158,13 +158,13 @@ osascript -s Summarizer/templates/process-alert.scpt
 - **Tuning**: Adjust `LMSTUDIO_TIMEOUT` in `.env` if needed
 
 **Ollama Health Detection & Auto-Recovery** (`Summarizer/summarizer.py:_run_with_ollama`):
-- **Timeout**: `OLLAMA_TIMEOUT = 120.0` (seconds) — detects unresponsive daemon
+- **Timeout**: `OLLAMA_TIMEOUT` env var (seconds, default 120) — detects unresponsive daemon
 - **Detection**: Logs `"Ollama unresponsive (timeout after 120s); attempting restart"`
 - **Auto-restart**: Kills stuck process via `pkill -f "ollama serve"`; launchd auto-relaunches
-- **Fallback**: If pkill fails, attempts `brew services restart ollama`
+- **Fallback**: If pkill finds no process, attempts `brew services restart ollama`; then waits up to 15s for the API
 - **Retry**: Retries summarization once after restart attempt
 - **Failure**: If still unresponsive, raises `SummarizerError` with clear diagnostic message
-- **Tuning**: Adjust `OLLAMA_TIMEOUT` in `config.py` if needed (e.g., slow hardware)
+- **Tuning**: Set `OLLAMA_TIMEOUT` in `.env` if needed (e.g., slow hardware)
 
 ## Coding Conventions
 
@@ -241,7 +241,7 @@ print(markdown.splitlines()[0])  # First line
 
 ### Summary Generation
 
-Call local Ollama for structured summaries:
+Summarize one article with the configured backend:
 
 ```python
 from Summarizer.summarizer import summarize_article, SummarizerConfig
@@ -255,7 +255,7 @@ article = {
 summary = summarize_article(article, SummarizerConfig())
 ```
 
-Requires Ollama running (`brew services start ollama`) with model pulled (`ollama pull qwen3:latest`).
+Requires the LM Studio server (`LMSTUDIO_BASE_URL` in `.env`).
 
 ### Digest Assembly
 
@@ -289,7 +289,7 @@ from Summarizer.cli import send_digest_via_smtp
 
 # Requires .env file with SMTP_USERNAME, SMTP_PASSWORD, SMTP_HOST, SMTP_PORT, SMTP_FROM_EMAIL
 eml_path = Path("runs/alert-20251020-091257/digest.eml")
-send_digest_via_smtp(eml_path, "recipient@example.com")
+send_digest_via_smtp(eml_path, ["recipient@example.com"])
 ```
 
 Requires `.env` configuration with SMTP credentials.

@@ -65,7 +65,7 @@ def test_summarizer_raises_on_failure(sample_article):
 def _patch_lmstudio_inventory(monkeypatch, loaded, downloaded, preferred=("zai-org/glm-4.6v-flash",), pin=None):
     from Summarizer import summarizer as S
     monkeypatch.setattr(S, "_get_active_llms", lambda base_url: list(loaded))
-    monkeypatch.setattr(S, "_get_loaded_models", lambda base_url: list(downloaded))
+    monkeypatch.setattr(S, "_get_downloaded_models", lambda base_url: list(downloaded))
     monkeypatch.setattr(S, "LMSTUDIO_PREFERRED_MODELS", list(preferred))
     monkeypatch.setattr(S, "LMSTUDIO_MODEL", pin)
 
@@ -104,7 +104,7 @@ def test_ensure_loaded_loads_downloaded_but_inactive_model(monkeypatch):
     calls = []
     active = {"now": []}
     monkeypatch.setattr(S, "_get_active_llms", lambda base_url: list(active["now"]))
-    monkeypatch.setattr(S, "_get_loaded_models", lambda base_url: ["qwen/qwen3.5-9b"])
+    monkeypatch.setattr(S, "_get_downloaded_models", lambda base_url: ["qwen/qwen3.5-9b"])
     import time
     monkeypatch.setattr(time, "sleep", lambda s: None)  # the loader sleeps 2s after lms load
 
@@ -154,3 +154,11 @@ def test_estimate_tokens_counts_non_ascii_per_char():
     assert _estimate_tokens("abcdef") == 2
     assert _estimate_tokens("日本語のテキスト") == 8
     assert _estimate_tokens(_truncate_to_tokens("日本語" * 100, 50)) <= 50
+
+
+def test_validation_accepts_type_specific_labels_over_2000_chars():
+    from Summarizer.summarizer import _validate_bullet_structure
+
+    bullets = [f"**{label}**: " + "x" * 600 for label in ("KEY DEVELOPMENT", "TACTICAL WIN", "MARKET SIGNAL", "CONCERN")]
+    raw = "y" * 2500
+    assert _validate_bullet_structure(bullets, raw) == (True, "")
