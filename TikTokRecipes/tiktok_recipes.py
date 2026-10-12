@@ -623,10 +623,16 @@ def main() -> None:
         if args.verbose:
             log(f"[{n}/{len(entries)}] {url}")
         try:
-            if (args.refresh and not saved) or not (folder / "video.info.json").exists():
+            info_path = folder / "video.info.json"
+            if (args.refresh and not saved) or not info_path.exists():
                 log(f"fetch {url}")
-                fetch_video(url, folder, args.cookies_from_browser)
-            info = json.loads((folder / "video.info.json").read_text())
+                try:
+                    fetch_video(url, folder, args.cookies_from_browser)
+                except Exception as exc:
+                    if not saved:
+                        raise
+                    log(f"fetch failed {url}, kept saved recipe: {exc}")
+            info = json.loads(info_path.read_text()) if info_path.exists() else {}
             transcript, source = pick_transcript(folder)
             if not saved and (args.refresh or not (folder / "thumb.jpg").exists()):
                 fetch_thumbnail(info, folder / "thumb.jpg")
