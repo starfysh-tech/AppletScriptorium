@@ -25,7 +25,7 @@ ExtensionAuditor uses a hybrid approach for maximum speed and accuracy:
 ### Phase 1: Local Manifest Extraction
 Reads extension metadata directly from Chrome's local storage:
 - Fast: No network requests
-- Accurate: 100% reliable version numbers
+- Accurate: Version numbers come from the newest installed version folder
 - Complete: All installed extensions discovered
 
 ### Phase 2: Web Enrichment (When Needed)
